@@ -156,13 +156,13 @@ export default function Home() {
         }
       }
       
-      // Pool spread range filter
-      const poolSpread = -c.picksheetSpread
+      // Pool spread range filter (use absolute value)
+      const poolSpread = Math.abs(c.picksheetSpread)
       if (filters.poolSpreadMin !== '' && poolSpread < parseFloat(filters.poolSpreadMin)) return false
       if (filters.poolSpreadMax !== '' && poolSpread > parseFloat(filters.poolSpreadMax)) return false
       
-      // Market spread range filter
-      const marketSpread = -c.marketSpread
+      // Market spread range filter (use absolute value)
+      const marketSpread = Math.abs(c.marketSpread)
       if (filters.marketSpreadMin !== '' && marketSpread < parseFloat(filters.marketSpreadMin)) return false
       if (filters.marketSpreadMax !== '' && marketSpread > parseFloat(filters.marketSpreadMax)) return false
       
