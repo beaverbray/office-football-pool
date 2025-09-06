@@ -1,0 +1,25 @@
+# Task ID: 3
+# Title: Build The Odds API integration
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Create service to fetch live odds data from The Odds API for NFL and NCAAF
+# Details:
+Integrate with The Odds API, fetch spreads for NFL/NCAAF, implement caching strategy, handle rate limits, store snapshots in odds_snapshots table
+
+# Test Strategy:
+Mock API responses for testing, verify rate limit handling, test cache behavior, validate data storage
+
+# Subtasks:
+## 1. Set up The Odds API authentication [pending]
+### Dependencies: None
+### Description: Configure API credentials and create connection module
+### Details:
+Register for The Odds API, obtain API key, create Python/Node module for API connection with rate limiting
+
+## 2. Build odds fetching service for NFL/NCAAF [pending]
+### Dependencies: None
+### Description: Implement service to fetch and cache spread data
+### Details:
+Create functions to fetch NFL and NCAAF spreads, implement caching strategy, handle rate limits and errors
+

@@ -1,0 +1,197 @@
+# Overview
+
+Build a service that ingests picksheet-style text (unstructured) and compares it against live market odds (The Odds API), then surfaces figures and KPIs about discrepancies (e.g., spread deltas, coverage, outliers). Output is stored in Supabase and presented in a React UI for fast review and decision-making.
+
+**Problem**: Picksheets and market feeds use inconsistent team/game naming and formats, making automated joins unreliable. Manual reconciliation is slow and error-prone.
+
+**Who it’s for**: Internal analysts/users who want a single view of how a picksheet’s lines compare to live markets, plus tracking over time.
+
+**Value**: Rapid, accurate comparison; automatic linking of entities via LLM-assisted matching; trustworthy deltas and trend KPIs.
+
+---
+
+# Core Features
+
+1. **Ingest & Parse Picksheet Text**
+
+* **What**: Accept raw text (copy/paste or file), extract structured rows: league, date/time, home/away, market (spread), points, notes (e.g., rankings #, due dates).
+* **Why**: Downstream matching and comparison requires normalized fields.
+* **How (HL)**: Deterministic parsing (regex/tokenization) + normalization rules (strip rankings like `#11`, unify abbreviations, standardize times).
+
+2. **Live Market Integration**
+
+* **What**: Pull current spreads/totals/moneylines from The Odds API; begin with NFL + NCAAF spreads for MVP.
+* **Why**: Baseline for comparison.
+* **How (HL)**: Poll or on-demand fetch; cache responses; respect rate limits.
+
+3. **Entity Resolution (LLM-Assisted)**
+
+* **What**: Match picksheet events/teams to live-odds events when keys differ.
+* **Why**: Names vary (`No Carolina St.` vs `NC State`, rankings, nicknames).
+* **How (HL)**: Multi-stage pipeline: normalization → fuzzy candidate search → metadata filters (league, date window) → LLM re-rank/verify → confidence score → human-in-the-loop overrides.
+
+4. **Comparison & KPIs**
+
+* **What**: Compute deltas (e.g., spread difference), coverage, unmatched items, largest absolute discrepancies, trend summaries.
+* **Why**: Make it obvious where the picksheet diverges from the market and how quality changes over time.
+* **How (HL)**: Materialize comparisons per match; aggregate to daily/weekly KPIs.
+
+5. **React Frontend**
+
+* **What**: Dashboard with table of matched games, deltas, filters (league, book, threshold), and KPI tiles.
+* **Why**: Fast triage and monitoring.
+* **How (HL)**: Next.js/React, Supabase client, role-based access.
+
+6. **Admin Controls & Auditability**
+
+* **What**: Manual alias binding; view/resolve unmatched rows; history of changes; retry pipeline.
+* **Why**: Improve matching quality and ensure explainability.
+
+---
+
+# User Experience
+
+**Personas**
+
+* *Analyst*: Uploads text, validates matches, inspects deltas, exports.
+* *Reviewer*: Checks KPIs; trusts that high-confidence matches are correct; inspects outliers.
+
+**Key Flows**
+
+* Paste/upload picksheet → parse preview → run compare → results table (matched, unmatched) → resolve aliases (optional) → KPIs update.
+* Browse historical runs → drill into a specific date → see market vs picksheet snapshot.
+
+**UI/UX Considerations**
+
+* Clear confidence badges and highlighting for large |delta|.
+* Side-by-side team names (Raw vs Canonical) with quick "bind alias" action.
+* Sticky KPI header; responsive table with virtualized rows; CSV export.
+
+---
+
+# Technical Architecture
+
+**System Components**
+
+* **Parser Service** (Python): deterministic rules & tokenization; outputs `picks_rows`.
+* **Odds Fetcher** (Node or Python): pulls from The Odds API, caches to `odds_snapshots`.
+* **Entity Resolver**: normalization + fuzzy (e.g., token-set ratio) + LLM verifier; emits `matches` with `confidence`.
+* **Comparator**: computes per-game deltas, writes to `comparisons` and KPI aggregates.
+* **API/Orchestrator**: (FastAPI or Next.js API routes) to trigger runs, read results.
+* **Supabase (Postgres + Auth + Storage)**: primary DB, row-level security, cron (if used).
+* **Frontend**: Next.js + React + Supabase client.
+
+**Data Models (Supabase/Postgres)**
+
+* `events` (id, provider\_event\_id, league, home\_team, away\_team, start\_time\_utc, status).
+* `teams` (id, league, name\_canonical, aliases jsonb).
+* `picks_rows` (id, source\_run\_id, league, event\_date\_local, home\_name\_raw, away\_name\_raw, home\_point\_raw, away\_point\_raw, market, raw\_text, parsed\_at).
+* `odds_snapshots` (id, event\_provider\_key, book, market, home\_point, away\_point, total, prices jsonb, fetched\_at).
+* `matches` (id, picks\_row\_id, event\_id, confidence, method, matched\_at, notes).
+* `comparisons` (id, match\_id, spread\_delta\_home, spread\_delta\_away, total\_delta, computed\_at).
+* `kpi_daily` (date, coverage\_rate, avg\_abs\_delta, p95\_abs\_delta, unmatched\_count, book, league).
+* `alias_overrides` (id, league, raw\_name, canonical\_team\_id, created\_by, created\_at).
+* `job_runs` (id, started\_at, ended\_at, status, counts jsonb, errors jsonb).
+
+**APIs & Integrations**
+
+* The Odds API (live odds; begin with spreads for NFL/NCAAF).
+* Supabase REST/SDK for CRUD and auth.
+* Optional: OpenAI (or equivalent) for LLM re-rank/verification; cache prompts/results.
+
+**Infrastructure**
+
+* Deploy backend as serverless functions (Supabase/Cloudflare) or a small container (Fly.io/Render).
+* Job scheduler via Supabase cron or hosted scheduler.
+* Secrets via environment (Supabase/KV).
+* Observability: structured logs, metrics, per-stage counts.
+
+**Security**
+
+* Supabase RLS on all tables; service key for jobs; least-privileged API routes.
+
+---
+
+# Development Roadmap
+
+**Phase 1 — MVP (NFL + NCAAF spreads)**
+
+* Picksheet ingestion (paste/upload) and parser preview.
+* Odds fetcher for one book via The Odds API.
+* Resolver v1: normalization + fuzzy + simple LLM check; alias overrides UI.
+* Comparator & KPIs: coverage, avg/median abs delta, top outliers.
+* React dashboard (table + KPI tiles), run-on-demand.
+
+**Phase 2 — Robustness & Scale**
+
+* Multi-book support; totals/moneyline.
+* Background scheduled runs; caching & rate-limit handling.
+* Resolver v2: better candidate generation, active alias learning, confidence thresholds & queues for review.
+* Auth & RLS; job history; CSV export; monitoring & alerts.
+
+**Phase 3 — Depth & History**
+
+* Historical trending & CLV-style metrics.
+* Notifications on large deltas.
+* Expanded leagues; per-book comparison views.
+* Model evaluation suite for resolver accuracy.
+
+---
+
+# Logical Dependency Chain
+
+1. Define schema & normalization rules → 2) Odds fetcher for target leagues → 3) Parser MVP → 4) Matching (baseline) → 5) Comparison + KPIs → 6) Frontend table/tiles → 7) Admin alias UI → 8) Scheduling/monitoring → 9) Multi-book & markets → 10) History & notifications.
+
+Guiding principle: get to a working UI quickly (simple table of matches, deltas, coverage). Iteratively harden the resolver and expand surface area.
+
+---
+
+# Risks and Mitigations
+
+* **Name ambiguity & formatting**: rankings, abbreviations, nicknames.
+  *Mitigation*: normalization rules; alias dictionary; LLM only when fuzzy below threshold; human overrides persisted.
+* **Timezones & schedules**: mismatched local vs UTC; college vs NFL date drift.
+  *Mitigation*: standardize to UTC; parse source TZ; within ±2-day window for candidate generation.
+* **API limits & freshness**: polling too frequently; stale odds.
+  *Mitigation*: caching, backoff, selective book fetch, on-demand compare.
+* **LLM cost/latency**: heavy matching load.
+  *Mitigation*: cache prompts, only escalate ambiguous pairs, batch with parallelism.
+* **Data drift**: new formats in picksheets.
+  *Mitigation*: parser feature flags; schema versioning; test suite with fixtures.
+* **Trust/Explainability**: analysts need to know *why* a match happened.
+  *Mitigation*: store evidence (tokens, similarity scores, LLM rationale) and show in UI.
+
+---
+
+# Appendix
+
+**Matching Heuristics (initial)**
+
+* Strip rankings `#\d+`, records `(\d+-\d+)`, and normalize common tokens (`State`↔`St.`, `Northern Ill`↔`NIU`, etc.).
+* Use **league + week + kickoff time window** to constrain candidates.
+* Score with token-set/abbrev maps; if in gray band, call LLM with structured prompt including week/time context.
+* Persist human-confirmed mappings to `game_data.alias_overrides` and prefer them before LLM.
+
+**Key-Number Metrics (definitions)**
+
+* **Key set**: `{3, 7, 10, 14, 17}` (extensible).
+* **Crossing**: A key `k` is crossed if `sign(pick_spread - k) ≠ sign(market_spread - k)` for any `k` in set (treat exact `k` as non-crossing unless moving through).
+* **Min distance to key**: `min_k |market_spread - k|`.
+* **Crossings count**: number of keys crossed for a match/book.
+
+**KPIs (snapshot)**
+
+* *Coverage Rate*: published\_matches / total\_rows.
+* *Avg/Median/P95 Abs Delta*: over published matches, per book or aggregated.
+* *Unmatched Count*: rows requiring review.
+* *Key-Number Crossings*: total crossings; % of matches with ≥1 crossing; distribution by key.
+
+**Test Plan**
+
+* Parser fixtures from multiple weeks; verify week & kickoff extraction.
+* Resolver eval set with labeled matches; acceptance test enforces 100% correctness for **published** snapshot.
+* Crossing/unit tests for half-point edges (e.g., 2.5↔3.0↔3.5) and multiple-book scenarios.
+
+**Non-goals (MVP)**
+
+* Scheduling/cron; historical trending; totals/moneyline; public embedding of market data.

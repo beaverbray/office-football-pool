@@ -1,0 +1,11 @@
+# Task ID: 10
+# Title: Implement export and reporting features
+# Status: pending
+# Dependencies: 7
+# Priority: low
+# Description: Add CSV export capability and historical run browsing
+# Details:
+CSV export for comparison results, historical run browser, drill-down to specific dates, snapshot viewing
+
+# Test Strategy:
+Verify CSV generation, test historical data retrieval, validate snapshot accuracy

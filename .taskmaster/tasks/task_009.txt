@@ -1,0 +1,11 @@
+# Task ID: 9
+# Title: Add authentication and authorization
+# Status: pending
+# Dependencies: 7
+# Priority: medium
+# Description: Implement Supabase Auth with role-based access control
+# Details:
+Set up Supabase Auth, implement RLS policies, create user roles (analyst, reviewer, admin), secure API endpoints
+
+# Test Strategy:
+Test authentication flows, verify RLS enforcement, test role-based access

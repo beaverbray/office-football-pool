@@ -1,0 +1,25 @@
+# Task ID: 4
+# Title: Develop entity resolution system
+# Status: pending
+# Dependencies: 2, 3
+# Priority: high
+# Description: Implement multi-stage matching pipeline to link picksheet teams/games to live odds events
+# Details:
+Normalization rules, fuzzy matching with token-set ratio, metadata filters (league, date window), LLM verification for ambiguous matches, confidence scoring, human override capability
+
+# Test Strategy:
+Test with known team variations, verify fuzzy matching accuracy, test LLM integration, validate confidence scores
+
+# Subtasks:
+## 1. Build fuzzy matching engine [pending]
+### Dependencies: None
+### Description: Implement fuzzy string matching for team names
+### Details:
+Use token-set ratio and abbreviation maps, implement similarity scoring, create candidate generation logic
+
+## 2. Integrate LLM for ambiguous match verification [pending]
+### Dependencies: None
+### Description: Add LLM verification for low-confidence fuzzy matches
+### Details:
+Set up OpenAI/Claude API, create structured prompts for verification, implement confidence scoring
+

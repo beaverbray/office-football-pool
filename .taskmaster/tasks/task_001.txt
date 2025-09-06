@@ -1,0 +1,31 @@
+# Task ID: 1
+# Title: Set up project infrastructure and database schema
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Initialize the project with Supabase, set up database tables for events, teams, picks, odds, matches, and comparisons according to the PRD specifications
+# Details:
+Create Supabase project, define all tables with proper relationships, set up row-level security policies, create indexes for performance. Tables needed: events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides, job_runs
+
+# Test Strategy:
+Verify table creation, test CRUD operations, validate RLS policies, check index performance
+
+# Subtasks:
+## 1. Initialize Supabase project [pending]
+### Dependencies: None
+### Description: Create new Supabase project and configure environment variables
+### Details:
+Set up new Supabase project, obtain API keys and database URL, configure .env files for local development
+
+## 2. Create database schema for core tables [pending]
+### Dependencies: None
+### Description: Define and create all database tables as specified in the PRD
+### Details:
+Create tables: events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides, job_runs. Set up proper indexes and relationships
+
+## 3. Configure Supabase Row Level Security (RLS) [pending]
+### Dependencies: None
+### Description: Set up RLS policies for all tables to ensure data security
+### Details:
+Create RLS policies for each table, configure service roles and user permissions, test security policies
+

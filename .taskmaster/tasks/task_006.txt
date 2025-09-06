@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Build API/orchestrator layer
+# Status: pending
+# Dependencies: 2, 3, 4, 5
+# Priority: medium
+# Description: Create FastAPI or Next.js API routes to coordinate pipeline operations
+# Details:
+Endpoints for triggering runs, reading results, managing aliases, viewing history, implement proper error handling and logging
+
+# Test Strategy:
+Test all API endpoints, verify error handling, test orchestration flow, validate response formats

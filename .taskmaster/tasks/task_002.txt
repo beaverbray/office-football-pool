@@ -1,0 +1,25 @@
+# Task ID: 2
+# Title: Implement picksheet parser service
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Build a Python service that ingests raw picksheet text and extracts structured data with normalization
+# Details:
+Parse raw text input, extract league/date/teams/spreads/points, handle rankings like #11, normalize team names, standardize times to UTC, support both paste and file upload methods
+
+# Test Strategy:
+Test with various picksheet formats, verify parsing accuracy, test edge cases with rankings and abbreviations
+
+# Subtasks:
+## 1. Build text parsing engine with regex/tokenization [pending]
+### Dependencies: None
+### Description: Create Python module for deterministic parsing of picksheet text
+### Details:
+Implement regex patterns for extracting team names, dates, spreads, totals. Handle various text formats and edge cases
+
+## 2. Implement team name normalization rules [pending]
+### Dependencies: None
+### Description: Create normalization logic for standardizing team names
+### Details:
+Strip rankings (#11), handle abbreviations (St. vs State), remove records (10-2), standardize common variations
+

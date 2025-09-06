@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Create comparison engine and KPI calculator
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Build service to compute spread deltas and aggregate KPIs for matched games
+# Details:
+Calculate spread differences, identify key number crossings, compute coverage rates, generate daily KPIs (avg/median/P95 deltas), track unmatched items
+
+# Test Strategy:
+Verify delta calculations, test KPI aggregation logic, validate key number crossing detection

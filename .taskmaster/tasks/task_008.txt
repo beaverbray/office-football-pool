@@ -1,0 +1,11 @@
+# Task ID: 8
+# Title: Implement admin controls and alias management
+# Status: pending
+# Dependencies: 7
+# Priority: low
+# Description: Build UI for manual alias binding and unmatched row resolution
+# Details:
+Admin interface for creating team aliases, resolving unmatched rows, viewing match history, retry failed pipeline runs
+
+# Test Strategy:
+Test alias CRUD operations, verify override persistence, test retry functionality

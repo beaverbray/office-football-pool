@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Develop React frontend dashboard
+# Status: pending
+# Dependencies: 6
+# Priority: medium
+# Description: Create Next.js/React UI with matched games table, KPI tiles, and filters
+# Details:
+Game comparison table with deltas, KPI summary tiles, filters by league/book/threshold, responsive design, Supabase client integration
+
+# Test Strategy:
+Test UI components, verify data display, test filtering logic, validate responsive behavior

@@ -1,0 +1,5 @@
+{
+  "/share/[id]/page": "app/share/[id]/page.js",
+  "/control-panel/page": "app/control-panel/page.js",
+  "/page": "app/page.js"
+}
