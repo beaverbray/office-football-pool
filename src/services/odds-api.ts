@@ -201,8 +201,17 @@ export class OddsAPIService {
     const data = await response.json()
     const validated = z.array(OddsResponseSchema).parse(data)
     
-    this.setCache(cacheKey, validated)
-    return validated
+    // Filter out live/in-progress games (games that have already started)
+    const now = new Date()
+    const upcomingGames = validated.filter(game => {
+      const gameTime = new Date(game.commence_time)
+      return gameTime > now
+    })
+    
+    console.log(`Filtered ${validated.length - upcomingGames.length} live games out of ${validated.length} total games`)
+    
+    this.setCache(cacheKey, upcomingGames)
+    return upcomingGames
   }
 
   /**
