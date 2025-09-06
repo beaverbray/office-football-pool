@@ -562,7 +562,7 @@ export default function SharePage() {
                   </div>
                   <div className="pt-2">
                     <div className="text-orange-600 mb-1">FLAGGED_FILTER:</div>
-                    <div className="text-gray-400">Shows games with: Delta > 3, Key number crossed, or Favorite flipped</div>
+                    <div className="text-gray-400">Shows games with: Delta {'>'} 3, Key number crossed, or Favorite flipped</div>
                   </div>
                 </div>
               </div>
