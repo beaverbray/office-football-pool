@@ -80,10 +80,18 @@ You must return a JSON object with this exact structure:
 CRITICAL PARSING RULES:
 
 1. HOME vs AWAY team identification (VERY IMPORTANT):
-   - @ symbol: Team BEFORE @ is AWAY, team AFTER @ is HOME (e.g., "Buffalo @ New England" = Buffalo away, New England home)
-   - vs keyword: Team BEFORE vs is HOME, team AFTER vs is AWAY (e.g., "Dallas vs Washington" = Dallas home, Washington away)
-   - Capital letters: Team in ALL CAPS is usually HOME (when no @ or vs present)
-   - Default: First team is AWAY, second team is HOME (if no other indicators)
+   - **MOST IMPORTANT RULE**: Team name in ALL CAPS is ALWAYS the HOME team
+   - **EXCEPTION**: Acronym teams (TCU, USC, UCLA, BYU, SMU, UNLV, UAB, UTEP, UTSA, etc.) are naturally in caps
+   - If both teams are capitalized:
+     - The NON-ACRONYM team is the HOME team
+     - Example: "TCU vs TEXAS" - TEXAS is home (not an acronym), TCU is away (acronym)
+     - Example: "USC vs STANFORD" - STANFORD is home, USC is away
+   - If only one team is in caps and it's not an acronym = that's the HOME team
+   - Example: "1 pt Baylor (2-2) -20.5 Sat 12:30 PM OKLAHOMA ST. (1-2) +20.5"
+     - OKLAHOMA ST. (in CAPS, not acronym) = HOME team with +20.5 spread
+     - Baylor (not in caps) = AWAY team with -20.5 spread
+   - @ symbol (if present): Team BEFORE @ is AWAY, team AFTER @ is HOME
+   - vs keyword (if present): Team BEFORE vs is HOME, team AFTER vs is AWAY
 
 2. Spread parsing:
    - Each team has opposite spreads (if one is +3.5, the other is -3.5)
