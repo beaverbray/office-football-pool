@@ -222,7 +222,7 @@ export class PipelineOrchestrator {
       const games = parsed.games.map(game => ({
         homeTeam: game.homeTeam,
         awayTeam: game.awayTeam,
-        spread: game.homeSpread, // Use home spread
+        spread: game.homeSpread, // Use home spread - consistent with market data
         gameDate: game.gameDate || undefined
       }))
 

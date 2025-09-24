@@ -746,12 +746,12 @@ export default function Home() {
                         </td>
                         <td className="px-1 py-1 text-center">
                           <span className="font-mono text-[10px] sm:text-sm text-gray-200">
-                            {-comp.picksheetSpread > 0 ? '+' : ''}{-comp.picksheetSpread}
+                            {comp.picksheetSpread > 0 ? '+' : ''}{comp.picksheetSpread}
                           </span>
                         </td>
                         <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
                           <span className="font-mono text-[10px] sm:text-sm text-gray-200">
-                            {-comp.marketSpread > 0 ? '+' : ''}{-comp.marketSpread}
+                            {comp.marketSpread > 0 ? '+' : ''}{comp.marketSpread}
                           </span>
                         </td>
                         <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
