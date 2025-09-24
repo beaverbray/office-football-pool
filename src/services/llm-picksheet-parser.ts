@@ -79,19 +79,32 @@ You must return a JSON object with this exact structure:
 
 CRITICAL PARSING RULES:
 
-1. HOME vs AWAY team identification (VERY IMPORTANT):
-   - **MOST IMPORTANT RULE**: Team name in ALL CAPS is ALWAYS the HOME team
-   - **EXCEPTION**: Acronym teams (TCU, USC, UCLA, BYU, SMU, UNLV, UAB, UTEP, UTSA, etc.) are naturally in caps
-   - If both teams are capitalized:
-     - The NON-ACRONYM team is the HOME team
-     - Example: "TCU vs TEXAS" - TEXAS is home (not an acronym), TCU is away (acronym)
-     - Example: "USC vs STANFORD" - STANFORD is home, USC is away
-   - If only one team is in caps and it's not an acronym = that's the HOME team
-   - Example: "1 pt Baylor (2-2) -20.5 Sat 12:30 PM OKLAHOMA ST. (1-2) +20.5"
-     - OKLAHOMA ST. (in CAPS, not acronym) = HOME team with +20.5 spread
-     - Baylor (not in caps) = AWAY team with -20.5 spread
-   - @ symbol (if present): Team BEFORE @ is AWAY, team AFTER @ is HOME
-   - vs keyword (if present): Team BEFORE vs is HOME, team AFTER vs is AWAY
+1. HOME vs AWAY team identification (VERY IMPORTANT - THIS IS THE PICKSHEET FORMAT):
+
+   FORMAT: [points] [AWAY team] [AWAY spread] [day/time] [HOME team] [HOME spread]
+
+   **KEY RULES**:
+   - Team in ALL CAPS = HOME team (on the right side)
+   - Team in regular case = AWAY team (on the left side)
+   - The spread immediately follows each team name
+
+   **SPECIAL CASES**:
+   - Acronym teams (TCU, USC, UCLA, BYU, SMU, UNLV, UAB, UTEP, UTSA, etc.) may appear in caps even when away
+   - If both teams appear capitalized, the NON-ACRONYM is HOME
+   - Rankings (#1, #24, etc.) don't affect home/away determination
+
+   **EXAMPLES FROM ACTUAL PICKSHEET**:
+   - "1 pt Army (1-2) +5.5 Thu 4:30 PM EAST CAROLINA (2-2) -5.5"
+     → Army = AWAY (left, regular case) with +5.5
+     → EAST CAROLINA = HOME (right, ALL CAPS) with -5.5
+
+   - "1 pt #24 TCU (3-0) +2.5 Fri 6:00 PM ARIZONA ST. (3-1) -2.5"
+     → TCU = AWAY (left side, even though it's an acronym) with +2.5
+     → ARIZONA ST. = HOME (right, ALL CAPS) with -2.5
+
+   - "1 pt Baylor (2-2) -20.5 Sat 12:30 PM OKLAHOMA ST. (1-2) +20.5"
+     → Baylor = AWAY (left, regular case) with -20.5
+     → OKLAHOMA ST. = HOME (right, ALL CAPS) with +20.5
 
 2. Spread parsing:
    - Each team has opposite spreads (if one is +3.5, the other is -3.5)
