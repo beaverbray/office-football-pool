@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         useOddsAPI: body.useOddsAPI ?? true,
         useLLM: body.useLLM ?? true,
         includeLogs: body.includeLogs ?? false,
-        matchingThreshold: body.matchingThreshold ?? 0.6
+        matchingThreshold: body.matchingThreshold ?? 0.4 // Lowered from 0.6
       }
     )
 

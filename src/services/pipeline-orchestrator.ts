@@ -307,7 +307,7 @@ export class PipelineOrchestrator {
   private async matchGames(
     picksheetGames: any[],
     marketGames: any[],
-    threshold: number = 0.6
+    threshold: number = 0.4 // Lowered from 0.6 for more lenient matching
   ): Promise<PipelineResult['matching'] & { matches?: any[] }> {
     const startTime = Date.now()
     this.currentStage = 'matching'

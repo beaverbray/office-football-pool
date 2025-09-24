@@ -254,9 +254,9 @@ export class EntityResolver {
 
     this.nflFuse = new Fuse(nflTeams, {
       keys: ['name', 'aliases'],
-      threshold: 0.4, // Allow for some fuzzy matching
+      threshold: 0.5, // More lenient fuzzy matching (was 0.4)
       includeScore: true,
-      minMatchCharLength: 3
+      minMatchCharLength: 2 // Lower minimum match length for better matching
     })
 
     // Initialize Fuse.js for NCAAF teams
@@ -267,9 +267,9 @@ export class EntityResolver {
 
     this.ncaafFuse = new Fuse(ncaafTeams, {
       keys: ['name', 'aliases'],
-      threshold: 0.4,
+      threshold: 0.5, // More lenient fuzzy matching (was 0.4)
       includeScore: true,
-      minMatchCharLength: 3
+      minMatchCharLength: 2 // Lower minimum match length for better matching
     })
 
     // Initialize OpenAI if API key is provided
@@ -338,11 +338,11 @@ export class EntityResolver {
       const topMatch = results[0]
       const confidence = 1 - (topMatch.score || 0) // Convert Fuse score to confidence
       
-      if (confidence > 0.6) {
+      if (confidence > 0.5) { // Lowered from 0.6
         return {
           originalName: teamName,
           matchedName: topMatch.item.name,
-          confidence: confidence * 0.9, // Slightly reduce confidence for fuzzy matches
+          confidence: confidence * 0.85, // Slightly reduce confidence for fuzzy matches
           league: 'NFL',
           method: 'fuzzy',
           candidates: results.slice(0, 3).map(r => ({
@@ -410,11 +410,11 @@ export class EntityResolver {
       const topMatch = results[0]
       const confidence = 1 - (topMatch.score || 0)
       
-      if (confidence > 0.6) {
+      if (confidence > 0.5) { // Lowered from 0.6
         return {
           originalName: teamName,
           matchedName: topMatch.item.name,
-          confidence: confidence * 0.9,
+          confidence: confidence * 0.85, // Slightly reduce confidence for fuzzy matches
           league: 'NCAAF',
           method: 'fuzzy',
           candidates: results.slice(0, 3).map(r => ({
@@ -548,9 +548,9 @@ export class EntityResolver {
     ])
     
     const overallConfidence = (homeMatch.confidence + awayMatch.confidence) / 2
-    const needsVerification = overallConfidence < 0.7 || 
-                            homeMatch.confidence < 0.6 || 
-                            awayMatch.confidence < 0.6
+    const needsVerification = overallConfidence < 0.5 || // Lowered from 0.7
+                            homeMatch.confidence < 0.4 || // Lowered from 0.6
+                            awayMatch.confidence < 0.4    // Lowered from 0.6
     
     return {
       homeTeam: homeMatch,
