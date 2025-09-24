@@ -1,11 +1,6 @@
 import OpenAI from 'openai'
 import { z } from 'zod'
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 // Define the schema for a single game
 const GameSchema = z.object({
   league: z.enum(['NFL', 'NCAAF']).describe('League: NFL or NCAAF (college football)'),
@@ -45,6 +40,11 @@ export class LLMPicksheetParser {
       if (!process.env.OPENAI_API_KEY) {
         throw new Error('OpenAI API key not configured')
       }
+
+      // Initialize OpenAI client only when needed
+      const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      })
 
       console.log('Starting LLM parse with text length:', text.length)
       
