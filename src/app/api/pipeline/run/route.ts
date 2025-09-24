@@ -4,7 +4,7 @@ import { pipelineOrchestrator } from '@/services/pipeline-orchestrator'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    
+
     // Validate input
     if (!body.picksheetText && !body.picksheetGames) {
       return NextResponse.json(
@@ -12,6 +12,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Log configuration for debugging
+    console.log('Pipeline configuration:', {
+      hasPicksheetText: !!body.picksheetText,
+      textLength: body.picksheetText?.length,
+      useOddsAPI: body.useOddsAPI ?? true,
+      useLLM: body.useLLM ?? true,
+      hasOddsAPIKey: !!process.env.ODDS_API_KEY,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY
+    })
 
     // Run pipeline
     const result = await pipelineOrchestrator.runPipeline(
@@ -35,12 +45,18 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Pipeline execution error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Pipeline execution failed', 
-        message: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    )
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorDetails = {
+      error: 'Pipeline execution failed',
+      message: errorMessage,
+      stage: 'pipeline_execution',
+      hasOddsAPIKey: !!process.env.ODDS_API_KEY,
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY
+    }
+
+    return NextResponse.json(errorDetails, { status: 500 })
   }
 }

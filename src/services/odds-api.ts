@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // API Configuration
-const API_KEY = process.env.THE_ODDS_API_KEY
+const API_KEY = process.env.ODDS_API_KEY || process.env.THE_ODDS_API_KEY
 const BASE_URL = 'https://api.the-odds-api.com/v4'
 
 // Sports keys for NFL and NCAAF
@@ -88,7 +88,7 @@ export class OddsAPIService {
   constructor(apiKey?: string) {
     this.apiKey = apiKey || API_KEY || ''
     if (!this.apiKey) {
-      throw new Error('THE_ODDS_API_KEY is not configured')
+      throw new Error('ODDS_API_KEY or THE_ODDS_API_KEY environment variable is not configured')
     }
   }
 
@@ -327,8 +327,8 @@ export class OddsAPIService {
 // Export a function to get the singleton instance
 // This prevents initialization errors when the module is imported
 export const getOddsAPI = () => {
-  if (!process.env.THE_ODDS_API_KEY) {
-    throw new Error('THE_ODDS_API_KEY is not configured. Please add it to your .env file.')
+  if (!process.env.ODDS_API_KEY && !process.env.THE_ODDS_API_KEY) {
+    throw new Error('ODDS_API_KEY is not configured. Please add it to your environment variables.')
   }
   return new OddsAPIService()
 }
