@@ -319,6 +319,7 @@ export class PipelineOrchestrator {
         picksheetIndex: number
         marketIndex: number
         confidence: number
+        isSwapped?: boolean
       }> = []
 
       for (let pIdx = 0; pIdx < picksheetGames.length; pIdx++) {
