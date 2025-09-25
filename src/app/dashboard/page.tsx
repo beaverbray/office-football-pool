@@ -50,12 +50,15 @@ export default function Dashboard() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [showOnlyIssues, setShowOnlyIssues] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  // Load data from localStorage on mount
+  // Load data from localStorage on mount (client-side only)
   useEffect(() => {
+    setMounted(true)
+
     const savedData = localStorage.getItem('pipelineData')
     const savedPicksheet = localStorage.getItem('picksheetText')
-    
+
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData)
@@ -65,7 +68,7 @@ export default function Dashboard() {
         console.error('Failed to load saved data:', e)
       }
     }
-    
+
     if (savedPicksheet) {
       setPicksheetText(savedPicksheet)
     }
@@ -206,13 +209,13 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              {dataLoaded && (
+              {mounted && dataLoaded && (
                 <span className="text-xs font-mono text-green-500">
                   ● DATA_LOADED
                 </span>
               )}
               <div className="text-xs font-mono text-gray-500">
-                {currentPipeline && `TIMESTAMP: ${new Date(currentPipeline.timestamp).toISOString()}`}
+                {mounted && currentPipeline && `TIMESTAMP: ${new Date(currentPipeline.timestamp).toISOString()}`}
               </div>
             </div>
           </div>
@@ -231,7 +234,7 @@ export default function Dashboard() {
               >
                 CLEAR_DATA
               </button>
-              {dataLoaded && (
+              {mounted && dataLoaded && (
                 <button
                   onClick={() => window.location.reload()}
                   className="px-3 py-1 text-xs font-mono bg-zinc-900 text-gray-400 border border-gray-600 rounded hover:bg-zinc-800 transition-colors"
@@ -251,13 +254,13 @@ export default function Dashboard() {
               onChange={(e) => setPicksheetText(e.target.value)}
               className="w-full h-32 p-3 bg-zinc-950 border border-zinc-700 rounded text-xs font-mono text-gray-300 focus:border-orange-700 focus:outline-none placeholder-zinc-600"
               placeholder="[TEAM_AWAY] @ [TEAM_HOME] [SPREAD]&#10;Example: Dallas @ Philadelphia -3&#10;..."
-              disabled={dataLoaded}
+              disabled={mounted && dataLoaded}
             />
           </div>
           
           <button
             onClick={runPipeline}
-            disabled={loading || dataLoaded}
+            disabled={loading || (mounted && dataLoaded)}
             className="px-6 py-2 bg-orange-700 text-black font-mono text-sm font-bold rounded hover:bg-orange-600 disabled:bg-zinc-800 disabled:text-zinc-600 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? (
@@ -265,7 +268,7 @@ export default function Dashboard() {
                 <span className="animate-pulse mr-2">●</span>
                 PROCESSING...
               </span>
-            ) : dataLoaded ? 'DATA_LOCKED' : 'EXECUTE_ANALYSIS'}
+            ) : (mounted && dataLoaded) ? 'DATA_LOCKED' : 'EXECUTE_ANALYSIS'}
           </button>
         </div>
 
@@ -375,23 +378,23 @@ export default function Dashboard() {
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       onClick={() => handleSort('poolSpread')}
                       className="px-4 py-3 text-center text-xs font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
                     >
                       <div className="flex items-center justify-center gap-1">
-                        POOL
+                        POOL_SPREAD
                         {sortColumn === 'poolSpread' && (
                           <span className="text-orange-700">{sortDirection === 'asc' ? '▲' : '▼'}</span>
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       onClick={() => handleSort('marketSpread')}
                       className="px-4 py-3 text-center text-xs font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
                     >
                       <div className="flex items-center justify-center gap-1">
-                        MARKET
+                        MARKET_SPREAD
                         {sortColumn === 'marketSpread' && (
                           <span className="text-orange-700">{sortDirection === 'asc' ? '▲' : '▼'}</span>
                         )}
@@ -465,12 +468,14 @@ export default function Dashboard() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="font-mono text-sm text-gray-200">
-                            {-comp.picksheetSpread > 0 ? '+' : ''}{-comp.picksheetSpread}
+                            {/* Show away team spread (negate home spread) */}
+                            {-comp.picksheetSpread > 0 ? '+' : ''}{(-comp.picksheetSpread).toFixed(1)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="font-mono text-sm text-gray-200">
-                            {-comp.marketSpread > 0 ? '+' : ''}{-comp.marketSpread}
+                            {/* Show away team spread (negate home spread) */}
+                            {-comp.marketSpread > 0 ? '+' : ''}{(-comp.marketSpread).toFixed(1)}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">

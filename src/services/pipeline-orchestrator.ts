@@ -414,10 +414,13 @@ export class PipelineOrchestrator {
     this.log('Comparing games and calculating KPIs')
 
     try {
+      // Use the internal matches array
+      const matches = (this as any)._lastMatches || []
+
       // Adjust market games for swapped teams
       const adjustedMarketGames = marketGames.map((game, idx) => {
         // Find if this game was matched with swapped teams
-        const match = matchingResult.matches?.find((m: any) => m.marketIndex === idx)
+        const match = matches.find((m: any) => m.marketIndex === idx)
         if (match?.isSwapped) {
           // If teams were swapped, negate the spread and swap team names
           return {
@@ -433,7 +436,7 @@ export class PipelineOrchestrator {
       const result = comparisonEngine.compareGames(
         picksheetGames,
         adjustedMarketGames,
-        (this as any)._lastMatches || []
+        matches
       )
 
       this.log(`Calculated KPIs: Avg delta ${result.kpis.avgSpreadDelta}, Key crossings ${result.kpis.keyNumberCrossings}`)

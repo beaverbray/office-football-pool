@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { OddsAPIService } from '@/services/odds-api'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     // Check if API key is configured
