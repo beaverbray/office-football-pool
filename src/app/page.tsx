@@ -746,12 +746,20 @@ export default function Home() {
                         </td>
                         <td className="px-1 py-1 text-center">
                           <span className="font-mono text-[10px] sm:text-sm text-gray-200">
-                            {comp.picksheetSpread > 0 ? '+' : ''}{comp.picksheetSpread}
+                            {/* Show away team spread (negate home spread) */}
+                            {(() => {
+                              const awaySpread = -comp.picksheetSpread;
+                              return `${awaySpread > 0 ? '+' : ''}${awaySpread.toFixed(1)}`;
+                            })()}
                           </span>
                         </td>
                         <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
                           <span className="font-mono text-[10px] sm:text-sm text-gray-200">
-                            {comp.marketSpread > 0 ? '+' : ''}{comp.marketSpread}
+                            {/* Show away team spread (negate home spread) */}
+                            {(() => {
+                              const awaySpread = -comp.marketSpread;
+                              return `${awaySpread > 0 ? '+' : ''}${awaySpread.toFixed(1)}`;
+                            })()}
                           </span>
                         </td>
                         <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
