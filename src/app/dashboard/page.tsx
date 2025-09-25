@@ -469,13 +469,19 @@ export default function Dashboard() {
                         <td className="px-4 py-3 text-center">
                           <span className="font-mono text-sm text-gray-200">
                             {/* Show away team spread (negate home spread) */}
-                            {-comp.picksheetSpread > 0 ? '+' : ''}{(-comp.picksheetSpread).toFixed(1)}
+                            {(() => {
+                              const awaySpread = -comp.picksheetSpread;
+                              return `${awaySpread > 0 ? '+' : ''}${awaySpread.toFixed(1)}`;
+                            })()}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <span className="font-mono text-sm text-gray-200">
                             {/* Show away team spread (negate home spread) */}
-                            {-comp.marketSpread > 0 ? '+' : ''}{(-comp.marketSpread).toFixed(1)}
+                            {(() => {
+                              const awaySpread = -comp.marketSpread;
+                              return `${awaySpread > 0 ? '+' : ''}${awaySpread.toFixed(1)}`;
+                            })()}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
