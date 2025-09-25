@@ -325,7 +325,8 @@ export class PipelineOrchestrator {
         const picksheetGame = picksheetGames[pIdx]
         let bestMatch = {
           marketIndex: -1,
-          confidence: 0
+          confidence: 0,
+          isSwapped: false
         }
 
         for (let mIdx = 0; mIdx < marketGames.length; mIdx++) {
@@ -353,11 +354,12 @@ export class PipelineOrchestrator {
               marketHomeMatch.confidence,
               marketAwayMatch.confidence
             )
-            
+
             if (confidence >= threshold && confidence > bestMatch.confidence) {
               bestMatch = {
                 marketIndex: mIdx,
-                confidence
+                confidence,
+                isSwapped: swappedMatch // Track if teams were swapped
               }
             }
           }
@@ -367,7 +369,8 @@ export class PipelineOrchestrator {
           matches.push({
             picksheetIndex: pIdx,
             marketIndex: bestMatch.marketIndex,
-            confidence: bestMatch.confidence
+            confidence: bestMatch.confidence,
+            isSwapped: bestMatch.isSwapped
           })
         }
       }
@@ -410,9 +413,25 @@ export class PipelineOrchestrator {
     this.log('Comparing games and calculating KPIs')
 
     try {
+      // Adjust market games for swapped teams
+      const adjustedMarketGames = marketGames.map((game, idx) => {
+        // Find if this game was matched with swapped teams
+        const match = matchingResult.matches?.find((m: any) => m.marketIndex === idx)
+        if (match?.isSwapped) {
+          // If teams were swapped, negate the spread and swap team names
+          return {
+            ...game,
+            homeSpread: -game.homeSpread, // Negate spread for swapped teams
+            homeTeam: game.awayTeam, // Swap teams
+            awayTeam: game.homeTeam
+          }
+        }
+        return game
+      })
+
       const result = comparisonEngine.compareGames(
         picksheetGames,
-        marketGames,
+        adjustedMarketGames,
         (this as any)._lastMatches || []
       )
 
