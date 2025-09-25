@@ -37,13 +37,21 @@ export class LLMPicksheetParser {
   static async parseWithLLM(text: string): Promise<ParsedPicksheet> {
     try {
       // Check API key
-      if (!process.env.OPENAI_API_KEY) {
+      const apiKey = process.env.OPENAI_API_KEY
+      if (!apiKey) {
         throw new Error('OpenAI API key not configured')
       }
 
+      console.log('API Key check:', {
+        exists: !!apiKey,
+        length: apiKey.length,
+        first10: apiKey.substring(0, 10),
+        last5: apiKey.substring(apiKey.length - 5)
+      })
+
       // Initialize OpenAI client only when needed
       const openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
+        apiKey: apiKey,
       })
 
       console.log('Starting LLM parse with text length:', text.length)

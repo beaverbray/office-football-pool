@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       textLength: body.picksheetText?.length,
       useOddsAPI: body.useOddsAPI ?? true,
       useLLM: body.useLLM ?? true,
-      hasOddsAPIKey: !!process.env.ODDS_API_KEY,
+      hasOddsAPIKey: !!(process.env.ODDS_API_KEY || process.env.THE_ODDS_API_KEY),
       hasOpenAIKey: !!process.env.OPENAI_API_KEY
     })
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       error: 'Pipeline execution failed',
       message: errorMessage,
       stage: 'pipeline_execution',
-      hasOddsAPIKey: !!process.env.ODDS_API_KEY,
+      hasOddsAPIKey: !!(process.env.ODDS_API_KEY || process.env.THE_ODDS_API_KEY),
       hasOpenAIKey: !!process.env.OPENAI_API_KEY
     }
 
