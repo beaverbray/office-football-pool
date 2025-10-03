@@ -191,7 +191,7 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'Middle Tennessee Blue Raiders': ['Middle Tennessee', 'Middle Tenn', 'MTSU', 'Blue Raiders', 'MTENN'],
   'Western Kentucky Hilltoppers': ['Western Kentucky', 'WKU', 'Hilltoppers', 'WKEN'],
   'FIU Panthers': ['FIU', 'Florida International', 'Panthers', 'Florida International Panthers'],
-  'FAU Owls': ['FAU', 'Florida Atlantic', 'Owls'],
+  'FAU Owls': ['FAU', 'Florida Atlantic', 'Owls', 'Florida Atlantic Owls'],
   'Louisiana Ragin\' Cajuns': ['Louisiana', 'Louisiana Lafayette', 'ULL', 'Ragin\' Cajuns', 'LALA'],
   'New Mexico State Aggies': ['New Mexico State', 'New Mexico St.', 'NMSU', 'Aggies', 'NMST'],
   'New Mexico Lobos': ['New Mexico', 'Lobos', 'NMEX'],
