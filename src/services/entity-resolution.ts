@@ -19,7 +19,7 @@ const NFL_TEAM_MAPPINGS: Record<string, string[]> = {
   'Houston Texans': ['Texans', 'Houston', 'HOU'],
   'Indianapolis Colts': ['Colts', 'Indianapolis', 'Indy', 'IND'],
   'Jacksonville Jaguars': ['Jaguars', 'Jacksonville', 'Jags', 'JAX', 'JAC'],
-  'Tennessee Titans': ['Titans', 'Tennessee', 'TEN'],
+  'Tennessee Titans': ['Titans', 'Tennessee', 'TEN', 'Tenn'],
   
   // AFC West
   'Denver Broncos': ['Broncos', 'Denver', 'DEN'],
@@ -104,8 +104,8 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   
   // ACC
   'Clemson Tigers': ['Clemson', 'Tigers', 'CLEM'],
-  'Florida State Seminoles': ['Florida State', 'Florida St.', 'FSU', 'Seminoles', 'FLST'],
-  'Miami Hurricanes': ['Miami', 'The U', 'Canes', 'Hurricanes', 'MIA'],
+  'Florida State Seminoles': ['Florida State', 'Florida St.', 'FSU', 'Seminoles', 'FLST', 'FLORIDA ST.', '#18 FLORIDA ST.'],
+  'Miami Hurricanes': ['Miami', 'The U', 'Canes', 'Hurricanes', 'MIA', 'Miami Fla', '#3 Miami Fla'],
   'North Carolina Tar Heels': ['North Carolina', 'UNC', 'Tar Heels', 'NC', 'NCAR'],
   'North Carolina State Wolfpack': ['North Carolina State', 'NC State', 'NCSU', 'Wolfpack', 'NCST', 'NC State Wolfpack'],
   'Duke Blue Devils': ['Duke', 'Blue Devils', 'DUKE'],
