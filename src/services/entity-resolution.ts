@@ -107,7 +107,7 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'Florida State Seminoles': ['Florida State', 'Florida St.', 'FSU', 'Seminoles', 'FLST'],
   'Miami Hurricanes': ['Miami', 'The U', 'Canes', 'Hurricanes', 'MIA'],
   'North Carolina Tar Heels': ['North Carolina', 'UNC', 'Tar Heels', 'NC', 'NCAR'],
-  'North Carolina State Wolfpack': ['North Carolina State', 'NC State', 'NCSU', 'Wolfpack', 'NCST'],
+  'North Carolina State Wolfpack': ['North Carolina State', 'NC State', 'NCSU', 'Wolfpack', 'NCST', 'NC State Wolfpack'],
   'Duke Blue Devils': ['Duke', 'Blue Devils', 'DUKE'],
   'Virginia Cavaliers': ['Virginia', 'UVA', 'Cavaliers', 'VA'],
   'Virginia Tech Hokies': ['Virginia Tech', 'VT', 'Hokies', 'VTECH'],
@@ -190,7 +190,7 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'Troy Trojans': ['Troy', 'Trojans', 'TROY'],
   'Middle Tennessee Blue Raiders': ['Middle Tennessee', 'Middle Tenn', 'MTSU', 'Blue Raiders', 'MTENN'],
   'Western Kentucky Hilltoppers': ['Western Kentucky', 'WKU', 'Hilltoppers', 'WKEN'],
-  'FIU Panthers': ['FIU', 'Florida International', 'Panthers'],
+  'FIU Panthers': ['FIU', 'Florida International', 'Panthers', 'Florida International Panthers'],
   'FAU Owls': ['FAU', 'Florida Atlantic', 'Owls'],
   'Louisiana Ragin\' Cajuns': ['Louisiana', 'Louisiana Lafayette', 'ULL', 'Ragin\' Cajuns', 'LALA'],
   'New Mexico State Aggies': ['New Mexico State', 'New Mexico St.', 'NMSU', 'Aggies', 'NMST'],
@@ -200,7 +200,7 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'Colorado State Rams': ['Colorado State', 'Colorado St.', 'CSU', 'Rams', 'COST'],
   
   // Additional small schools
-  'Connecticut Huskies': ['Connecticut', 'UConn', 'Huskies', 'CONN'],
+  'Connecticut Huskies': ['Connecticut', 'UConn', 'Huskies', 'CONN', 'UConn Huskies'],
   'UMass Minutemen': ['UMass', 'Massachusetts', 'Minutemen', 'UMAS'],
   'Old Dominion Monarchs': ['Old Dominion', 'ODU', 'Monarchs', 'ODOM'],
   'Coastal Carolina Chanticleers': ['Coastal Carolina', 'CCU', 'Chanticleers', 'CCAR'],
@@ -208,7 +208,8 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'Texas State Bobcats': ['Texas State', 'Texas St.', 'Bobcats', 'TXST'],
   'Southern Miss Golden Eagles': ['Southern Miss', 'Southern Mississippi', 'USM', 'Golden Eagles', 'SMIS'],
   'Delaware Blue Hens': ['Delaware', 'Blue Hens', 'DEL'],
-  'Kennesaw State Owls': ['Kennesaw State', 'Kennesaw St.', 'KSU', 'Owls', 'KENN']
+  'Kennesaw State Owls': ['Kennesaw State', 'Kennesaw St.', 'KSU', 'Owls', 'KENN'],
+  'Campbell Fighting Camels': ['Campbell', 'Campbell Fighting Camels', 'Camels', 'CAMP']
 }
 
 // Common NCAAF team patterns
