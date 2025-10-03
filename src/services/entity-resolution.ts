@@ -460,76 +460,97 @@ export class EntityResolver {
    * Match a single team name
    */
   async matchTeam(teamName: string, league?: 'NFL' | 'NCAAF'): Promise<TeamMatch> {
-    // Try NFL exact match first (unless explicitly NCAAF)
-    if (league !== 'NCAAF') {
+    // If league is explicitly specified, only search that league
+    if (league === 'NFL') {
       const nflExact = this.findNFLTeamExact(teamName)
-      if (nflExact) {
-        return nflExact
-      }
-    }
-    
-    // If league is specified as NCAAF or team is likely NCAA
-    if (league === 'NCAAF' || this.isLikelyNCAA(teamName)) {
-      // Try exact NCAAF match first
-      const ncaafExact = this.findNCAAFTeamExact(teamName)
-      if (ncaafExact) {
-        return ncaafExact
-      }
-      
-      // Try fuzzy NCAAF match
-      const ncaafFuzzy = this.findNCAAFTeamFuzzy(teamName)
-      if (ncaafFuzzy) {
-        return ncaafFuzzy
-      }
-    }
-    
-    // Try NFL fuzzy matching if not explicitly NCAAF
-    if (league !== 'NCAAF') {
+      if (nflExact) return nflExact
+
       const nflFuzzy = this.findNFLTeamFuzzy(teamName)
-      if (nflFuzzy) {
-        return nflFuzzy
-      }
-    }
-    
-    // If still no match and likely NCAA, return with medium confidence
-    if (this.isLikelyNCAA(teamName)) {
+      if (nflFuzzy) return nflFuzzy
+
+      // No match found in NFL
       return {
         originalName: teamName,
-        matchedName: teamName.replace(/^#\d+\s*/, ''), // Remove ranking
-        confidence: 0.7,
+        matchedName: teamName,
+        confidence: 0.3,
+        league: 'NFL',
+        method: 'fuzzy'
+      }
+    }
+
+    if (league === 'NCAAF') {
+      const ncaafExact = this.findNCAAFTeamExact(teamName)
+      if (ncaafExact) return ncaafExact
+
+      const ncaafFuzzy = this.findNCAAFTeamFuzzy(teamName)
+      if (ncaafFuzzy) return ncaafFuzzy
+
+      // No match found in NCAAF
+      return {
+        originalName: teamName,
+        matchedName: teamName.replace(/^#\d+\s*/, ''),
+        confidence: 0.3,
         league: 'NCAAF',
         method: 'fuzzy'
       }
     }
-    
-    // Check if it might be NCAAF that we missed
+
+    // League not specified - try to determine the best match
+    // Strategy: Try both leagues and pick the best match based on confidence
+
+    // Check for exact matches in both leagues
+    const nflExact = this.findNFLTeamExact(teamName)
     const ncaafExact = this.findNCAAFTeamExact(teamName)
-    if (ncaafExact) {
-      return ncaafExact
+
+    // If we have exact matches, prefer NCAAF if team name looks like college
+    if (nflExact && ncaafExact) {
+      // Both have exact matches - use heuristics
+      if (this.isLikelyNCAA(teamName)) {
+        return ncaafExact
+      }
+      return nflExact
     }
-    
+
+    if (nflExact) return nflExact
+    if (ncaafExact) return ncaafExact
+
+    // No exact matches - try fuzzy matching in both
+    const nflFuzzy = this.findNFLTeamFuzzy(teamName)
     const ncaafFuzzy = this.findNCAAFTeamFuzzy(teamName)
-    if (ncaafFuzzy) {
-      return ncaafFuzzy
+
+    // Pick the best fuzzy match based on confidence
+    if (nflFuzzy && ncaafFuzzy) {
+      // Both have fuzzy matches - pick the one with higher confidence
+      // But apply a bonus to NCAAF if it looks like a college team
+      const ncaafBonus = this.isLikelyNCAA(teamName) ? 0.15 : 0
+      const adjustedNCAAFConfidence = ncaafFuzzy.confidence + ncaafBonus
+
+      if (adjustedNCAAFConfidence > nflFuzzy.confidence) {
+        return ncaafFuzzy
+      }
+      return nflFuzzy
     }
-    
-    // If no match found and likely NCAA, return as NCAA
+
+    if (nflFuzzy) return nflFuzzy
+    if (ncaafFuzzy) return ncaafFuzzy
+
+    // Still no match - make an educated guess based on patterns
     if (this.isLikelyNCAA(teamName)) {
       return {
         originalName: teamName,
         matchedName: teamName.replace(/^#\d+\s*/, ''),
-        confidence: 0.6,
+        confidence: 0.5,
         league: 'NCAAF',
         method: 'fuzzy'
       }
     }
-    
-    // Default to low confidence match
+
+    // Default to low confidence NFL match
     return {
       originalName: teamName,
       matchedName: teamName,
       confidence: 0.3,
-      league: league || 'NFL',
+      league: 'NFL',
       method: 'fuzzy'
     }
   }

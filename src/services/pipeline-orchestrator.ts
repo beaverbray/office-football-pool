@@ -315,6 +315,56 @@ export class PipelineOrchestrator {
 
     try {
       const resolver = new EntityResolver()
+
+      // PRE-RESOLVE all team names once (O(n+m) instead of O(n*m))
+      // For picksheet games without explicit league, do game-level league detection
+      this.log('Pre-resolving picksheet teams with game-level league detection...')
+      const picksheetResolved = await Promise.all(
+        picksheetGames.map(async (game, idx) => {
+          // Try to determine league from both team names
+          const homeMatch = await resolver.matchTeam(game.homeTeam)
+          const awayMatch = await resolver.matchTeam(game.awayTeam)
+
+          // If both teams resolved to different leagues, retry with inferred league
+          if (homeMatch.league !== awayMatch.league) {
+            // Prefer NFL if either team is clearly NFL
+            const inferredLeague = (homeMatch.league === 'NFL' || awayMatch.league === 'NFL') ? 'NFL' : 'NCAAF'
+
+            this.log(`League mismatch detected for ${game.awayTeam} @ ${game.homeTeam}: ` +
+              `Home=${homeMatch.league}, Away=${awayMatch.league}. Inferring: ${inferredLeague}`)
+
+            // Re-resolve with inferred league for consistency
+            const homeMatchFixed = await resolver.matchTeam(game.homeTeam, inferredLeague)
+            const awayMatchFixed = await resolver.matchTeam(game.awayTeam, inferredLeague)
+
+            return {
+              index: idx,
+              homeMatch: homeMatchFixed,
+              awayMatch: awayMatchFixed,
+              original: game
+            }
+          }
+
+          return {
+            index: idx,
+            homeMatch,
+            awayMatch,
+            original: game
+          }
+        })
+      )
+
+      this.log('Pre-resolving market teams...')
+      const marketResolved = await Promise.all(
+        marketGames.map(async (game, idx) => ({
+          index: idx,
+          homeMatch: await resolver.matchTeam(game.homeTeam, game.league),
+          awayMatch: await resolver.matchTeam(game.awayTeam, game.league),
+          original: game,
+          league: game.league
+        }))
+      )
+
       const matches: Array<{
         picksheetIndex: number
         marketIndex: number
@@ -322,43 +372,47 @@ export class PipelineOrchestrator {
         isSwapped?: boolean
       }> = []
 
-      for (let pIdx = 0; pIdx < picksheetGames.length; pIdx++) {
-        const picksheetGame = picksheetGames[pIdx]
+      const usedMarketIndices = new Set<number>() // Prevent duplicate matches
+
+      for (const pGame of picksheetResolved) {
         let bestMatch = {
           marketIndex: -1,
           confidence: 0,
           isSwapped: false
         }
 
-        for (let mIdx = 0; mIdx < marketGames.length; mIdx++) {
-          const marketGame = marketGames[mIdx]
-          
-          // Match teams
-          const homeMatch = await resolver.matchTeam(picksheetGame.homeTeam)
-          const marketHomeMatch = await resolver.matchTeam(marketGame.homeTeam)
-          const awayMatch = await resolver.matchTeam(picksheetGame.awayTeam)
-          const marketAwayMatch = await resolver.matchTeam(marketGame.awayTeam)
-          
+        for (const mGame of marketResolved) {
+          // Skip if this market game is already matched
+          if (usedMarketIndices.has(mGame.index)) {
+            continue
+          }
+
+          // Optional: Filter by league if both are known to reduce false matches
+          // Uncomment if you want strict league filtering:
+          // if (pGame.homeMatch.league !== mGame.league && pGame.awayMatch.league !== mGame.league) {
+          //   continue
+          // }
+
           // Check if teams match (normal or swapped)
-          const normalMatch = 
-            homeMatch.matchedName === marketHomeMatch.matchedName &&
-            awayMatch.matchedName === marketAwayMatch.matchedName
-          
-          const swappedMatch = 
-            homeMatch.matchedName === marketAwayMatch.matchedName &&
-            awayMatch.matchedName === marketHomeMatch.matchedName
-          
+          const normalMatch =
+            pGame.homeMatch.matchedName === mGame.homeMatch.matchedName &&
+            pGame.awayMatch.matchedName === mGame.awayMatch.matchedName
+
+          const swappedMatch =
+            pGame.homeMatch.matchedName === mGame.awayMatch.matchedName &&
+            pGame.awayMatch.matchedName === mGame.homeMatch.matchedName
+
           if (normalMatch || swappedMatch) {
             const confidence = Math.min(
-              homeMatch.confidence,
-              awayMatch.confidence,
-              marketHomeMatch.confidence,
-              marketAwayMatch.confidence
+              pGame.homeMatch.confidence,
+              pGame.awayMatch.confidence,
+              mGame.homeMatch.confidence,
+              mGame.awayMatch.confidence
             )
 
             if (confidence >= threshold && confidence > bestMatch.confidence) {
               bestMatch = {
-                marketIndex: mIdx,
+                marketIndex: mGame.index,
                 confidence,
                 isSwapped: swappedMatch // Track if teams were swapped
               }
@@ -368,11 +422,12 @@ export class PipelineOrchestrator {
 
         if (bestMatch.marketIndex !== -1) {
           matches.push({
-            picksheetIndex: pIdx,
+            picksheetIndex: pGame.index,
             marketIndex: bestMatch.marketIndex,
             confidence: bestMatch.confidence,
             isSwapped: bestMatch.isSwapped
           })
+          usedMarketIndices.add(bestMatch.marketIndex) // Mark as used
         }
       }
 
@@ -381,7 +436,7 @@ export class PipelineOrchestrator {
 
       // Store matches internally but don't include in result
       ;(this as any)._lastMatches = matches
-      
+
       return {
         success: true,
         matchRate,

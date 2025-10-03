@@ -44,51 +44,96 @@ export async function POST(request: NextRequest) {
 
     // Use entity resolver to match games
     const resolver = new EntityResolver()
+
+    // PRE-RESOLVE all team names once (O(n+m) instead of O(n*m))
+    // For picksheet games, do game-level league detection
+    const picksheetResolved = await Promise.all(
+      picksheetGames.map(async (game: any, idx: number) => {
+        // Try to determine league from both team names
+        const homeMatch = await resolver.matchTeam(game.homeTeam)
+        const awayMatch = await resolver.matchTeam(game.awayTeam)
+
+        // If both teams resolved to different leagues, retry with inferred league
+        if (homeMatch.league !== awayMatch.league) {
+          // Prefer NFL if either team is clearly NFL
+          const inferredLeague = (homeMatch.league === 'NFL' || awayMatch.league === 'NFL') ? 'NFL' : 'NCAAF'
+
+          // Re-resolve with inferred league for consistency
+          const homeMatchFixed = await resolver.matchTeam(game.homeTeam, inferredLeague)
+          const awayMatchFixed = await resolver.matchTeam(game.awayTeam, inferredLeague)
+
+          return {
+            index: idx,
+            homeMatch: homeMatchFixed,
+            awayMatch: awayMatchFixed,
+            original: game
+          }
+        }
+
+        return {
+          index: idx,
+          homeMatch,
+          awayMatch,
+          original: game
+        }
+      })
+    )
+
+    const marketResolved = await Promise.all(
+      actualMarketGames.map(async (game: any, idx: number) => ({
+        index: idx,
+        homeMatch: await resolver.matchTeam(game.homeTeam, game.league),
+        awayMatch: await resolver.matchTeam(game.awayTeam, game.league),
+        original: game,
+        league: game.league
+      }))
+    )
+
     const matches: Array<{
       picksheetIndex: number
       marketIndex: number
       confidence: number
+      isSwapped?: boolean
     }> = []
 
+    const usedMarketIndices = new Set<number>() // Prevent duplicate matches
+
     // Match each picksheet game to market games
-    for (let pIdx = 0; pIdx < picksheetGames.length; pIdx++) {
-      const picksheetGame = picksheetGames[pIdx]
+    for (const pGame of picksheetResolved) {
       let bestMatch = {
         marketIndex: -1,
-        confidence: 0
+        confidence: 0,
+        isSwapped: false
       }
 
-      for (let mIdx = 0; mIdx < actualMarketGames.length; mIdx++) {
-        const marketGame = actualMarketGames[mIdx]
-        
-        // Match home teams
-        const homeMatch = await resolver.matchTeam(picksheetGame.homeTeam)
-        const marketHomeMatch = await resolver.matchTeam(marketGame.homeTeam)
-        
-        // Match away teams
-        const awayMatch = await resolver.matchTeam(picksheetGame.awayTeam)
-        const marketAwayMatch = await resolver.matchTeam(marketGame.awayTeam)
-        
-        // Check if teams match
-        const teamsMatch = 
-          (homeMatch.matchedName === marketHomeMatch.matchedName &&
-           awayMatch.matchedName === marketAwayMatch.matchedName) ||
-          // Also check reversed (in case home/away are swapped)
-          (homeMatch.matchedName === marketAwayMatch.matchedName &&
-           awayMatch.matchedName === marketHomeMatch.matchedName)
-        
-        if (teamsMatch) {
+      for (const mGame of marketResolved) {
+        // Skip if this market game is already matched
+        if (usedMarketIndices.has(mGame.index)) {
+          continue
+        }
+
+        // Check if teams match (normal or swapped)
+        const normalMatch =
+          pGame.homeMatch.matchedName === mGame.homeMatch.matchedName &&
+          pGame.awayMatch.matchedName === mGame.awayMatch.matchedName
+
+        const swappedMatch =
+          pGame.homeMatch.matchedName === mGame.awayMatch.matchedName &&
+          pGame.awayMatch.matchedName === mGame.homeMatch.matchedName
+
+        if (normalMatch || swappedMatch) {
           const confidence = Math.min(
-            homeMatch.confidence,
-            awayMatch.confidence,
-            marketHomeMatch.confidence,
-            marketAwayMatch.confidence
+            pGame.homeMatch.confidence,
+            pGame.awayMatch.confidence,
+            mGame.homeMatch.confidence,
+            mGame.awayMatch.confidence
           )
-          
+
           if (confidence > bestMatch.confidence) {
             bestMatch = {
-              marketIndex: mIdx,
-              confidence
+              marketIndex: mGame.index,
+              confidence,
+              isSwapped: swappedMatch
             }
           }
         }
@@ -96,10 +141,12 @@ export async function POST(request: NextRequest) {
 
       if (bestMatch.marketIndex !== -1) {
         matches.push({
-          picksheetIndex: pIdx,
+          picksheetIndex: pGame.index,
           marketIndex: bestMatch.marketIndex,
-          confidence: bestMatch.confidence
+          confidence: bestMatch.confidence,
+          isSwapped: bestMatch.isSwapped
         })
+        usedMarketIndices.add(bestMatch.marketIndex) // Mark as used
       }
     }
 
