@@ -34,18 +34,28 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
               <Link
                 href="/"
                 className={`px-4 py-2 text-sm font-mono rounded transition-colors ${
-                  isActive('/') 
-                    ? 'bg-orange-700 text-black font-bold' 
+                  isActive('/')
+                    ? 'bg-orange-700 text-black font-bold'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
                 }`}
               >
                 DASHBOARD
               </Link>
               <Link
+                href="/predictions"
+                className={`px-4 py-2 text-sm font-mono rounded transition-colors ${
+                  isActive('/predictions')
+                    ? 'bg-orange-700 text-black font-bold'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
+                }`}
+              >
+                PREDICTIONS
+              </Link>
+              <Link
                 href="/control-panel"
                 className={`px-4 py-2 text-sm font-mono rounded transition-colors ${
-                  isActive('/control-panel') 
-                    ? 'bg-orange-700 text-black font-bold' 
+                  isActive('/control-panel')
+                    ? 'bg-orange-700 text-black font-bold'
                     : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
                 }`}
               >
@@ -89,19 +99,30 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
               href="/"
               onClick={() => setShowMobileMenu(false)}
               className={`block px-4 py-2 text-sm font-mono rounded transition-colors mb-1 ${
-                isActive('/') 
-                  ? 'bg-orange-700 text-black font-bold' 
+                isActive('/')
+                  ? 'bg-orange-700 text-black font-bold'
                   : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
               }`}
             >
               DASHBOARD
             </Link>
             <Link
+              href="/predictions"
+              onClick={() => setShowMobileMenu(false)}
+              className={`block px-4 py-2 text-sm font-mono rounded transition-colors mb-1 ${
+                isActive('/predictions')
+                  ? 'bg-orange-700 text-black font-bold'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
+              }`}
+            >
+              PREDICTIONS
+            </Link>
+            <Link
               href="/control-panel"
               onClick={() => setShowMobileMenu(false)}
-              className={`block px-4 py-2 text-sm font-mono rounded transition-colors ${
-                isActive('/control-panel') 
-                  ? 'bg-orange-700 text-black font-bold' 
+              className={`block px-4 py-2 text-sm font-mono rounded transition-colors mb-1 ${
+                isActive('/control-panel')
+                  ? 'bg-orange-700 text-black font-bold'
                   : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
               }`}
             >
@@ -111,7 +132,7 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
               <button
                 onClick={onShare}
                 disabled={sharing}
-                className="block w-full text-left px-4 py-2 text-sm font-mono rounded transition-colors bg-orange-700 text-black font-bold"
+                className="block w-full text-left px-4 py-2 text-sm font-mono rounded transition-colors bg-orange-700 text-black font-bold mt-1"
               >
                 {sharing ? 'SHARING...' : 'SHARE'}
               </button>

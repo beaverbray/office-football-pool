@@ -354,6 +354,85 @@ export interface Database {
           metadata?: Json
         }
       }
+      predictions: {
+        Row: {
+          id: string
+          source: string
+          event_id: string | null
+          game_time: string
+          home_team: string
+          away_team: string
+          predicted_winner: 'home' | 'away'
+          win_probability: number
+          confidence: 'H' | 'M' | 'L'
+          spread: number
+          over_under: number | null
+          scraped_at: string
+          game_date: string
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          source: string
+          event_id?: string | null
+          game_time: string
+          home_team: string
+          away_team: string
+          predicted_winner: 'home' | 'away'
+          win_probability: number
+          confidence: 'H' | 'M' | 'L'
+          spread: number
+          over_under?: number | null
+          scraped_at?: string
+          game_date: string
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          source?: string
+          event_id?: string | null
+          game_time?: string
+          home_team?: string
+          away_team?: string
+          predicted_winner?: 'home' | 'away'
+          win_probability?: number
+          confidence?: 'H' | 'M' | 'L'
+          spread?: number
+          over_under?: number | null
+          scraped_at?: string
+          game_date?: string
+          metadata?: Json
+        }
+      }
+      schedule: {
+        Row: {
+          league: string
+          match_number: number
+          week: number
+          date: string
+          location: string
+          home_team: string
+          away_team: string
+        }
+        Insert: {
+          league: string
+          match_number: number
+          week: number
+          date: string
+          location: string
+          home_team: string
+          away_team: string
+        }
+        Update: {
+          league?: string
+          match_number?: number
+          week?: number
+          date?: string
+          location?: string
+          home_team?: string
+          away_team?: string
+        }
+      }
     }
   }
 }

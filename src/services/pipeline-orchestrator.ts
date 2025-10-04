@@ -2,10 +2,16 @@ import { LLMPicksheetParser } from './llm-picksheet-parser'
 import { getOddsAPI, OddsAPIService } from './odds-api'
 import { EntityResolver } from './entity-resolution'
 import { comparisonEngine, type ComparisonKPIs, type GameComparison } from './comparison-engine'
+import { WarrenNolanScraper } from './warren-nolan-scraper'
+import { ScheduleService } from './schedule-service'
+import { GameMatchingService } from './game-matching-service'
 
 export interface PipelineConfig {
   useOddsAPI?: boolean
   useLLM?: boolean
+  useWarrenNolan?: boolean
+  warrenNolanDate?: string
+  week?: number // Week number for schedule matching
   includeLogs?: boolean
   matchingThreshold?: number
 }
@@ -79,6 +85,7 @@ export class PipelineOrchestrator {
   private logs: string[] = []
   private currentStage: string = 'idle'
   private results: Map<string, PipelineResult> = new Map()
+  private entityCache: Map<string, any> = new Map() // Cache team resolutions
 
   /**
    * Main pipeline execution method
@@ -99,12 +106,36 @@ export class PipelineOrchestrator {
     }
 
     this.log(`Starting pipeline ${pipelineId}`)
-    
+
     try {
-      // Stage 1: Parse picksheet (if text provided)
+      // Stage 0.5: Load schedule first for use in parsing
+      let scheduleGames: any[] = []
+      const weekToLoad = config.week // Use provided week, or could auto-detect
+      if (weekToLoad) {
+        const scheduleResult = await this.loadSchedule(weekToLoad)
+        if (scheduleResult.success && scheduleResult.games) {
+          scheduleGames = scheduleResult.games
+          this.log(`Pre-loaded ${scheduleGames.length} schedule games for week ${weekToLoad} (parsing context)`)
+        } else {
+          this.log('Warning: Failed to pre-load schedule for parsing context')
+        }
+      } else {
+        this.log('No week specified, will try to load schedule after parsing')
+      }
+
+      // Stage 1: Parse picksheet (if text provided) or scrape Warren Nolan
       let picksheetGames = input.picksheetGames
-      if (input.picksheetText && !picksheetGames) {
-        result.parsing = await this.parsePicksheet(input.picksheetText, config.useLLM)
+
+      if (config.useWarrenNolan && !picksheetGames) {
+        result.parsing = await this.scrapeWarrenNolan(config.warrenNolanDate)
+        if (!result.parsing?.success) {
+          result.status = 'failed'
+          result.stage = 'parsing'
+          throw new Error(result.parsing?.error || 'Warren Nolan scraping failed')
+        }
+        picksheetGames = result.parsing?.games
+      } else if (input.picksheetText && !picksheetGames) {
+        result.parsing = await this.parsePicksheet(input.picksheetText, config.useLLM, scheduleGames)
         if (!result.parsing?.success) {
           result.status = 'failed'
           result.stage = 'parsing'
@@ -117,16 +148,41 @@ export class PipelineOrchestrator {
         throw new Error('No picksheet games to process')
       }
 
-      // Stage 2: Retrieve market odds
+      // Stage 2 & 2.5: Retrieve market odds and load schedule in parallel
       let marketGames = input.marketGames
-      if (config.useOddsAPI && !marketGames) {
-        result.oddsRetrieval = await this.retrieveOdds()
-        if (!result.oddsRetrieval?.success) {
-          result.status = 'partial'
-          result.stage = 'odds_retrieval'
-          this.log(`Warning: Odds retrieval failed: ${result.oddsRetrieval?.error || 'Unknown error'}`)
-        } else {
-          marketGames = result.oddsRetrieval?.games
+      const needsOdds = config.useOddsAPI && !marketGames
+      const needsSchedule = scheduleGames.length === 0 && config.week
+
+      if (needsOdds || needsSchedule) {
+        const parallelStart = Date.now()
+        this.log('Running odds retrieval and schedule loading in parallel...')
+        const [oddsResult, scheduleResult] = await Promise.all([
+          needsOdds ? this.retrieveOdds() : Promise.resolve(null),
+          needsSchedule ? this.loadSchedule(config.week) : Promise.resolve(null)
+        ])
+        const parallelTime = Date.now() - parallelStart
+        this.log(`Parallel stage execution completed in ${parallelTime}ms`)
+
+        // Process odds result
+        if (oddsResult) {
+          result.oddsRetrieval = oddsResult
+          if (!oddsResult.success) {
+            result.status = 'partial'
+            result.stage = 'odds_retrieval'
+            this.log(`Warning: Odds retrieval failed: ${oddsResult.error || 'Unknown error'}`)
+          } else {
+            marketGames = oddsResult.games
+          }
+        }
+
+        // Process schedule result
+        if (scheduleResult) {
+          if (scheduleResult.success && scheduleResult.games) {
+            scheduleGames = scheduleResult.games
+            this.log(`Loaded ${scheduleGames.length} schedule games for matching`)
+          } else {
+            this.log('Warning: Failed to load schedule, falling back to direct matching')
+          }
         }
       }
 
@@ -138,9 +194,16 @@ export class PipelineOrchestrator {
       result.matching = await this.matchGames(
         picksheetGames,
         marketGames,
+        scheduleGames,
         config.matchingThreshold
       )
-      
+
+      if (!result.matching) {
+        result.status = 'failed'
+        result.stage = 'matching'
+        throw new Error('Matching failed')
+      }
+
       if (result.matching.matchRate === 0) {
         result.status = 'failed'
         result.stage = 'matching'
@@ -189,23 +252,90 @@ export class PipelineOrchestrator {
       throw error
     } finally {
       this.clearLogs()
-      ;(this as any)._lastMatches = null // Clear stored matches
+      this.clearEntityCache() // Clear cache to free memory
+      ;(this as any)._lastMatches = null // Clear stored matches (legacy)
+      ;(this as any)._scheduleMatches = null // Clear schedule matches
     }
   }
 
   /**
-   * Stage 1: Parse picksheet text
+   * Get cached entity resolution or resolve and cache
+   */
+  private async getCachedEntity(
+    resolver: EntityResolver,
+    teamName: string,
+    league?: 'NFL' | 'NCAAF'
+  ): Promise<any> {
+    const cacheKey = `${teamName}|${league || 'any'}`
+
+    if (this.entityCache.has(cacheKey)) {
+      return this.entityCache.get(cacheKey)
+    }
+
+    const result = await resolver.matchTeam(teamName, league)
+    this.entityCache.set(cacheKey, result)
+    return result
+  }
+
+  /**
+   * Stage 1a: Scrape Warren Nolan predictions
+   */
+  private async scrapeWarrenNolan(
+    date?: string
+  ): Promise<PipelineResult['parsing']> {
+    const startTime = Date.now()
+    this.currentStage = 'scraping'
+    this.log('Starting Warren Nolan scraping')
+
+    try {
+      const result = date
+        ? await WarrenNolanScraper.scrapePredictions(date)
+        : await WarrenNolanScraper.scrapeTodaysPredictions()
+
+      if (!result.success || !result.predictions) {
+        return {
+          success: false,
+          gamesFound: 0,
+          error: result.error || 'Failed to scrape Warren Nolan',
+          duration: Date.now() - startTime
+        }
+      }
+
+      this.log(`Scraped ${result.predictions.length} predictions from Warren Nolan`)
+
+      // Convert to pipeline format
+      const games = WarrenNolanScraper.convertToPipelineFormat(result.predictions)
+
+      return {
+        success: true,
+        gamesFound: games.length,
+        games,
+        duration: Date.now() - startTime
+      }
+    } catch (error) {
+      return {
+        success: false,
+        gamesFound: 0,
+        error: error instanceof Error ? error.message : 'Unknown scraping error',
+        duration: Date.now() - startTime
+      }
+    }
+  }
+
+  /**
+   * Stage 1b: Parse picksheet text
    */
   private async parsePicksheet(
     text: string,
-    useLLM: boolean = true
+    useLLM: boolean = true,
+    scheduleGames?: any[]
   ): Promise<PipelineResult['parsing']> {
     const startTime = Date.now()
     this.currentStage = 'parsing'
     this.log('Starting picksheet parsing')
 
     try {
-      const parsed = await LLMPicksheetParser.parseWithLLM(text)
+      const parsed = await LLMPicksheetParser.parseWithLLM(text, scheduleGames)
 
       if (!parsed || !parsed.games) {
         return {
@@ -302,40 +432,162 @@ export class PipelineOrchestrator {
   }
 
   /**
-   * Stage 3: Match games between sources
+   * Load schedule games for the current week
+   */
+  private async loadSchedule(week?: number): Promise<any> {
+    const startTime = Date.now()
+    this.currentStage = 'schedule_loading'
+    this.log('Loading schedule games...')
+
+    try {
+      const scheduleGames = week
+        ? await ScheduleService.getGamesByWeek(week)
+        : await ScheduleService.getCurrentWeekGames()
+
+      this.log(`Loaded ${scheduleGames.length} games from schedule`)
+
+      return {
+        success: true,
+        gamesFound: scheduleGames.length,
+        games: scheduleGames,
+        duration: Date.now() - startTime
+      }
+    } catch (error) {
+      return {
+        success: false,
+        gamesFound: 0,
+        error: error instanceof Error ? error.message : 'Unknown schedule loading error',
+        duration: Date.now() - startTime
+      }
+    }
+  }
+
+  /**
+   * Stage 3: Match games using schedule as source of truth
    */
   private async matchGames(
     picksheetGames: any[],
     marketGames: any[],
-    threshold: number = 0.4 // Lowered from 0.6 for more lenient matching
-  ): Promise<PipelineResult['matching'] & { matches?: any[] }> {
+    scheduleGames: any[],
+    threshold: number = 0.4
+  ): Promise<PipelineResult['matching']> {
     const startTime = Date.now()
     this.currentStage = 'matching'
-    this.log('Matching games between picksheet and market')
+    this.log('Matching games against schedule...')
+
+    try {
+      if (!scheduleGames || scheduleGames.length === 0) {
+        this.log('No schedule games, falling back to legacy entity resolution matching')
+        return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+      }
+
+      // Match picksheet games to schedule
+      const picksheetMatches = GameMatchingService.matchPicksheetToSchedule(
+        picksheetGames,
+        scheduleGames
+      )
+
+      // Match market games to schedule
+      const marketMatches = GameMatchingService.matchMarketToSchedule(
+        marketGames,
+        scheduleGames
+      )
+
+      // Build matched games array
+      const matches: any[] = []
+      let matchedCount = 0
+
+      scheduleGames.forEach((scheduleGame: any, idx: number) => {
+        const picksheetMatch = picksheetMatches.get(scheduleGame.match_number)
+        const marketMatch = marketMatches.get(scheduleGame.match_number)
+
+        if (picksheetMatch && marketMatch) {
+          matches.push({
+            scheduleGame,
+            picksheetGame: picksheetMatch.game,
+            marketGame: marketMatch.game,
+            confidence: Math.min(picksheetMatch.confidence, marketMatch.confidence)
+          })
+          matchedCount++
+        }
+      })
+
+      // Store matches for comparison stage
+      ;(this as any)._scheduleMatches = matches
+
+      const matchRate = matchedCount / picksheetGames.length
+      this.log(`Matched ${matchedCount} of ${picksheetGames.length} games (${(matchRate * 100).toFixed(1)}%)`)
+
+      return {
+        success: true,
+        matchRate,
+        matches: matchedCount as any,
+        totalGames: picksheetGames.length,
+        duration: Date.now() - startTime
+      }
+    } catch (error) {
+      return {
+        success: false,
+        matchRate: 0,
+        matches: 0 as any,
+        totalGames: picksheetGames.length,
+        error: error instanceof Error ? error.message : 'Unknown matching error',
+        duration: Date.now() - startTime
+      }
+    }
+  }
+
+  /**
+   * Legacy matching: Direct entity resolution between picksheet and market
+   * Fallback when schedule is not available
+   */
+  private async matchGamesLegacy(
+    picksheetGames: any[],
+    marketGames: any[],
+    threshold: number = 0.4
+  ): Promise<PipelineResult['matching']> {
+    const startTime = Date.now()
+    this.log('Using legacy entity resolution matching')
 
     try {
       const resolver = new EntityResolver()
 
-      // PRE-RESOLVE all team names once (O(n+m) instead of O(n*m))
-      // For picksheet games without explicit league, do game-level league detection
-      this.log('Pre-resolving picksheet teams with game-level league detection...')
+      // Collect all unique teams to resolve in one batch
+      const teamsToResolve = new Set<string>()
+      picksheetGames.forEach(game => {
+        teamsToResolve.add(`${game.homeTeam}|any`)
+        teamsToResolve.add(`${game.awayTeam}|any`)
+      })
+      marketGames.forEach(game => {
+        teamsToResolve.add(`${game.homeTeam}|${game.league || 'any'}`)
+        teamsToResolve.add(`${game.awayTeam}|${game.league || 'any'}`)
+      })
+
+      // Resolve all teams in parallel batch
+      const resolutionStart = Date.now()
+      this.log(`Pre-resolving ${teamsToResolve.size} unique teams in parallel...`)
+      await Promise.all(
+        Array.from(teamsToResolve).map(async (key) => {
+          const [teamName, league] = key.split('|')
+          const leagueParam = league === 'any' ? undefined : (league as 'NFL' | 'NCAAF')
+          await this.getCachedEntity(resolver, teamName, leagueParam)
+        })
+      )
+      const resolutionTime = Date.now() - resolutionStart
+      this.log(`Team resolution completed in ${resolutionTime}ms (avg ${(resolutionTime / teamsToResolve.size).toFixed(1)}ms per team)`)
+
+      // Now resolve games using cache (instant lookups)
+      this.log('Resolving picksheet games from cache...')
       const picksheetResolved = await Promise.all(
         picksheetGames.map(async (game, idx) => {
-          // Try to determine league from both team names
-          const homeMatch = await resolver.matchTeam(game.homeTeam)
-          const awayMatch = await resolver.matchTeam(game.awayTeam)
+          const homeMatch = await this.getCachedEntity(resolver, game.homeTeam)
+          const awayMatch = await this.getCachedEntity(resolver, game.awayTeam)
 
-          // If both teams resolved to different leagues, retry with inferred league
+          // Handle league mismatches
           if (homeMatch.league !== awayMatch.league) {
-            // Prefer NFL if either team is clearly NFL
             const inferredLeague = (homeMatch.league === 'NFL' || awayMatch.league === 'NFL') ? 'NFL' : 'NCAAF'
-
-            this.log(`League mismatch detected for ${game.awayTeam} @ ${game.homeTeam}: ` +
-              `Home=${homeMatch.league}, Away=${awayMatch.league}. Inferring: ${inferredLeague}`)
-
-            // Re-resolve with inferred league for consistency
-            const homeMatchFixed = await resolver.matchTeam(game.homeTeam, inferredLeague)
-            const awayMatchFixed = await resolver.matchTeam(game.awayTeam, inferredLeague)
+            const homeMatchFixed = await this.getCachedEntity(resolver, game.homeTeam, inferredLeague)
+            const awayMatchFixed = await this.getCachedEntity(resolver, game.awayTeam, inferredLeague)
 
             return {
               index: idx,
@@ -354,12 +606,12 @@ export class PipelineOrchestrator {
         })
       )
 
-      this.log('Pre-resolving market teams...')
+      this.log('Resolving market games from cache...')
       const marketResolved = await Promise.all(
         marketGames.map(async (game, idx) => ({
           index: idx,
-          homeMatch: await resolver.matchTeam(game.homeTeam, game.league),
-          awayMatch: await resolver.matchTeam(game.awayTeam, game.league),
+          homeMatch: await this.getCachedEntity(resolver, game.homeTeam, game.league),
+          awayMatch: await this.getCachedEntity(resolver, game.awayTeam, game.league),
           original: game,
           league: game.league
         }))
@@ -372,7 +624,7 @@ export class PipelineOrchestrator {
         isSwapped?: boolean
       }> = []
 
-      const usedMarketIndices = new Set<number>() // Prevent duplicate matches
+      const usedMarketIndices = new Set<number>()
 
       for (const pGame of picksheetResolved) {
         let bestMatch = {
@@ -382,18 +634,10 @@ export class PipelineOrchestrator {
         }
 
         for (const mGame of marketResolved) {
-          // Skip if this market game is already matched
           if (usedMarketIndices.has(mGame.index)) {
             continue
           }
 
-          // Optional: Filter by league if both are known to reduce false matches
-          // Uncomment if you want strict league filtering:
-          // if (pGame.homeMatch.league !== mGame.league && pGame.awayMatch.league !== mGame.league) {
-          //   continue
-          // }
-
-          // Check if teams match (normal or swapped)
           const normalMatch =
             pGame.homeMatch.matchedName === mGame.homeMatch.matchedName &&
             pGame.awayMatch.matchedName === mGame.awayMatch.matchedName
@@ -414,7 +658,7 @@ export class PipelineOrchestrator {
               bestMatch = {
                 marketIndex: mGame.index,
                 confidence,
-                isSwapped: swappedMatch // Track if teams were swapped
+                isSwapped: swappedMatch
               }
             }
           }
@@ -427,14 +671,14 @@ export class PipelineOrchestrator {
             confidence: bestMatch.confidence,
             isSwapped: bestMatch.isSwapped
           })
-          usedMarketIndices.add(bestMatch.marketIndex) // Mark as used
+          usedMarketIndices.add(bestMatch.marketIndex)
         }
       }
 
       const matchRate = matches.length / picksheetGames.length
-      this.log(`Matched ${matches.length} of ${picksheetGames.length} games (${(matchRate * 100).toFixed(1)}%)`)
+      this.log(`Legacy matching: ${matches.length} of ${picksheetGames.length} games (${(matchRate * 100).toFixed(1)}%)`)
 
-      // Store matches internally but don't include in result
+      // Store matches for comparison stage
       ;(this as any)._lastMatches = matches
 
       return {
@@ -469,38 +713,140 @@ export class PipelineOrchestrator {
     this.log('Comparing games and calculating KPIs')
 
     try {
-      // Use the internal matches array
-      const matches = (this as any)._lastMatches || []
+      // Use the schedule-based matches
+      const scheduleMatches = (this as any)._scheduleMatches || []
 
-      // Adjust market games for swapped teams
-      const adjustedMarketGames = marketGames.map((game, idx) => {
-        // Find if this game was matched with swapped teams
-        const match = matches.find((m: any) => m.marketIndex === idx)
-        if (match?.isSwapped) {
-          // If teams were swapped, negate the spread and swap team names
+      if (scheduleMatches.length === 0) {
+        // Fallback to old logic if no schedule matches
+        const matches = (this as any)._lastMatches || []
+
+        if (matches.length === 0) {
           return {
-            ...game,
-            homeSpread: -game.homeSpread, // Negate spread for swapped teams
-            homeTeam: game.awayTeam, // Swap teams
-            awayTeam: game.homeTeam
+            success: false,
+            error: 'No matches available for comparison',
+            duration: Date.now() - startTime
           }
         }
-        return game
+
+        // Use legacy comparison logic
+        const adjustedMarketGames = marketGames.map((game, idx) => {
+          const match = matches.find((m: any) => m.marketIndex === idx)
+          if (match?.isSwapped) {
+            return {
+              ...game,
+              homeSpread: -game.homeSpread,
+              homeTeam: game.awayTeam,
+              awayTeam: game.homeTeam
+            }
+          }
+          return game
+        })
+
+        const result = comparisonEngine.compareGames(
+          picksheetGames,
+          adjustedMarketGames,
+          matches
+        )
+
+        this.log(`Calculated KPIs: Avg delta ${result.kpis.avgSpreadDelta}, Key crossings ${result.kpis.keyNumberCrossings}`)
+
+        return {
+          success: true,
+          kpis: result.kpis,
+          comparisons: result.comparisons,
+          unmatched: result.unmatched,
+          duration: Date.now() - startTime
+        }
+      }
+
+      // Build comparison using schedule as reference
+      const comparisons: any[] = scheduleMatches.map((match: any) => {
+        const picksheetSpread = match.picksheetGame.spread
+        const marketSpread = match.marketGame.homeSpread
+        const spreadDelta = picksheetSpread - marketSpread
+
+        // Calculate key number crossings
+        const keyNumbers = [3, 7, 10, 14]
+        const keyNumbersCrossed: number[] = []
+        for (const keyNum of keyNumbers) {
+          if ((picksheetSpread > keyNum && marketSpread < keyNum) ||
+              (picksheetSpread < keyNum && marketSpread > keyNum)) {
+            keyNumbersCrossed.push(keyNum)
+          }
+          if ((picksheetSpread > -keyNum && marketSpread < -keyNum) ||
+              (picksheetSpread < -keyNum && marketSpread > -keyNum)) {
+            keyNumbersCrossed.push(-keyNum)
+          }
+        }
+
+        // Check if favorite flipped
+        const favoriteFlipped = (picksheetSpread > 0 && marketSpread < 0) ||
+                               (picksheetSpread < 0 && marketSpread > 0)
+
+        return {
+          gameId: `${match.scheduleGame.away_team}-${match.scheduleGame.home_team}-${match.scheduleGame.week}`,
+          homeTeam: match.scheduleGame.home_team,
+          awayTeam: match.scheduleGame.away_team,
+          gameTime: match.scheduleGame.date, // Use date field from schedule table
+          league: match.scheduleGame.league,
+          picksheetSpread,
+          marketSpread,
+          spreadDelta,
+          crossesKeyNumber: keyNumbersCrossed.length > 0,
+          keyNumbersCrossed,
+          favoriteFlipped,
+          confidence: match.confidence || 1.0
+        }
       })
 
-      const result = comparisonEngine.compareGames(
-        picksheetGames,
-        adjustedMarketGames,
-        matches
+      // Calculate KPIs
+      const deltas = comparisons.map(c => Math.abs(c.spreadDelta))
+      const sortedDeltas = [...deltas].sort((a, b) => a - b)
+      const medianDelta = sortedDeltas[Math.floor(sortedDeltas.length / 2)] || 0
+      const p95Delta = sortedDeltas[Math.floor(sortedDeltas.length * 0.95)] || 0
+      const avgDelta = deltas.reduce((sum, d) => sum + d, 0) / deltas.length
+      const variance = deltas.reduce((sum, d) => sum + Math.pow(d - avgDelta, 2), 0) / deltas.length
+      const stdDev = Math.sqrt(variance)
+
+      const keyNumberCrossings = comparisons.filter(c => c.crossesKeyNumber).length
+
+      // Calculate favorite flips (when the spread changes the favorite)
+      const favoriteFlips = comparisons.filter(c => c.favoriteFlipped).length
+
+      // Find largest delta
+      const largestComp = comparisons.reduce((max, c) =>
+        Math.abs(c.spreadDelta) > Math.abs(max.spreadDelta) ? c : max,
+        comparisons[0] || { spreadDelta: 0, homeTeam: '', awayTeam: '' }
       )
 
-      this.log(`Calculated KPIs: Avg delta ${result.kpis.avgSpreadDelta}, Key crossings ${result.kpis.keyNumberCrossings}`)
+      const kpis: ComparisonKPIs = {
+        totalGames: picksheetGames.length,
+        matchedGames: comparisons.length,
+        unmatchedGames: picksheetGames.length - comparisons.length,
+        matchRate: comparisons.length / picksheetGames.length,
+        avgSpreadDelta: avgDelta,
+        medianSpreadDelta: medianDelta,
+        p95SpreadDelta: p95Delta,
+        stdDevSpreadDelta: stdDev,
+        keyNumberCrossings: keyNumberCrossings,
+        keyNumberCrossingRate: keyNumberCrossings / comparisons.length,
+        favoriteFlips: favoriteFlips,
+        favoriteFlipRate: favoriteFlips / comparisons.length,
+        largestDelta: comparisons.length > 0 ? {
+          gameId: `${largestComp.homeTeam}-${largestComp.awayTeam}`,
+          teams: `${largestComp.awayTeam} @ ${largestComp.homeTeam}`,
+          delta: Math.abs(largestComp.spreadDelta)
+        } : null,
+        timestamp: new Date().toISOString()
+      }
+
+      this.log(`Calculated KPIs: Avg delta ${kpis.avgSpreadDelta}, Key crossings ${kpis.keyNumberCrossings}`)
 
       return {
         success: true,
-        kpis: result.kpis,
-        comparisons: result.comparisons,
-        unmatched: result.unmatched,
+        kpis,
+        comparisons,
+        unmatched: [],
         duration: Date.now() - startTime
       }
     } catch (error) {
@@ -557,6 +903,17 @@ export class PipelineOrchestrator {
    */
   private clearLogs(): void {
     this.logs = []
+  }
+
+  /**
+   * Clear entity resolution cache
+   */
+  private clearEntityCache(): void {
+    const cacheSize = this.entityCache.size
+    this.entityCache.clear()
+    if (cacheSize > 0) {
+      this.log(`Cleared entity cache (${cacheSize} entries)`)
+    }
   }
 
   /**

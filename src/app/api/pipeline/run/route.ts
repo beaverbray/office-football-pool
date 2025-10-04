@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       textLength: body.picksheetText?.length,
       useOddsAPI: body.useOddsAPI ?? true,
       useLLM: body.useLLM ?? true,
+      week: body.week,
       hasOddsAPIKey: !!(process.env.ODDS_API_KEY || process.env.THE_ODDS_API_KEY),
       hasOpenAIKey: !!process.env.OPENAI_API_KEY
     })
@@ -34,7 +35,8 @@ export async function POST(request: NextRequest) {
         useOddsAPI: body.useOddsAPI ?? true,
         useLLM: body.useLLM ?? true,
         includeLogs: body.includeLogs ?? false,
-        matchingThreshold: body.matchingThreshold ?? 0.4 // Lowered from 0.6
+        matchingThreshold: body.matchingThreshold ?? 0.4, // Lowered from 0.6
+        week: body.week
       }
     )
 

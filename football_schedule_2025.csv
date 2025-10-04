@@ -1,0 +1,1152 @@
+﻿league,match_number,week,date,location,home_team,away_team
+NFL,1,1,9/5/25,Lincoln Financial Field,Philadelphia Eagles,Dallas Cowboys
+NFL,2,1,9/6/25,Arena Corinthians,Los Angeles Chargers,Kansas City Chiefs
+NFL,3,1,9/7/25,Mercedes-Benz Stadium,Atlanta Falcons,Tampa Bay Buccaneers
+NFL,4,1,9/7/25,Huntington Bank Field,Cleveland Browns,Cincinnati Bengals
+NFL,5,1,9/7/25,Lucas Oil Stadium,Indianapolis Colts,Miami Dolphins
+NFL,6,1,9/7/25,EverBank Stadium,Jacksonville Jaguars,Carolina Panthers
+NFL,7,1,9/7/25,Gillette Stadium,New England Patriots,Las Vegas Raiders
+NFL,8,1,9/7/25,Caesars Superdome,New Orleans Saints,Arizona Cardinals
+NFL,9,1,9/7/25,MetLife Stadium,New York Jets,Pittsburgh Steelers
+NFL,10,1,9/7/25,Northwest Stadium,Washington Commanders,New York Giants
+NFL,11,1,9/7/25,Empower Field at Mile High,Denver Broncos,Tennessee Titans
+NFL,12,1,9/7/25,Lumen Field,Seattle Seahawks,San Francisco 49ers
+NFL,13,1,9/7/25,Lambeau Field,Green Bay Packers,Detroit Lions
+NFL,14,1,9/7/25,SoFi Stadium,Los Angeles Rams,Houston Texans
+NFL,15,1,9/8/25,Highmark Stadium,Buffalo Bills,Baltimore Ravens
+NFL,16,1,9/9/25,Soldier Field,Chicago Bears,Minnesota Vikings
+NFL,17,2,9/12/25,Lambeau Field,Green Bay Packers,Washington Commanders
+NFL,18,2,9/14/25,M&T Bank Stadium,Baltimore Ravens,Cleveland Browns
+NFL,19,2,9/14/25,Paycor Stadium,Cincinnati Bengals,Jacksonville Jaguars
+NFL,20,2,9/14/25,AT&T Stadium,Dallas Cowboys,New York Giants
+NFL,21,2,9/14/25,Ford Field,Detroit Lions,Chicago Bears
+NFL,22,2,9/14/25,Hard Rock Stadium,Miami Dolphins,New England Patriots
+NFL,23,2,9/14/25,Caesars Superdome,New Orleans Saints,San Francisco 49ers
+NFL,24,2,9/14/25,MetLife Stadium,New York Jets,Buffalo Bills
+NFL,25,2,9/14/25,Acrisure Stadium,Pittsburgh Steelers,Seattle Seahawks
+NFL,26,2,9/14/25,Nissan Stadium,Tennessee Titans,Los Angeles Rams
+NFL,27,2,9/14/25,State Farm Stadium,Arizona Cardinals,Carolina Panthers
+NFL,28,2,9/14/25,Lucas Oil Stadium,Indianapolis Colts,Denver Broncos
+NFL,29,2,9/14/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Philadelphia Eagles
+NFL,30,2,9/15/25,U.S. Bank Stadium,Minnesota Vikings,Atlanta Falcons
+NFL,31,2,9/15/25,NRG Stadium,Houston Texans,Tampa Bay Buccaneers
+NFL,32,2,9/16/25,Allegiant Stadium,Las Vegas Raiders,Los Angeles Chargers
+NFL,33,3,9/19/25,Highmark Stadium,Buffalo Bills,Miami Dolphins
+NFL,34,3,9/21/25,Bank of America Stadium,Carolina Panthers,Atlanta Falcons
+NFL,35,3,9/21/25,Huntington Bank Field,Cleveland Browns,Green Bay Packers
+NFL,36,3,9/21/25,EverBank Stadium,Jacksonville Jaguars,Houston Texans
+NFL,37,3,9/21/25,U.S. Bank Stadium,Minnesota Vikings,Cincinnati Bengals
+NFL,38,3,9/21/25,Gillette Stadium,New England Patriots,Pittsburgh Steelers
+NFL,39,3,9/21/25,Lincoln Financial Field,Philadelphia Eagles,Los Angeles Rams
+NFL,40,3,9/21/25,Raymond James Stadium,Tampa Bay Buccaneers,New York Jets
+NFL,41,3,9/21/25,Nissan Stadium,Tennessee Titans,Indianapolis Colts
+NFL,42,3,9/21/25,Northwest Stadium,Washington Commanders,Las Vegas Raiders
+NFL,43,3,9/21/25,SoFi Stadium,Los Angeles Chargers,Denver Broncos
+NFL,44,3,9/21/25,Lumen Field,Seattle Seahawks,New Orleans Saints
+NFL,45,3,9/21/25,Soldier Field,Chicago Bears,Dallas Cowboys
+NFL,46,3,9/21/25,Levi's Stadium,San Francisco 49ers,Arizona Cardinals
+NFL,47,3,9/22/25,MetLife Stadium,New York Giants,Kansas City Chiefs
+NFL,48,3,9/23/25,M&T Bank Stadium,Baltimore Ravens,Detroit Lions
+NFL,49,4,9/26/25,State Farm Stadium,Arizona Cardinals,Seattle Seahawks
+NFL,50,4,9/28/25,Croke Park,Pittsburgh Steelers,Minnesota Vikings
+NFL,51,4,9/28/25,Mercedes-Benz Stadium,Atlanta Falcons,Washington Commanders
+NFL,52,4,9/28/25,Highmark Stadium,Buffalo Bills,New Orleans Saints
+NFL,53,4,9/28/25,Ford Field,Detroit Lions,Cleveland Browns
+NFL,54,4,9/28/25,NRG Stadium,Houston Texans,Tennessee Titans
+NFL,55,4,9/28/25,Gillette Stadium,New England Patriots,Carolina Panthers
+NFL,56,4,9/28/25,MetLife Stadium,New York Giants,Los Angeles Chargers
+NFL,57,4,9/28/25,Raymond James Stadium,Tampa Bay Buccaneers,Philadelphia Eagles
+NFL,58,4,9/28/25,SoFi Stadium,Los Angeles Rams,Indianapolis Colts
+NFL,59,4,9/28/25,Levi's Stadium,San Francisco 49ers,Jacksonville Jaguars
+NFL,60,4,9/28/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Baltimore Ravens
+NFL,61,4,9/28/25,Allegiant Stadium,Las Vegas Raiders,Chicago Bears
+NFL,62,4,9/29/25,AT&T Stadium,Dallas Cowboys,Green Bay Packers
+NFL,63,4,9/29/25,Hard Rock Stadium,Miami Dolphins,New York Jets
+NFL,64,4,9/30/25,Empower Field at Mile High,Denver Broncos,Cincinnati Bengals
+NFL,65,5,10/3/25,SoFi Stadium,Los Angeles Rams,San Francisco 49ers
+NFL,66,5,10/5/25,Tottenham Hotspur Stadium,Cleveland Browns,Minnesota Vikings
+NFL,67,5,10/5/25,M&T Bank Stadium,Baltimore Ravens,Houston Texans
+NFL,68,5,10/5/25,Bank of America Stadium,Carolina Panthers,Miami Dolphins
+NFL,69,5,10/5/25,Lucas Oil Stadium,Indianapolis Colts,Las Vegas Raiders
+NFL,70,5,10/5/25,Caesars Superdome,New Orleans Saints,New York Giants
+NFL,71,5,10/5/25,MetLife Stadium,New York Jets,Dallas Cowboys
+NFL,72,5,10/5/25,Lincoln Financial Field,Philadelphia Eagles,Denver Broncos
+NFL,73,5,10/5/25,State Farm Stadium,Arizona Cardinals,Tennessee Titans
+NFL,74,5,10/5/25,Lumen Field,Seattle Seahawks,Tampa Bay Buccaneers
+NFL,75,5,10/5/25,Paycor Stadium,Cincinnati Bengals,Detroit Lions
+NFL,76,5,10/5/25,SoFi Stadium,Los Angeles Chargers,Washington Commanders
+NFL,77,5,10/6/25,Highmark Stadium,Buffalo Bills,New England Patriots
+NFL,78,5,10/7/25,EverBank Stadium,Jacksonville Jaguars,Kansas City Chiefs
+NFL,79,6,10/10/25,MetLife Stadium,New York Giants,Philadelphia Eagles
+NFL,80,6,10/12/25,Tottenham Hotspur Stadium,New York Jets,Denver Broncos
+NFL,81,6,10/12/25,M&T Bank Stadium,Baltimore Ravens,Los Angeles Rams
+NFL,82,6,10/12/25,Bank of America Stadium,Carolina Panthers,Dallas Cowboys
+NFL,83,6,10/12/25,Lucas Oil Stadium,Indianapolis Colts,Arizona Cardinals
+NFL,84,6,10/12/25,EverBank Stadium,Jacksonville Jaguars,Seattle Seahawks
+NFL,85,6,10/12/25,Hard Rock Stadium,Miami Dolphins,Los Angeles Chargers
+NFL,86,6,10/12/25,Acrisure Stadium,Pittsburgh Steelers,Cleveland Browns
+NFL,90,6,10/12/25,Caesars Superdome,New Orleans Saints,New England Patriots
+NFL,88,6,10/12/25,Allegiant Stadium,Las Vegas Raiders,Tennessee Titans
+NFL,87,6,10/12/25,Raymond James Stadium,Tampa Bay Buccaneers,San Francisco 49ers
+NFL,89,6,10/12/25,Lambeau Field,Green Bay Packers,Cincinnati Bengals
+NFL,91,6,10/13/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Detroit Lions
+NFL,92,6,10/13/25,Mercedes-Benz Stadium,Atlanta Falcons,Buffalo Bills
+NFL,93,6,10/14/25,Northwest Stadium,Washington Commanders,Chicago Bears
+NFL,94,7,10/17/25,Paycor Stadium,Cincinnati Bengals,Pittsburgh Steelers
+NFL,95,7,10/19/25,Wembley Stadium,Jacksonville Jaguars,Los Angeles Rams
+NFL,96,7,10/19/25,Soldier Field,Chicago Bears,New Orleans Saints
+NFL,97,7,10/19/25,Huntington Bank Field,Cleveland Browns,Miami Dolphins
+NFL,98,7,10/19/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Las Vegas Raiders
+NFL,99,7,10/19/25,U.S. Bank Stadium,Minnesota Vikings,Philadelphia Eagles
+NFL,100,7,10/19/25,MetLife Stadium,New York Jets,Carolina Panthers
+NFL,101,7,10/19/25,Nissan Stadium,Tennessee Titans,New England Patriots
+NFL,102,7,10/19/25,Empower Field at Mile High,Denver Broncos,New York Giants
+NFL,103,7,10/19/25,SoFi Stadium,Los Angeles Chargers,Indianapolis Colts
+NFL,104,7,10/19/25,State Farm Stadium,Arizona Cardinals,Green Bay Packers
+NFL,105,7,10/19/25,AT&T Stadium,Dallas Cowboys,Washington Commanders
+NFL,106,7,10/20/25,Levi's Stadium,San Francisco 49ers,Atlanta Falcons
+NFL,107,7,10/20/25,Ford Field,Detroit Lions,Tampa Bay Buccaneers
+NFL,108,7,10/21/25,Lumen Field,Seattle Seahawks,Houston Texans
+NFL,109,8,10/24/25,SoFi Stadium,Los Angeles Chargers,Minnesota Vikings
+NFL,110,8,10/26/25,Mercedes-Benz Stadium,Atlanta Falcons,Miami Dolphins
+NFL,111,8,10/26/25,M&T Bank Stadium,Baltimore Ravens,Chicago Bears
+NFL,112,8,10/26/25,Bank of America Stadium,Carolina Panthers,Buffalo Bills
+NFL,113,8,10/26/25,Paycor Stadium,Cincinnati Bengals,New York Jets
+NFL,114,8,10/26/25,NRG Stadium,Houston Texans,San Francisco 49ers
+NFL,115,8,10/26/25,Gillette Stadium,New England Patriots,Cleveland Browns
+NFL,116,8,10/26/25,Lincoln Financial Field,Philadelphia Eagles,New York Giants
+NFL,117,8,10/26/25,Caesars Superdome,New Orleans Saints,Tampa Bay Buccaneers
+NFL,118,8,10/26/25,Empower Field at Mile High,Denver Broncos,Dallas Cowboys
+NFL,119,8,10/26/25,Lucas Oil Stadium,Indianapolis Colts,Tennessee Titans
+NFL,120,8,10/27/25,Acrisure Stadium,Pittsburgh Steelers,Green Bay Packers
+NFL,121,8,10/28/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Washington Commanders
+NFL,122,9,10/31/25,Hard Rock Stadium,Miami Dolphins,Baltimore Ravens
+NFL,123,9,11/2/25,Paycor Stadium,Cincinnati Bengals,Chicago Bears
+NFL,124,9,11/2/25,Ford Field,Detroit Lions,Minnesota Vikings
+NFL,125,9,11/2/25,Lambeau Field,Green Bay Packers,Carolina Panthers
+NFL,126,9,11/2/25,NRG Stadium,Houston Texans,Denver Broncos
+NFL,127,9,11/2/25,Gillette Stadium,New England Patriots,Atlanta Falcons
+NFL,128,9,11/2/25,MetLife Stadium,New York Giants,San Francisco 49ers
+NFL,129,9,11/2/25,Acrisure Stadium,Pittsburgh Steelers,Indianapolis Colts
+NFL,130,9,11/2/25,Nissan Stadium,Tennessee Titans,Los Angeles Chargers
+NFL,131,9,11/2/25,SoFi Stadium,Los Angeles Rams,New Orleans Saints
+NFL,132,9,11/2/25,Allegiant Stadium,Las Vegas Raiders,Jacksonville Jaguars
+NFL,133,9,11/2/25,Highmark Stadium,Buffalo Bills,Kansas City Chiefs
+NFL,134,9,11/3/25,Northwest Stadium,Washington Commanders,Seattle Seahawks
+NFL,135,9,11/4/25,AT&T Stadium,Dallas Cowboys,Arizona Cardinals
+NFL,136,10,11/7/25,Empower Field at Mile High,Denver Broncos,Las Vegas Raiders
+NFL,137,10,11/9/25,Olympic Stadium,Indianapolis Colts,Atlanta Falcons
+NFL,138,10,11/9/25,Bank of America Stadium,Carolina Panthers,New Orleans Saints
+NFL,139,10,11/9/25,Soldier Field,Chicago Bears,New York Giants
+NFL,140,10,11/9/25,NRG Stadium,Houston Texans,Jacksonville Jaguars
+NFL,141,10,11/9/25,Hard Rock Stadium,Miami Dolphins,Buffalo Bills
+NFL,142,10,11/9/25,U.S. Bank Stadium,Minnesota Vikings,Baltimore Ravens
+NFL,143,10,11/9/25,MetLife Stadium,New York Jets,Cleveland Browns
+NFL,144,10,11/9/25,Raymond James Stadium,Tampa Bay Buccaneers,New England Patriots
+NFL,145,10,11/9/25,Lumen Field,Seattle Seahawks,Arizona Cardinals
+NFL,146,10,11/9/25,Levi's Stadium,San Francisco 49ers,Los Angeles Rams
+NFL,147,10,11/9/25,Northwest Stadium,Washington Commanders,Detroit Lions
+NFL,148,10,11/10/25,SoFi Stadium,Los Angeles Chargers,Pittsburgh Steelers
+NFL,149,10,11/11/25,Lambeau Field,Green Bay Packers,Philadelphia Eagles
+NFL,150,11,11/14/25,Gillette Stadium,New England Patriots,New York Jets
+NFL,151,11,11/16/25,Santiago Bernabeu Stadium,Miami Dolphins,Washington Commanders
+NFL,152,11,11/16/25,Mercedes-Benz Stadium,Atlanta Falcons,Carolina Panthers
+NFL,153,11,11/16/25,Highmark Stadium,Buffalo Bills,Tampa Bay Buccaneers
+NFL,154,11,11/16/25,EverBank Stadium,Jacksonville Jaguars,Los Angeles Chargers
+NFL,155,11,11/16/25,U.S. Bank Stadium,Minnesota Vikings,Chicago Bears
+NFL,156,11,11/16/25,MetLife Stadium,New York Giants,Green Bay Packers
+NFL,157,11,11/16/25,Acrisure Stadium,Pittsburgh Steelers,Cincinnati Bengals
+NFL,158,11,11/16/25,Nissan Stadium,Tennessee Titans,Houston Texans
+NFL,159,11,11/16/25,State Farm Stadium,Arizona Cardinals,San Francisco 49ers
+NFL,160,11,11/16/25,SoFi Stadium,Los Angeles Rams,Seattle Seahawks
+NFL,161,11,11/16/25,Huntington Bank Field,Cleveland Browns,Baltimore Ravens
+NFL,162,11,11/16/25,Empower Field at Mile High,Denver Broncos,Kansas City Chiefs
+NFL,163,11,11/17/25,Lincoln Financial Field,Philadelphia Eagles,Detroit Lions
+NFL,164,11,11/18/25,Allegiant Stadium,Las Vegas Raiders,Dallas Cowboys
+NFL,165,12,11/21/25,NRG Stadium,Houston Texans,Buffalo Bills
+NFL,166,12,11/23/25,M&T Bank Stadium,Baltimore Ravens,New York Jets
+NFL,167,12,11/23/25,Soldier Field,Chicago Bears,Pittsburgh Steelers
+NFL,168,12,11/23/25,Paycor Stadium,Cincinnati Bengals,New England Patriots
+NFL,169,12,11/23/25,Ford Field,Detroit Lions,New York Giants
+NFL,170,12,11/23/25,Lambeau Field,Green Bay Packers,Minnesota Vikings
+NFL,171,12,11/23/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Indianapolis Colts
+NFL,172,12,11/23/25,Nissan Stadium,Tennessee Titans,Seattle Seahawks
+NFL,173,12,11/23/25,State Farm Stadium,Arizona Cardinals,Jacksonville Jaguars
+NFL,174,12,11/23/25,Allegiant Stadium,Las Vegas Raiders,Cleveland Browns
+NFL,175,12,11/23/25,AT&T Stadium,Dallas Cowboys,Philadelphia Eagles
+NFL,176,12,11/23/25,Caesars Superdome,New Orleans Saints,Atlanta Falcons
+NFL,177,12,11/24/25,SoFi Stadium,Los Angeles Rams,Tampa Bay Buccaneers
+NFL,178,12,11/25/25,Levi's Stadium,San Francisco 49ers,Carolina Panthers
+NFL,179,13,11/27/25,Ford Field,Detroit Lions,Green Bay Packers
+NFL,180,13,11/27/25,AT&T Stadium,Dallas Cowboys,Kansas City Chiefs
+NFL,181,13,11/28/25,M&T Bank Stadium,Baltimore Ravens,Cincinnati Bengals
+NFL,182,13,11/28/25,Lincoln Financial Field,Philadelphia Eagles,Chicago Bears
+NFL,183,13,11/30/25,Bank of America Stadium,Carolina Panthers,Los Angeles Rams
+NFL,184,13,11/30/25,Huntington Bank Field,Cleveland Browns,San Francisco 49ers
+NFL,185,13,11/30/25,Lucas Oil Stadium,Indianapolis Colts,Houston Texans
+NFL,186,13,11/30/25,Hard Rock Stadium,Miami Dolphins,New Orleans Saints
+NFL,187,13,11/30/25,MetLife Stadium,New York Jets,Atlanta Falcons
+NFL,188,13,11/30/25,Raymond James Stadium,Tampa Bay Buccaneers,Arizona Cardinals
+NFL,189,13,11/30/25,Nissan Stadium,Tennessee Titans,Jacksonville Jaguars
+NFL,190,13,11/30/25,Lumen Field,Seattle Seahawks,Minnesota Vikings
+NFL,191,13,11/30/25,SoFi Stadium,Los Angeles Chargers,Las Vegas Raiders
+NFL,192,13,11/30/25,Acrisure Stadium,Pittsburgh Steelers,Buffalo Bills
+NFL,193,13,12/1/25,Northwest Stadium,Washington Commanders,Denver Broncos
+NFL,194,13,12/2/25,Gillette Stadium,New England Patriots,New York Giants
+NFL,195,14,12/5/25,Ford Field,Detroit Lions,Dallas Cowboys
+NFL,196,14,12/7/25,Mercedes-Benz Stadium,Atlanta Falcons,Seattle Seahawks
+NFL,197,14,12/7/25,M&T Bank Stadium,Baltimore Ravens,Pittsburgh Steelers
+NFL,198,14,12/7/25,Huntington Bank Field,Cleveland Browns,Tennessee Titans
+NFL,199,14,12/7/25,Lambeau Field,Green Bay Packers,Chicago Bears
+NFL,200,14,12/7/25,EverBank Stadium,Jacksonville Jaguars,Indianapolis Colts
+NFL,201,14,12/7/25,U.S. Bank Stadium,Minnesota Vikings,Washington Commanders
+NFL,202,14,12/7/25,MetLife Stadium,New York Jets,Miami Dolphins
+NFL,203,14,12/7/25,Raymond James Stadium,Tampa Bay Buccaneers,New Orleans Saints
+NFL,204,14,12/7/25,Allegiant Stadium,Las Vegas Raiders,Denver Broncos
+NFL,205,14,12/7/25,State Farm Stadium,Arizona Cardinals,Los Angeles Rams
+NFL,206,14,12/7/25,Highmark Stadium,Buffalo Bills,Cincinnati Bengals
+NFL,207,14,12/8/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Houston Texans
+NFL,208,14,12/9/25,SoFi Stadium,Los Angeles Chargers,Philadelphia Eagles
+NFL,209,15,12/12/25,Raymond James Stadium,Tampa Bay Buccaneers,Atlanta Falcons
+NFL,210,15,12/14/25,Soldier Field,Chicago Bears,Cleveland Browns
+NFL,211,15,12/14/25,Paycor Stadium,Cincinnati Bengals,Baltimore Ravens
+NFL,212,15,12/14/25,NRG Stadium,Houston Texans,Arizona Cardinals
+NFL,213,15,12/14/25,EverBank Stadium,Jacksonville Jaguars,New York Jets
+NFL,214,15,12/14/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Los Angeles Chargers
+NFL,215,15,12/14/25,Gillette Stadium,New England Patriots,Buffalo Bills
+NFL,216,15,12/14/25,MetLife Stadium,New York Giants,Washington Commanders
+NFL,217,15,12/14/25,Lincoln Financial Field,Philadelphia Eagles,Las Vegas Raiders
+NFL,218,15,12/14/25,Empower Field at Mile High,Denver Broncos,Green Bay Packers
+NFL,219,15,12/14/25,SoFi Stadium,Los Angeles Rams,Detroit Lions
+NFL,220,15,12/14/25,Caesars Superdome,New Orleans Saints,Carolina Panthers
+NFL,221,15,12/14/25,Lumen Field,Seattle Seahawks,Indianapolis Colts
+NFL,222,15,12/14/25,Levi's Stadium,San Francisco 49ers,Tennessee Titans
+NFL,223,15,12/15/25,AT&T Stadium,Dallas Cowboys,Minnesota Vikings
+NFL,224,15,12/16/25,Acrisure Stadium,Pittsburgh Steelers,Miami Dolphins
+NFL,225,16,12/19/25,Lumen Field,Seattle Seahawks,Los Angeles Rams
+NFL,228,16,12/21/25,M&T Bank Stadium,Baltimore Ravens,New England Patriots
+NFL,229,16,12/21/25,Bank of America Stadium,Carolina Panthers,Tampa Bay Buccaneers
+NFL,230,16,12/21/25,Huntington Bank Field,Cleveland Browns,Buffalo Bills
+NFL,231,16,12/21/25,AT&T Stadium,Dallas Cowboys,Los Angeles Chargers
+NFL,232,16,12/21/25,Caesars Superdome,New Orleans Saints,New York Jets
+NFL,233,16,12/21/25,MetLife Stadium,New York Giants,Minnesota Vikings
+NFL,234,16,12/21/25,Nissan Stadium,Tennessee Titans,Kansas City Chiefs
+NFL,235,16,12/21/25,State Farm Stadium,Arizona Cardinals,Atlanta Falcons
+NFL,236,16,12/21/25,Empower Field at Mile High,Denver Broncos,Jacksonville Jaguars
+NFL,237,16,12/21/25,Ford Field,Detroit Lions,Pittsburgh Steelers
+NFL,238,16,12/21/25,NRG Stadium,Houston Texans,Las Vegas Raiders
+NFL,226,16,12/22/25,Soldier Field,Chicago Bears,Green Bay Packers
+NFL,227,16,12/22/25,Northwest Stadium,Washington Commanders,Philadelphia Eagles
+NFL,239,16,12/22/25,Hard Rock Stadium,Miami Dolphins,Cincinnati Bengals
+NFL,240,16,12/23/25,Lucas Oil Stadium,Indianapolis Colts,San Francisco 49ers
+NFL,241,17,12/25/25,Northwest Stadium,Washington Commanders,Dallas Cowboys
+NFL,242,17,12/25/25,U.S. Bank Stadium,Minnesota Vikings,Detroit Lions
+NFL,243,17,12/26/25,GEHA Field at Arrowhead Stadium,Kansas City Chiefs,Denver Broncos
+NFL,244,17,12/28/25,Huntington Bank Field,Cleveland Browns,Pittsburgh Steelers
+NFL,245,17,12/28/25,Lucas Oil Stadium,Indianapolis Colts,Jacksonville Jaguars
+NFL,246,17,12/28/25,Hard Rock Stadium,Miami Dolphins,Tampa Bay Buccaneers
+NFL,247,17,12/28/25,MetLife Stadium,New York Jets,New England Patriots
+NFL,248,17,12/28/25,Nissan Stadium,Tennessee Titans,New Orleans Saints
+NFL,249,17,12/28/25,Highmark Stadium,Buffalo Bills,Philadelphia Eagles
+NFL,250,17,12/29/25,Levi's Stadium,San Francisco 49ers,Chicago Bears
+NFL,252,17,12/30/25,Bank of America Stadium,Carolina Panthers,Seattle Seahawks
+NFL,253,17,12/30/25,Paycor Stadium,Cincinnati Bengals,Arizona Cardinals
+NFL,254,17,12/30/25,Lambeau Field,Green Bay Packers,Baltimore Ravens
+NFL,255,17,12/30/25,SoFi Stadium,Los Angeles Chargers,Houston Texans
+NFL,256,17,12/30/25,Allegiant Stadium,Las Vegas Raiders,New York Giants
+NFL,251,17,12/30/25,Mercedes-Benz Stadium,Atlanta Falcons,Los Angeles Rams
+NFL,257,18,1/5/26,Mercedes-Benz Stadium,Atlanta Falcons,New Orleans Saints
+NFL,258,18,1/5/26,Highmark Stadium,Buffalo Bills,New York Jets
+NFL,259,18,1/5/26,Soldier Field,Chicago Bears,Detroit Lions
+NFL,260,18,1/5/26,Paycor Stadium,Cincinnati Bengals,Cleveland Browns
+NFL,261,18,1/5/26,Empower Field at Mile High,Denver Broncos,Los Angeles Chargers
+NFL,262,18,1/5/26,NRG Stadium,Houston Texans,Indianapolis Colts
+NFL,263,18,1/5/26,EverBank Stadium,Jacksonville Jaguars,Tennessee Titans
+NFL,264,18,1/5/26,SoFi Stadium,Los Angeles Rams,Arizona Cardinals
+NFL,265,18,1/5/26,Allegiant Stadium,Las Vegas Raiders,Kansas City Chiefs
+NFL,266,18,1/5/26,U.S. Bank Stadium,Minnesota Vikings,Green Bay Packers
+NFL,267,18,1/5/26,Gillette Stadium,New England Patriots,Miami Dolphins
+NFL,268,18,1/5/26,MetLife Stadium,New York Giants,Dallas Cowboys
+NFL,269,18,1/5/26,Lincoln Financial Field,Philadelphia Eagles,Washington Commanders
+NFL,270,18,1/5/26,Acrisure Stadium,Pittsburgh Steelers,Baltimore Ravens
+NFL,271,18,1/5/26,Levi's Stadium,San Francisco 49ers,Seattle Seahawks
+NFL,272,18,1/5/26,Raymond James Stadium,Tampa Bay Buccaneers,Carolina Panthers
+NCAA,273,-1,8/23/25,NA,Hawaii,Stanford
+NCAA,274,-1,8/23/25,NA, Iowa State, Kansas State
+NCAA,275,-1,8/23/25,NA,Kansas,Fresno State
+NCAA,276,-1,8/23/25,NA,Nevada-Las Vegas,Idaho State
+NCAA,277,-1,8/23/25,NA,Western Kentucky,Sam Houston
+NCAA,278,0,8/28/25,NA,Alabama-Birmingham,Alabama State
+NCAA,279,0,8/28/25,NA,Bowling Green,Lafayette
+NCAA,280,0,8/28/25,NA,Central Florida,Jacksonville State
+NCAA,281,0,8/28/25,NA,Delaware,Delaware State
+NCAA,282,0,8/28/25,NA,Duke,Elon
+NCAA,283,0,8/28/25,NA,Houston,Stephen F. Austin
+NCAA,284,0,8/28/25,NA,Louisiana-Monroe,St. Francis (PA)
+NCAA,285,0,8/28/25,NA,Minnesota,Buffalo
+NCAA,286,0,8/28/25,NA,Missouri,Central Arkansas
+NCAA,287,0,8/28/25,NA,Nebraska,Cincinnati
+NCAA,288,0,8/28/25,NA,North Carolina State,East Carolina
+NCAA,289,0,8/28/25,NA,Oklahoma State,Tennessee-Martin
+NCAA,290,0,8/28/25,NA,Rutgers,Ohio
+NCAA,291,0,8/28/25,NA,San Diego State,Stony Brook
+NCAA,292,0,8/28/25,NA,South Florida, Boise State
+NCAA,293,0,8/28/25,NA,Wisconsin,Miami (OH)
+NCAA,294,0,8/28/25,NA,Akron,Wyoming
+NCAA,295,0,8/29/25,NA,Charlotte,Appalachian State
+NCAA,296,0,8/29/25,NA,Baylor,Auburn
+NCAA,297,0,8/29/25,NA,San Jose State,Central Michigan
+NCAA,298,0,8/29/25,NA,Florida International,Bethune-Cookman
+NCAA,299,0,8/29/25,NA,Colorado,Georgia Tech
+NCAA,300,0,8/29/25,NA, Illinois,Western Illinois
+NCAA,301,0,8/29/25,NA,Kansas,Wagner
+NCAA,302,0,8/29/25,NA,Michigan State,Western Michigan
+NCAA,303,0,8/29/25,NA,Sam Houston,Nevada-Las Vegas
+NCAA,304,0,8/29/25,NA,Army,Tarleton State
+NCAA,305,0,8/29/25,NA,Wake Forest,Kennesaw State
+NCAA,306,0,8/30/25,NA,Air Force,Bucknell
+NCAA,307,0,8/30/25,NA,Arizona,Hawaii
+NCAA,308,0,8/30/25,NA, Arizona State,Northern Arizona
+NCAA,309,0,8/30/25,NA,Arkansas,Alabama A&M
+NCAA,310,0,8/30/25,NA,Arkansas State,Southeast Missouri State
+NCAA,311,0,8/30/25,NA,Middle Tennessee State,Austin Peay
+NCAA,312,0,8/30/25,NA,Boston College,Fordham
+NCAA,313,0,8/30/25,NA,Brigham Young,Portland State
+NCAA,314,0,8/30/25,NA,Oregon State,California
+NCAA,315,0,8/30/25,NA,Connecticut,Central Connecticut State
+NCAA,316,0,8/30/25,NA, Florida,Long Island
+NCAA,317,0,8/30/25,NA,Florida State,Alabama
+NCAA,318,0,8/30/25,NA,Fresno State,Georgia Southern
+NCAA,319,0,8/30/25,NA,Georgia,Marshall
+NCAA,320,0,8/30/25,NA, Indiana,Old Dominion
+NCAA,321,0,8/30/25,NA,Iowa,Albany
+NCAA,322,0,8/30/25,NA, Iowa State,South Dakota
+NCAA,323,0,8/30/25,NA,James Madison,Weber State
+NCAA,324,0,8/30/25,NA, Kansas State,North Dakota
+NCAA,325,0,8/30/25,NA,Kent State,Merrimack
+NCAA,326,0,8/30/25,NA,Kentucky,Toledo
+NCAA,327,0,8/30/25,NA,Liberty,Maine
+NCAA,328,0,8/30/25,NA, Clemson,Louisiana State
+NCAA,329,0,8/30/25,NA,Louisiana Tech,Southeastern Louisiana
+NCAA,330,0,8/30/25,NA,Louisville,Eastern Kentucky
+NCAA,331,0,8/30/25,NA,Maryland,Florida Atlantic
+NCAA,332,0,8/30/25,NA,Memphis,Chattanooga
+NCAA,333,0,8/30/25,NA, Michigan,New Mexico
+NCAA,334,0,8/30/25,NA, Mississippi,Georgia State
+NCAA,335,0,8/30/25,NA,Southern Mississippi,Mississippi State
+NCAA,336,0,8/30/25,NA,Navy,Virginia Military Institute
+NCAA,337,0,8/30/25,NA,New Mexico State,Bryant
+NCAA,338,0,8/30/25,NA,North Texas,Lamar
+NCAA,339,0,8/30/25,NA,Northern Illinois,Holy Cross
+NCAA,340,0,8/30/25,NA,Ohio State,Texas
+NCAA,341,0,8/30/25,NA, Oklahoma,Illinois State
+NCAA,342,0,8/30/25,NA,Oregon,Montana State
+NCAA,343,0,8/30/25,NA,Penn State,Nevada
+NCAA,344,0,8/30/25,NA,Pittsburgh,Duquesne
+NCAA,345,0,8/30/25,NA,Purdue,Ball State
+NCAA,346,0,8/30/25,NA,Louisiana,Rice
+NCAA,347,0,8/30/25,NA,South Alabama,Morgan State
+NCAA,348,0,8/30/25,NA,Southern California,Missouri State
+NCAA,349,0,8/30/25,NA, Southern Methodist,East Texas A&M
+NCAA,350,0,8/30/25,NA,Massachusetts,Temple
+NCAA,351,0,8/30/25,NA, Tennessee,Syracuse
+NCAA,352,0,8/30/25,NA, Texas A&M,Texas-San Antonio
+NCAA,353,0,8/30/25,NA,Texas State,Eastern Michigan
+NCAA,354,0,8/30/25,NA, Texas Tech,Arkansas-Pine Bluff
+NCAA,355,0,8/30/25,NA,Troy,Nicholls State
+NCAA,356,0,8/30/25,NA,Tulane,Northwestern
+NCAA,357,0,8/30/25,NA,Tulsa,Abilene Christian
+NCAA,358,0,8/30/25,NA,UCLA,Utah
+NCAA,359,0,8/30/25,NA,Utah State,Texas-El Paso
+NCAA,360,0,8/30/25,NA,Vanderbilt,Charleston Southern
+NCAA,361,0,8/30/25,NA,Virginia,Coastal Carolina
+NCAA,362,0,8/30/25,NA,Washington,Colorado State
+NCAA,363,0,8/30/25,NA,Washington State,Idaho
+NCAA,364,0,8/30/25,NA,West Virginia,Robert Morris
+NCAA,365,0,8/30/25,NA,Western Kentucky,North Alabama
+NCAA,366,0,8/31/25,NA, Miami (FL),Notre Dame
+NCAA,367,0,8/31/25,NA, South Carolina,Virginia Tech
+NCAA,368,0,9/1/25,NA,North Carolina,Texas Christian
+NCAA,369,1,9/5/25,NA,Boise State,Eastern Washington
+NCAA,370,1,9/5/25,NA,Louisville,James Madison
+NCAA,371,1,9/5/25,NA,Maryland,Northern Illinois
+NCAA,372,1,9/5/25,NA,Northwestern,Western Illinois
+NCAA,373,1,9/6/25,NA, Alabama,Louisiana-Monroe
+NCAA,374,1,9/6/25,NA,Appalachian State,Lindenwood
+NCAA,375,1,9/6/25,NA,Arizona,Weber State
+NCAA,376,1,9/6/25,NA,Arkansas,Arkansas State
+NCAA,377,1,9/6/25,NA,Kansas State,Army
+NCAA,378,1,9/6/25,NA,Auburn,Ball State
+NCAA,379,1,9/6/25,NA, Southern Methodist,Baylor
+NCAA,380,1,9/6/25,NA,Brigham Young,Stanford
+NCAA,381,1,9/6/25,NA,Massachusetts,Bryant
+NCAA,382,1,9/6/25,NA,Buffalo,St. Francis (PA)
+NCAA,383,1,9/6/25,NA,California,Texas Southern
+NCAA,384,1,9/6/25,NA,Central Florida,North Carolina A&T
+NCAA,385,1,9/6/25,NA,Cincinnati,Bowling Green
+NCAA,386,1,9/6/25,NA, Clemson,Troy
+NCAA,387,1,9/6/25,NA,Coastal Carolina,Charleston Southern
+NCAA,388,1,9/6/25,NA,Colorado,Delaware
+NCAA,389,1,9/6/25,NA,Colorado State,Northern Colorado
+NCAA,390,1,9/6/25,NA,East Carolina,Campbell
+NCAA,391,1,9/6/25,NA,Florida Atlantic,Florida A&M
+NCAA,392,1,9/6/25,NA, Florida State,East Texas A&M
+NCAA,393,1,9/6/25,NA,Oregon State,Fresno State
+NCAA,394,1,9/6/25,NA,Georgia,Austin Peay
+NCAA,395,1,9/6/25,NA,Georgia Tech,Gardner-Webb
+NCAA,396,1,9/6/25,NA,Rice,Houston
+NCAA,397,1,9/6/25,NA,Duke, Illinois
+NCAA,398,1,9/6/25,NA, Indiana,Kennesaw State
+NCAA,399,1,9/6/25,NA, Iowa State,Iowa
+NCAA,400,1,9/6/25,NA,Jacksonville State,Liberty
+NCAA,401,1,9/6/25,NA,Eastern Michigan,Long Island
+NCAA,402,1,9/6/25,NA,Louisiana,McNeese State
+NCAA,403,1,9/6/25,NA, Louisiana State,Louisiana Tech
+NCAA,404,1,9/6/25,NA,Georgia State,Memphis
+NCAA,405,1,9/6/25,NA, Miami (FL),Bethune-Cookman
+NCAA,406,1,9/6/25,NA,Michigan State,Boston College
+NCAA,407,1,9/6/25,NA,Minnesota,Northwestern State
+NCAA,408,1,9/6/25,NA,Kentucky, Mississippi
+NCAA,409,1,9/6/25,NA,Mississippi State, Arizona State
+NCAA,410,1,9/6/25,NA,Missouri,Kansas
+NCAA,411,1,9/6/25,NA,Marshall,Missouri State
+NCAA,412,1,9/6/25,NA,Navy,Alabama-Birmingham
+NCAA,413,1,9/6/25,NA,Nebraska,Akron
+NCAA,414,1,9/6/25,NA,Nevada,Sacramento State
+NCAA,415,1,9/6/25,NA,Nevada-Las Vegas,UCLA
+NCAA,416,1,9/6/25,NA,New Mexico,Idaho State
+NCAA,417,1,9/6/25,NA,New Mexico State,Tulsa
+NCAA,418,1,9/6/25,NA,Charlotte,North Carolina
+NCAA,419,1,9/6/25,NA,North Carolina State,Virginia
+NCAA,420,1,9/6/25,NA,Western Michigan,North Texas
+NCAA,421,1,9/6/25,NA,Ohio,West Virginia
+NCAA,422,1,9/6/25,NA,Ohio State,Grambling State
+NCAA,423,1,9/6/25,NA, Oklahoma, Michigan
+NCAA,424,1,9/6/25,NA,Old Dominion,North Carolina Central
+NCAA,425,1,9/6/25,NA, Oregon,Oklahoma State
+NCAA,426,1,9/6/25,NA, Penn State,Florida International
+NCAA,427,1,9/6/25,NA,Pittsburgh,Central Michigan
+NCAA,428,1,9/6/25,NA,Purdue,Southern Illinois
+NCAA,429,1,9/6/25,NA,Rutgers,Miami (OH)
+NCAA,430,1,9/6/25,NA, South Carolina,South Carolina State
+NCAA,431,1,9/6/25,NA, Florida,South Florida
+NCAA,432,1,9/6/25,NA,Southern California,Georgia Southern
+NCAA,433,1,9/6/25,NA,Southern Mississippi,Jackson State
+NCAA,434,1,9/6/25,NA,Syracuse,Connecticut
+NCAA,435,1,9/6/25,NA,Temple,Howard
+NCAA,436,1,9/6/25,NA, Tennessee,East Tennessee State
+NCAA,437,1,9/6/25,NA,Texas,San Jose State
+NCAA,438,1,9/6/25,NA, Texas A&M,Utah State
+NCAA,439,1,9/6/25,NA,Texas-San Antonio,Texas State
+NCAA,440,1,9/6/25,NA, Texas Tech,Kent State
+NCAA,441,1,9/6/25,NA,Texas-El Paso,Tennessee-Martin
+NCAA,442,1,9/6/25,NA,Toledo,Western Kentucky
+NCAA,443,1,9/6/25,NA,South Alabama,Tulane
+NCAA,444,1,9/6/25,NA, Utah,Cal Poly
+NCAA,445,1,9/6/25,NA,Virginia Tech,Vanderbilt
+NCAA,446,1,9/6/25,NA,Wake Forest,Western Carolina
+NCAA,447,1,9/6/25,NA,Washington,California-Davis
+NCAA,448,1,9/6/25,NA,Washington State,San Diego State
+NCAA,449,1,9/6/25,NA,Wisconsin,Middle Tennessee State
+NCAA,450,1,9/6/25,NA,Wyoming,Northern Iowa
+NCAA,451,1,9/7/25,NA,Hawaii,Sam Houston
+NCAA,452,2,9/11/25,NA,Wake Forest,North Carolina State
+NCAA,453,2,9/12/25,NA,Arizona,Kansas State
+NCAA,454,2,9/12/25,NA,Houston,Colorado
+NCAA,455,2,9/12/25,NA, Indiana,Indiana State
+NCAA,456,2,9/12/25,NA,UCLA,New Mexico
+NCAA,457,2,9/12/25,NA,Syracuse,Colgate
+NCAA,458,2,9/13/25,NA, Alabama,Wisconsin
+NCAA,459,2,9/13/25,NA,Alabama-Birmingham,Akron
+NCAA,460,2,9/13/25,NA,Arizona State,Texas State
+NCAA,461,2,9/13/25,NA, Auburn,South Alabama
+NCAA,462,2,9/13/25,NA,Ball State,New Hampshire
+NCAA,463,2,9/13/25,NA,Baylor,Samford
+NCAA,464,2,9/13/25,NA,Bowling Green,Liberty
+NCAA,465,2,9/13/25,NA,Kent State,Buffalo
+NCAA,466,2,9/13/25,NA,California,Minnesota
+NCAA,467,2,9/13/25,NA,Charlotte,Monmouth
+NCAA,468,2,9/13/25,NA,Cincinnati,Northwestern State
+NCAA,469,2,9/13/25,NA,Delaware,Connecticut
+NCAA,470,2,9/13/25,NA,Coastal Carolina,East Carolina
+NCAA,471,2,9/13/25,NA,Florida International,Florida Atlantic
+NCAA,472,2,9/13/25,NA,Fresno State,Southern
+NCAA,473,2,9/13/25,NA, Tennessee, Georgia
+NCAA,474,2,9/13/25,NA,Georgia Southern,Jacksonville State
+NCAA,475,2,9/13/25,NA,Georgia State,Murray State
+NCAA,476,2,9/13/25,NA,Georgia Tech, Clemson
+NCAA,477,2,9/13/25,NA, Illinois,Western Michigan
+NCAA,478,2,9/13/25,NA,Iowa,Massachusetts
+NCAA,479,2,9/13/25,NA,Arkansas State, Iowa State
+NCAA,480,2,9/13/25,NA,Kennesaw State,Merrimack
+NCAA,481,2,9/13/25,NA,Kentucky,Eastern Michigan
+NCAA,482,2,9/13/25,NA, Louisiana State,Florida
+NCAA,483,2,9/13/25,NA,Louisiana Tech,New Mexico State
+NCAA,484,2,9/13/25,NA,Marshall,Eastern Kentucky
+NCAA,485,2,9/13/25,NA,Maryland,Towson
+NCAA,486,2,9/13/25,NA,Troy,Memphis
+NCAA,487,2,9/13/25,NA, Miami (FL), South Florida
+NCAA,488,2,9/13/25,NA, Michigan,Central Michigan
+NCAA,489,2,9/13/25,NA,Michigan State,Youngstown State
+NCAA,490,2,9/13/25,NA,Nevada,Middle Tennessee State
+NCAA,491,2,9/13/25,NA, Mississippi,Arkansas
+NCAA,492,2,9/13/25,NA,Mississippi State,Alcorn State
+NCAA,493,2,9/13/25,NA, Missouri,Louisiana
+NCAA,494,2,9/13/25,NA,Tulsa,Navy
+NCAA,495,2,9/13/25,NA,Nebraska,Houston Baptist
+NCAA,496,2,9/13/25,NA,North Carolina,Richmond
+NCAA,497,2,9/13/25,NA,North Texas,Washington State
+NCAA,498,2,9/13/25,NA, Ohio State,Ohio
+NCAA,499,2,9/13/25,NA,Temple, Oklahoma
+NCAA,500,2,9/13/25,NA,Virginia Tech,Old Dominion
+NCAA,501,2,9/13/25,NA,Northwestern, Oregon
+NCAA,502,2,9/13/25,NA, Penn State,Villanova
+NCAA,503,2,9/13/25,NA,Rice,Prairie View A&M
+NCAA,504,2,9/13/25,NA,Rutgers,Norfolk State
+NCAA,505,2,9/13/25,NA,Purdue,Southern California
+NCAA,506,2,9/13/25,NA,Missouri State,Southern Methodist
+NCAA,507,2,9/13/25,NA,Southern Mississippi,Appalachian State
+NCAA,508,2,9/13/25,NA,Stanford,Boston College
+NCAA,509,2,9/13/25,NA, Texas,Texas-El Paso
+NCAA,510,2,9/13/25,NA, Notre Dame, Texas A&M
+NCAA,511,2,9/13/25,NA,Texas Christian,Abilene Christian
+NCAA,512,2,9/13/25,NA, Texas Tech,Oregon State
+NCAA,513,2,9/13/25,NA,Texas-San Antonio,Incarnate Word
+NCAA,514,2,9/13/25,NA,Toledo,Morgan State
+NCAA,515,2,9/13/25,NA,Tulane,Duke
+NCAA,516,2,9/13/25,NA,Wyoming, Utah
+NCAA,517,2,9/13/25,NA,Utah State,Air Force
+NCAA,518,2,9/13/25,NA, South Carolina,Vanderbilt
+NCAA,519,2,9/13/25,NA,Virginia,William & Mary
+NCAA,520,2,9/13/25,NA,West Virginia,Pittsburgh
+NCAA,521,2,9/14/25,NA,Hawaii,Portland State
+NCAA,522,3,9/18/25,NA,Charlotte,Rice
+NCAA,523,3,9/19/25,NA,Rutgers,Iowa
+NCAA,524,3,9/19/25,NA,Oklahoma State,Tulsa
+NCAA,525,3,9/20/25,NA,Akron,Duquesne
+NCAA,526,3,9/20/25,NA,Baylor,Arizona State
+NCAA,527,3,9/20/25,NA,Air Force,Boise State
+NCAA,528,3,9/20/25,NA,East Carolina,Brigham Young
+NCAA,529,3,9/20/25,NA,Central Florida,North Carolina
+NCAA,530,3,9/20/25,NA,Central Michigan,Wagner
+NCAA,531,3,9/20/25,NA,South Alabama,Coastal Carolina
+NCAA,532,3,9/20/25,NA,Colorado,Wyoming
+NCAA,533,3,9/20/25,NA,Connecticut,Ball State
+NCAA,534,3,9/20/25,NA,Florida International,Delaware
+NCAA,535,3,9/20/25,NA,Duke,North Carolina State
+NCAA,536,3,9/20/25,NA,Eastern Michigan,Louisiana
+NCAA,537,3,9/20/25,NA, Florida State,Kent State
+NCAA,538,3,9/20/25,NA,Georgia Southern,Maine
+NCAA,539,3,9/20/25,NA, Georgia Tech,Temple
+NCAA,540,3,9/20/25,NA, Indiana, Illinois
+NCAA,541,3,9/20/25,NA,Jacksonville State,Murray State
+NCAA,542,3,9/20/25,NA,Liberty,James Madison
+NCAA,543,3,9/20/25,NA,Kansas,West Virginia
+NCAA,544,3,9/20/25,NA,Kennesaw State,Arkansas State
+NCAA,545,3,9/20/25,NA, Louisiana State,Southeastern Louisiana
+NCAA,546,3,9/20/25,NA,Louisiana Tech,Southern Mississippi
+NCAA,547,3,9/20/25,NA,Texas-El Paso,Louisiana-Monroe
+NCAA,548,3,9/20/25,NA,Louisville,Bowling Green
+NCAA,549,3,9/20/25,NA,Middle Tennessee State,Marshall
+NCAA,550,3,9/20/25,NA,Wisconsin,Maryland
+NCAA,551,3,9/20/25,NA,Memphis,Arkansas
+NCAA,552,3,9/20/25,NA, Miami (FL),Florida
+NCAA,553,3,9/20/25,NA,Nebraska, Michigan
+NCAA,554,3,9/20/25,NA, Mississippi,Tulane
+NCAA,555,3,9/20/25,NA,Mississippi State,Northern Illinois
+NCAA,556,3,9/20/25,NA, Missouri,South Carolina
+NCAA,557,3,9/20/25,NA,Missouri State,Tennessee-Martin
+NCAA,558,3,9/20/25,NA,Miami (OH),Nevada-Las Vegas
+NCAA,559,3,9/20/25,NA,Army,North Texas
+NCAA,560,3,9/20/25,NA, Notre Dame,Purdue
+NCAA,561,3,9/20/25,NA,Ohio,Gardner-Webb
+NCAA,562,3,9/20/25,NA, Oklahoma, Auburn
+NCAA,563,3,9/20/25,NA, Oregon,Oregon State
+NCAA,564,3,9/20/25,NA,San Diego State,California
+NCAA,565,3,9/20/25,NA,San Jose State,Idaho
+NCAA,566,3,9/20/25,NA,South Florida,South Carolina State
+NCAA,567,3,9/20/25,NA, Southern California,Michigan State
+NCAA,568,3,9/20/25,NA,Clemson,Syracuse
+NCAA,569,3,9/20/25,NA, Tennessee,Alabama-Birmingham
+NCAA,570,3,9/20/25,NA, Texas,Sam Houston
+NCAA,571,3,9/20/25,NA,Texas Christian,Southern Methodist
+NCAA,572,3,9/20/25,NA,Texas State,Nicholls State
+NCAA,573,3,9/20/25,NA, Utah, Texas Tech
+NCAA,574,3,9/20/25,NA,Colorado State,Texas-San Antonio
+NCAA,575,3,9/20/25,NA,Buffalo,Troy
+NCAA,576,3,9/20/25,NA,Utah State,McNeese State
+NCAA,577,3,9/20/25,NA, Vanderbilt,Georgia State
+NCAA,578,3,9/20/25,NA,Virginia,Stanford
+NCAA,579,3,9/20/25,NA,Virginia Tech,Wofford
+NCAA,580,3,9/20/25,NA,Washington State,Washington
+NCAA,581,3,9/20/25,NA,Western Kentucky,Nevada
+NCAA,582,3,9/20/25,NA,Western Michigan,Toledo
+NCAA,583,3,9/21/25,NA,Hawaii,Fresno State
+NCAA,584,4,9/25/25,NA,East Carolina,Army
+NCAA,585,4,9/26/25,NA,Arizona State, Texas Christian
+NCAA,586,4,9/26/25,NA,Oregon State,Houston
+NCAA,587,4,9/26/25,NA,Virginia, Florida State
+NCAA,588,4,9/27/25,NA, Georgia, Alabama
+NCAA,589,4,9/27/25,NA,Oklahoma State,Baylor
+NCAA,590,4,9/27/25,NA,Boise State,Appalachian State
+NCAA,591,4,9/27/25,NA,Colorado, Brigham Young
+NCAA,592,4,9/27/25,NA,Boston College,California
+NCAA,593,4,9/27/25,NA,Central Michigan,Eastern Michigan
+NCAA,594,4,9/27/25,NA,Kansas,Cincinnati
+NCAA,595,4,9/27/25,NA,Buffalo,Connecticut
+NCAA,596,4,9/27/25,NA,Syracuse,Duke
+NCAA,597,4,9/27/25,NA,Wake Forest, Georgia Tech
+NCAA,598,4,9/27/25,NA,Air Force,Hawaii
+NCAA,599,4,9/27/25,NA, Illinois, Southern California
+NCAA,600,4,9/27/25,NA,Iowa, Indiana
+NCAA,601,4,9/27/25,NA, Iowa State,Arizona
+NCAA,602,4,9/27/25,NA,James Madison,Georgia Southern
+NCAA,603,4,9/27/25,NA,Kansas State,Central Florida
+NCAA,604,4,9/27/25,NA,Kennesaw State,Middle Tennessee State
+NCAA,605,4,9/27/25,NA,Louisiana,Marshall
+NCAA,606,4,9/27/25,NA,Texas-El Paso,Louisiana Tech
+NCAA,607,4,9/27/25,NA,Louisiana-Monroe,Arkansas State
+NCAA,608,4,9/27/25,NA,Pittsburgh,Louisville
+NCAA,609,4,9/27/25,NA,Florida Atlantic,Memphis
+NCAA,610,4,9/27/25,NA,Miami (OH),Lindenwood
+NCAA,611,4,9/27/25,NA,Minnesota,Rutgers
+NCAA,612,4,9/27/25,NA, Mississippi, Louisiana State
+NCAA,613,4,9/27/25,NA, Missouri,Massachusetts
+NCAA,614,4,9/27/25,NA,Navy,Rice
+NCAA,615,4,9/27/25,NA,New Mexico,New Mexico State
+NCAA,616,4,9/27/25,NA,North Texas,South Alabama
+NCAA,617,4,9/27/25,NA,Northwestern,UCLA
+NCAA,618,4,9/27/25,NA,Arkansas, Notre Dame
+NCAA,619,4,9/27/25,NA,Ohio,Bowling Green
+NCAA,620,4,9/27/25,NA,Washington, Ohio State
+NCAA,621,4,9/27/25,NA,Old Dominion,Liberty
+NCAA,622,4,9/27/25,NA, Penn State, Oregon
+NCAA,623,4,9/27/25,NA,Northern Illinois,San Diego State
+NCAA,624,4,9/27/25,NA,South Carolina,Kentucky
+NCAA,625,4,9/27/25,NA,Southern Mississippi,Jacksonville State
+NCAA,626,4,9/27/25,NA,Stanford,San Jose State
+NCAA,627,4,9/27/25,NA,Mississippi State, Tennessee
+NCAA,628,4,9/27/25,NA, Texas A&M,Auburn
+NCAA,629,4,9/27/25,NA,Toledo,Akron
+NCAA,630,4,9/27/25,NA,Tulsa,Tulane
+NCAA,631,4,9/27/25,NA,West Virginia,Utah
+NCAA,632,4,9/27/25,NA, Vanderbilt,Utah State
+NCAA,633,4,9/27/25,NA,North Carolina State,Virginia Tech
+NCAA,634,4,9/27/25,NA,Colorado State,Washington State
+NCAA,635,4,9/27/25,NA,Missouri State,Western Kentucky
+NCAA,636,4,9/27/25,NA,Western Michigan,Rhode Island
+NCAA,637,5,10/2/25,NA,New Mexico State,Sam Houston
+NCAA,638,5,10/3/25,NA,South Florida,Charlotte
+NCAA,639,5,10/3/25,NA,San Diego State,Colorado State
+NCAA,640,5,10/3/25,NA,San Jose State,New Mexico
+NCAA,641,5,10/3/25,NA, Brigham Young,West Virginia
+NCAA,642,5,10/3/25,NA,Delaware,Western Kentucky
+NCAA,643,5,10/4/25,NA,Navy,Air Force
+NCAA,644,5,10/4/25,NA,Alabama-Birmingham,Army
+NCAA,645,5,10/4/25,NA, Notre Dame,Boise State
+NCAA,646,5,10/4/25,NA,Pittsburgh,Boston College
+NCAA,647,5,10/4/25,NA,North Carolina State,Campbell
+NCAA,648,5,10/4/25,NA,Akron,Central Michigan
+NCAA,649,5,10/4/25,NA,North Carolina,Clemson
+NCAA,650,5,10/4/25,NA,Old Dominion,Coastal Carolina
+NCAA,651,5,10/4/25,NA,Texas Christian,Colorado
+NCAA,652,5,10/4/25,NA,California,Duke
+NCAA,653,5,10/4/25,NA,Buffalo,Eastern Michigan
+NCAA,654,5,10/4/25,NA,Rice,Florida Atlantic
+NCAA,655,5,10/4/25,NA,Connecticut,Florida International
+NCAA,656,5,10/4/25,NA,Purdue, Illinois
+NCAA,657,5,10/4/25,NA,Cincinnati, Iowa State
+NCAA,658,5,10/4/25,NA,Georgia State,James Madison
+NCAA,659,5,10/4/25,NA,Central Florida,Kansas
+NCAA,660,5,10/4/25,NA,Baylor,Kansas State
+NCAA,661,5,10/4/25,NA, Oklahoma,Kent State
+NCAA,662,5,10/4/25,NA, Georgia,Kentucky
+NCAA,663,5,10/4/25,NA,Northwestern,Louisiana-Monroe
+NCAA,664,5,10/4/25,NA, Florida State, Miami (FL)
+NCAA,665,5,10/4/25,NA,Northern Illinois,Miami (OH)
+NCAA,666,5,10/4/25,NA,Nebraska,Michigan State
+NCAA,667,5,10/4/25,NA, Ohio State,Minnesota
+NCAA,668,5,10/4/25,NA, Texas A&M,Mississippi State
+NCAA,669,5,10/4/25,NA,Fresno State,Nevada
+NCAA,670,5,10/4/25,NA,Wyoming,Nevada-Las Vegas
+NCAA,671,5,10/4/25,NA,Ball State,Ohio
+NCAA,672,5,10/4/25,NA,Arizona,Oklahoma State
+NCAA,673,5,10/4/25,NA,Appalachian State,Oregon State
+NCAA,674,5,10/4/25,NA,UCLA, Penn State
+NCAA,675,5,10/4/25,NA,Troy,South Alabama
+NCAA,676,5,10/4/25,NA,Southern Methodist,Syracuse
+NCAA,677,5,10/4/25,NA,Florida, Texas
+NCAA,678,5,10/4/25,NA,Arkansas State,Texas State
+NCAA,679,5,10/4/25,NA,Houston, Texas Tech
+NCAA,680,5,10/4/25,NA,Temple,Texas-San Antonio
+NCAA,681,5,10/4/25,NA,Memphis,Tulsa
+NCAA,682,5,10/4/25,NA, Alabama, Vanderbilt
+NCAA,683,5,10/4/25,NA,Louisville, Virginia
+NCAA,684,5,10/4/25,NA,Virginia Tech,Wake Forest
+NCAA,685,5,10/4/25,NA,Maryland,Washington
+NCAA,686,5,10/4/25,NA,Massachusetts,Western Michigan
+NCAA,687,5,10/4/25,NA, Michigan,Wisconsin
+NCAA,688,6,10/8/25,NA,Texas-El Paso,Liberty
+NCAA,689,6,10/8/25,NA,Middle Tennessee State,Missouri State
+NCAA,690,6,10/9/25,NA,Tulane,East Carolina
+NCAA,691,6,10/9/25,NA,Sam Houston,Jacksonville State
+NCAA,692,6,10/9/25,NA,Kennesaw State,Louisiana Tech
+NCAA,693,6,10/9/25,NA,Georgia Southern,Southern Mississippi
+NCAA,694,6,10/10/25,NA,Colorado State,Fresno State
+NCAA,695,6,10/10/25,NA,Washington,Rutgers
+NCAA,696,6,10/10/25,NA,North Texas,South Florida
+NCAA,697,6,10/11/25,NA,Nevada-Las Vegas,Air Force
+NCAA,698,6,10/11/25,NA, Missouri, Alabama
+NCAA,699,6,10/11/25,NA,Florida Atlantic,Alabama-Birmingham
+NCAA,700,6,10/11/25,NA,Georgia State,Appalachian State
+NCAA,701,6,10/11/25,NA,Utah, Arizona State
+NCAA,702,6,10/11/25,NA, Tennessee,Arkansas
+NCAA,703,6,10/11/25,NA,Western Michigan,Ball State
+NCAA,704,6,10/11/25,NA,Arizona, Brigham Young
+NCAA,705,6,10/11/25,NA,Cincinnati,Central Florida
+NCAA,706,6,10/11/25,NA,Army,Charlotte
+NCAA,707,6,10/11/25,NA,Boston College,Clemson
+NCAA,708,6,10/11/25,NA, Texas A&M,Florida
+NCAA,709,6,10/11/25,NA,Auburn, Georgia
+NCAA,710,6,10/11/25,NA,Oklahoma State,Houston
+NCAA,711,6,10/11/25,NA, Oregon, Indiana
+NCAA,712,6,10/11/25,NA,Wisconsin,Iowa
+NCAA,713,6,10/11/25,NA,Colorado, Iowa State
+NCAA,714,6,10/11/25,NA, Texas Tech,Kansas
+NCAA,715,6,10/11/25,NA,James Madison,Louisiana
+NCAA,716,6,10/11/25,NA,Coastal Carolina,Louisiana-Monroe
+NCAA,717,6,10/11/25,NA,Kent State,Massachusetts
+NCAA,718,6,10/11/25,NA,Akron,Miami (OH)
+NCAA,719,6,10/11/25,NA,Southern California, Michigan
+NCAA,720,6,10/11/25,NA,Temple,Navy
+NCAA,721,6,10/11/25,NA,Maryland,Nebraska
+NCAA,722,6,10/11/25,NA,Boise State,New Mexico
+NCAA,723,6,10/11/25,NA, Notre Dame,North Carolina State
+NCAA,724,6,10/11/25,NA,Eastern Michigan,Northern Illinois
+NCAA,725,6,10/11/25,NA, Penn State,Northwestern
+NCAA,726,6,10/11/25,NA, Illinois, Ohio State
+NCAA,727,6,10/11/25,NA,Marshall,Old Dominion
+NCAA,728,6,10/11/25,NA, Florida State,Pittsburgh
+NCAA,729,6,10/11/25,NA,Minnesota,Purdue
+NCAA,730,6,10/11/25,NA,Texas-San Antonio,Rice
+NCAA,731,6,10/11/25,NA,Nevada,San Diego State
+NCAA,732,6,10/11/25,NA,Wyoming,San Jose State
+NCAA,733,6,10/11/25,NA, Louisiana State,South Carolina
+NCAA,734,6,10/11/25,NA,Southern Methodist,Stanford
+NCAA,735,6,10/11/25,NA, Texas, Oklahoma
+NCAA,736,6,10/11/25,NA,Kansas State,Texas Christian
+NCAA,737,6,10/11/25,NA,Bowling Green,Toledo
+NCAA,738,6,10/11/25,NA,Texas State,Troy
+NCAA,739,6,10/11/25,NA,Michigan State,UCLA
+NCAA,740,6,10/11/25,NA, Georgia Tech,Virginia Tech
+NCAA,741,6,10/11/25,NA,Oregon State,Wake Forest
+NCAA,742,6,10/11/25,NA, Mississippi,Washington State
+NCAA,743,6,10/12/25,NA,Hawaii,Utah State
+NCAA,744,7,10/14/25,NA,South Alabama,Arkansas State
+NCAA,745,7,10/14/25,NA,Western Kentucky,Florida International
+NCAA,746,7,10/14/25,NA,Liberty,New Mexico State
+NCAA,747,7,10/15/25,NA,Jacksonville State,Delaware
+NCAA,748,7,10/15/25,NA,Sam Houston,Texas-El Paso
+NCAA,749,7,10/16/25,NA,East Carolina,Tulsa
+NCAA,750,7,10/17/25,NA, Miami (FL),Louisville
+NCAA,751,7,10/17/25,NA,Minnesota,Nebraska
+NCAA,752,7,10/17/25,NA,California,North Carolina
+NCAA,753,7,10/17/25,NA,Utah State,San Jose State
+NCAA,754,7,10/18/25,NA,Ball State,Akron
+NCAA,755,7,10/18/25,NA,Houston,Arizona
+NCAA,756,7,10/18/25,NA,Tulane,Army
+NCAA,757,7,10/18/25,NA,Texas Christian,Baylor
+NCAA,758,7,10/18/25,NA,Massachusetts,Buffalo
+NCAA,759,7,10/18/25,NA,Bowling Green,Central Michigan
+NCAA,760,7,10/18/25,NA,Oklahoma State,Cincinnati
+NCAA,761,7,10/18/25,NA,Appalachian State,Coastal Carolina
+NCAA,762,7,10/18/25,NA,Boston College,Connecticut
+NCAA,763,7,10/18/25,NA,Miami (OH),Eastern Michigan
+NCAA,764,7,10/18/25,NA,South Florida,Florida Atlantic
+NCAA,765,7,10/18/25,NA,Stanford, Florida State
+NCAA,766,7,10/18/25,NA,Georgia Southern,Georgia State
+NCAA,767,7,10/18/25,NA,Duke, Georgia Tech
+NCAA,768,7,10/18/25,NA,Colorado State,Hawaii
+NCAA,769,7,10/18/25,NA,Toledo,Kent State
+NCAA,770,7,10/18/25,NA,Oregon State,Lafayette
+NCAA,771,7,10/18/25,NA, Vanderbilt, Louisiana State
+NCAA,772,7,10/18/25,NA,UCLA,Maryland
+NCAA,773,7,10/18/25,NA,Alabama-Birmingham,Memphis
+NCAA,774,7,10/18/25,NA, Indiana,Michigan State
+NCAA,775,7,10/18/25,NA, Georgia, Mississippi
+NCAA,776,7,10/18/25,NA,Florida,Mississippi State
+NCAA,777,7,10/18/25,NA,Auburn, Missouri
+NCAA,778,7,10/18/25,NA,New Mexico,Nevada
+NCAA,779,7,10/18/25,NA,Boise State,Nevada-Las Vegas
+NCAA,780,7,10/18/25,NA,Ohio,Northern Illinois
+NCAA,781,7,10/18/25,NA,Wisconsin, Ohio State
+NCAA,782,7,10/18/25,NA,South Carolina, Oklahoma
+NCAA,783,7,10/18/25,NA,James Madison,Old Dominion
+NCAA,784,7,10/18/25,NA,Rutgers, Oregon
+NCAA,785,7,10/18/25,NA,Iowa, Penn State
+NCAA,786,7,10/18/25,NA,Syracuse,Pittsburgh
+NCAA,787,7,10/18/25,NA,Northwestern,Purdue
+NCAA,788,7,10/18/25,NA, Notre Dame,Southern California
+NCAA,789,7,10/18/25,NA,Clemson,Southern Methodist
+NCAA,790,7,10/18/25,NA,Louisiana,Southern Mississippi
+NCAA,791,7,10/18/25,NA,Charlotte,Temple
+NCAA,792,7,10/18/25,NA, Alabama, Tennessee
+NCAA,793,7,10/18/25,NA,Kentucky, Texas
+NCAA,794,7,10/18/25,NA,Arkansas, Texas A&M
+NCAA,795,7,10/18/25,NA,Marshall,Texas State
+NCAA,796,7,10/18/25,NA, Arizona State, Texas Tech
+NCAA,797,7,10/18/25,NA,North Texas,Texas-San Antonio
+NCAA,798,7,10/18/25,NA,Louisiana-Monroe,Troy
+NCAA,799,7,10/18/25,NA, Brigham Young,Utah
+NCAA,800,7,10/18/25,NA, Michigan,Washington
+NCAA,801,7,10/18/25,NA, Virginia,Washington State
+NCAA,802,7,10/18/25,NA,Central Florida,West Virginia
+NCAA,803,7,10/18/25,NA,Air Force,Wyoming
+NCAA,804,8,10/21/25,NA,Florida International,Kennesaw State
+NCAA,805,8,10/21/25,NA,Louisiana Tech,Western Kentucky
+NCAA,806,8,10/22/25,NA,Delaware,Middle Tennessee State
+NCAA,807,8,10/22/25,NA,New Mexico State,Missouri State
+NCAA,808,8,10/23/25,NA,Georgia State,South Alabama
+NCAA,809,8,10/24/25,NA,Nevada,Boise State
+NCAA,810,8,10/24/25,NA,Virginia Tech,California
+NCAA,811,8,10/24/25,NA,Charlotte,North Texas
+NCAA,812,8,10/25/25,NA,Buffalo,Akron
+NCAA,813,8,10/25/25,NA,South Carolina, Alabama
+NCAA,814,8,10/25/25,NA,Old Dominion,Appalachian State
+NCAA,815,8,10/25/25,NA,Arkansas,Auburn
+NCAA,816,8,10/25/25,NA,Northern Illinois,Ball State
+NCAA,817,8,10/25/25,NA,Cincinnati,Baylor
+NCAA,818,8,10/25/25,NA,Louisville,Boston College
+NCAA,819,8,10/25/25,NA,Kent State,Bowling Green
+NCAA,820,8,10/25/25,NA, Iowa State, Brigham Young
+NCAA,821,8,10/25/25,NA,Utah,Colorado
+NCAA,822,8,10/25/25,NA,Wyoming,Colorado State
+NCAA,823,8,10/25/25,NA,Rice,Connecticut
+NCAA,824,8,10/25/25,NA,Navy,Florida Atlantic
+NCAA,825,8,10/25/25,NA,Arkansas State,Georgia Southern
+NCAA,826,8,10/25/25,NA, Arizona State,Houston
+NCAA,827,8,10/25/25,NA,Washington, Illinois
+NCAA,828,8,10/25/25,NA,Kansas,Kansas State
+NCAA,829,8,10/25/25,NA,Troy,Louisiana
+NCAA,830,8,10/25/25,NA,Southern Mississippi,Louisiana-Monroe
+NCAA,831,8,10/25/25,NA,Central Michigan,Massachusetts
+NCAA,832,8,10/25/25,NA,Michigan State, Michigan
+NCAA,833,8,10/25/25,NA,Iowa,Minnesota
+NCAA,834,8,10/25/25,NA, Oklahoma, Mississippi
+NCAA,835,8,10/25/25,NA, Vanderbilt, Missouri
+NCAA,836,8,10/25/25,NA,Pittsburgh,North Carolina State
+NCAA,837,8,10/25/25,NA,Nebraska,Northwestern
+NCAA,838,8,10/25/25,NA,Eastern Michigan,Ohio
+NCAA,839,8,10/25/25,NA, Texas Tech,Oklahoma State
+NCAA,840,8,10/25/25,NA,Purdue,Rutgers
+NCAA,841,8,10/25/25,NA,Fresno State,San Diego State
+NCAA,842,8,10/25/25,NA,Memphis,South Florida
+NCAA,843,8,10/25/25,NA,Wake Forest,Southern Methodist
+NCAA,844,8,10/25/25,NA, Miami (FL),Stanford
+NCAA,845,8,10/25/25,NA, Georgia Tech,Syracuse
+NCAA,846,8,10/25/25,NA,Tulsa,Temple
+NCAA,847,8,10/25/25,NA,Kentucky, Tennessee
+NCAA,848,8,10/25/25,NA,Mississippi State, Texas
+NCAA,849,8,10/25/25,NA, Louisiana State, Texas A&M
+NCAA,850,8,10/25/25,NA,West Virginia,Texas Christian
+NCAA,851,8,10/25/25,NA,Washington State,Toledo
+NCAA,852,8,10/25/25,NA, Indiana,UCLA
+NCAA,853,8,10/25/25,NA,New Mexico,Utah State
+NCAA,854,8,10/25/25,NA,North Carolina, Virginia
+NCAA,855,8,10/25/25,NA,Miami (OH),Western Michigan
+NCAA,856,8,10/25/25,NA, Oregon,Wisconsin
+NCAA,857,9,10/28/25,NA,Texas State,James Madison
+NCAA,858,9,10/28/25,NA,Kennesaw State,Texas-El Paso
+NCAA,859,9,10/29/25,NA,Missouri State,Florida International
+NCAA,860,9,10/29/25,NA,Middle Tennessee State,Jacksonville State
+NCAA,861,9,10/30/25,NA,Coastal Carolina,Marshall
+NCAA,862,9,10/30/25,NA,Texas-San Antonio,Tulane
+NCAA,863,9,10/31/25,NA,Rice,Memphis
+NCAA,864,9,10/31/25,NA,Syracuse,North Carolina
+NCAA,865,9,10/31/25,NA,Louisiana Tech,Sam Houston
+NCAA,866,9,11/1/25,NA,Connecticut,Alabama-Birmingham
+NCAA,867,9,11/1/25,NA,Colorado,Arizona
+NCAA,868,9,11/1/25,NA, Iowa State, Arizona State
+NCAA,869,9,11/1/25,NA,Troy,Arkansas State
+NCAA,870,9,11/1/25,NA,Air Force,Army
+NCAA,871,9,11/1/25,NA,Bowling Green,Buffalo
+NCAA,872,9,11/1/25,NA,Baylor,Central Florida
+NCAA,873,9,11/1/25,NA,Western Michigan,Central Michigan
+NCAA,874,9,11/1/25,NA,Utah,Cincinnati
+NCAA,875,9,11/1/25,NA,Liberty,Delaware
+NCAA,876,9,11/1/25,NA,Clemson,Duke
+NCAA,877,9,11/1/25,NA,Temple,East Carolina
+NCAA,878,9,11/1/25,NA,Boise State,Fresno State
+NCAA,879,9,11/1/25,NA, Georgia,Florida
+NCAA,880,9,11/1/25,NA,North Carolina State, Georgia Tech
+NCAA,881,9,11/1/25,NA,San Jose State,Hawaii
+NCAA,882,9,11/1/25,NA,Maryland, Indiana
+NCAA,883,9,11/1/25,NA,Auburn,Kentucky
+NCAA,884,9,11/1/25,NA,South Alabama,Louisiana
+NCAA,885,9,11/1/25,NA,Virginia Tech,Louisville
+NCAA,886,9,11/1/25,NA,Southern Methodist, Miami (FL)
+NCAA,887,9,11/1/25,NA,Minnesota,Michigan State
+NCAA,888,9,11/1/25,NA,Arkansas,Mississippi State
+NCAA,889,9,11/1/25,NA,North Texas,Navy
+NCAA,890,9,11/1/25,NA,Nevada-Las Vegas,New Mexico
+NCAA,891,9,11/1/25,NA,Western Kentucky,New Mexico State
+NCAA,892,9,11/1/25,NA,Boston College, Notre Dame
+NCAA,893,9,11/1/25,NA, Tennessee, Oklahoma
+NCAA,894,9,11/1/25,NA,Kansas,Oklahoma State
+NCAA,895,9,11/1/25,NA,Louisiana-Monroe,Old Dominion
+NCAA,896,9,11/1/25,NA, Ohio State, Penn State
+NCAA,897,9,11/1/25,NA,Stanford,Pittsburgh
+NCAA,898,9,11/1/25,NA, Michigan,Purdue
+NCAA,899,9,11/1/25,NA, Illinois,Rutgers
+NCAA,900,9,11/1/25,NA, Mississippi,South Carolina
+NCAA,901,9,11/1/25,NA,Nebraska,Southern California
+NCAA,902,9,11/1/25,NA,Kansas State, Texas Tech
+NCAA,903,9,11/1/25,NA, Texas, Vanderbilt
+NCAA,904,9,11/1/25,NA,California, Virginia
+NCAA,905,9,11/1/25,NA, Florida State,Wake Forest
+NCAA,906,9,11/1/25,NA,Oregon State,Washington State
+NCAA,907,9,11/1/25,NA,Houston,West Virginia
+NCAA,908,9,11/1/25,NA,San Diego State,Wyoming
+NCAA,909,10,11/4/25,NA,Akron,Massachusetts
+NCAA,910,10,11/4/25,NA,Ohio,Miami (OH)
+NCAA,911,10,11/5/25,NA,Ball State,Kent State
+NCAA,912,10,11/5/25,NA,Toledo,Northern Illinois
+NCAA,913,10,11/6/25,NA,Appalachian State,Georgia Southern
+NCAA,914,10,11/6/25,NA,South Florida,Texas-San Antonio
+NCAA,915,10,11/7/25,NA,Central Florida,Houston
+NCAA,916,10,11/7/25,NA,Southern California,Northwestern
+NCAA,917,10,11/7/25,NA,Memphis,Tulane
+NCAA,918,10,11/8/25,NA,San Jose State,Air Force
+NCAA,919,10,11/8/25,NA,Rice,Alabama-Birmingham
+NCAA,920,10,11/8/25,NA, Vanderbilt,Auburn
+NCAA,921,10,11/8/25,NA,Eastern Michigan,Bowling Green
+NCAA,922,10,11/8/25,NA, Texas Tech, Brigham Young
+NCAA,923,10,11/8/25,NA,Louisville,California
+NCAA,924,10,11/8/25,NA,East Carolina,Charlotte
+NCAA,925,10,11/8/25,NA, Mississippi,Citadel
+NCAA,926,10,11/8/25,NA,West Virginia,Colorado
+NCAA,927,10,11/8/25,NA,Connecticut,Duke
+NCAA,928,10,11/8/25,NA,Kentucky,Florida
+NCAA,929,10,11/8/25,NA,Middle Tennessee State,Florida International
+NCAA,930,10,11/8/25,NA,Clemson, Florida State
+NCAA,931,10,11/8/25,NA,Mississippi State, Georgia
+NCAA,932,10,11/8/25,NA,Coastal Carolina,Georgia State
+NCAA,933,10,11/8/25,NA, Penn State, Indiana
+NCAA,934,10,11/8/25,NA,Texas Christian, Iowa State
+NCAA,935,10,11/8/25,NA,Texas-El Paso,Jacksonville State
+NCAA,936,10,11/8/25,NA,Marshall,James Madison
+NCAA,937,10,11/8/25,NA,Arizona,Kansas
+NCAA,938,10,11/8/25,NA,New Mexico State,Kennesaw State
+NCAA,939,10,11/8/25,NA, Alabama, Louisiana State
+NCAA,940,10,11/8/25,NA,Delaware,Louisiana Tech
+NCAA,941,10,11/8/25,NA,Rutgers,Maryland
+NCAA,942,10,11/8/25,NA,Liberty,Missouri State
+NCAA,943,10,11/8/25,NA, Notre Dame,Navy
+NCAA,944,10,11/8/25,NA,UCLA,Nebraska
+NCAA,945,10,11/8/25,NA,Utah State,Nevada
+NCAA,946,10,11/8/25,NA,Colorado State,Nevada-Las Vegas
+NCAA,947,10,11/8/25,NA,Purdue, Ohio State
+NCAA,948,10,11/8/25,NA,Iowa, Oregon
+NCAA,949,10,11/8/25,NA,Oregon State,Sam Houston
+NCAA,950,10,11/8/25,NA,Hawaii,San Diego State
+NCAA,951,10,11/8/25,NA,Boston College,Southern Methodist
+NCAA,952,10,11/8/25,NA,Arkansas State,Southern Mississippi
+NCAA,953,10,11/8/25,NA,North Carolina,Stanford
+NCAA,954,10,11/8/25,NA, Miami (FL),Syracuse
+NCAA,955,10,11/8/25,NA,Army,Temple
+NCAA,956,10,11/8/25,NA, Missouri, Texas A&M
+NCAA,957,10,11/8/25,NA,Louisiana,Texas State
+NCAA,958,10,11/8/25,NA,Florida Atlantic,Tulsa
+NCAA,959,10,11/8/25,NA, Virginia,Wake Forest
+NCAA,960,10,11/8/25,NA,Wisconsin,Washington
+NCAA,961,11,11/11/25,NA,Akron,Kent State
+NCAA,962,11,11/11/25,NA,Western Michigan,Ohio
+NCAA,963,11,11/12/25,NA,Central Michigan,Buffalo
+NCAA,964,11,11/12/25,NA,Massachusetts,Northern Illinois
+NCAA,965,11,11/12/25,NA,Miami (OH),Toledo
+NCAA,966,11,11/13/25,NA,Old Dominion,Troy
+NCAA,967,11,11/14/25,NA,Louisville,Clemson
+NCAA,968,11,11/14/25,NA, Oregon,Minnesota
+NCAA,969,11,11/15/25,NA,Connecticut,Air Force
+NCAA,970,11,11/15/25,NA,James Madison,Appalachian State
+NCAA,971,11,11/15/25,NA,Cincinnati,Arizona
+NCAA,972,11,11/15/25,NA, Louisiana State,Arkansas
+NCAA,973,11,11/15/25,NA,San Diego State,Boise State
+NCAA,974,11,11/15/25,NA, Texas Tech,Central Florida
+NCAA,975,11,11/15/25,NA,Georgia Southern,Coastal Carolina
+NCAA,976,11,11/15/25,NA,New Mexico,Colorado State
+NCAA,977,11,11/15/25,NA,Sam Houston,Delaware
+NCAA,978,11,11/15/25,NA,Ball State,Eastern Michigan
+NCAA,979,11,11/15/25,NA, Mississippi,Florida
+NCAA,980,11,11/15/25,NA,Tulane,Florida Atlantic
+NCAA,981,11,11/15/25,NA,Boston College, Georgia Tech
+NCAA,982,11,11/15/25,NA,Southern California,Iowa
+NCAA,983,11,11/15/25,NA,Oklahoma State,Kansas State
+NCAA,984,11,11/15/25,NA,Jacksonville State,Kennesaw State
+NCAA,985,11,11/15/25,NA,Florida International,Liberty
+NCAA,986,11,11/15/25,NA,Washington State,Louisiana Tech
+NCAA,987,11,11/15/25,NA,Georgia State,Marshall
+NCAA,988,11,11/15/25,NA, Illinois,Maryland
+NCAA,989,11,11/15/25,NA,East Carolina,Memphis
+NCAA,990,11,11/15/25,NA,Northwestern, Michigan
+NCAA,991,11,11/15/25,NA,Western Kentucky,Middle Tennessee State
+NCAA,992,11,11/15/25,NA, Missouri,Mississippi State
+NCAA,993,11,11/15/25,NA, Tennessee,New Mexico State
+NCAA,994,11,11/15/25,NA,Wake Forest,North Carolina
+NCAA,995,11,11/15/25,NA, Miami (FL),North Carolina State
+NCAA,996,11,11/15/25,NA,Alabama-Birmingham,North Texas
+NCAA,997,11,11/15/25,NA,Pittsburgh, Notre Dame
+NCAA,998,11,11/15/25,NA, Alabama, Oklahoma
+NCAA,999,11,11/15/25,NA,Tulsa,Oregon State
+NCAA,1000,11,11/15/25,NA,Michigan State, Penn State
+NCAA,1001,11,11/15/25,NA,Washington,Purdue
+NCAA,1002,11,11/15/25,NA,Nevada,San Jose State
+NCAA,1003,11,11/15/25,NA,Louisiana-Monroe,South Alabama
+NCAA,1004,11,11/15/25,NA, Texas A&M,South Carolina
+NCAA,1005,11,11/15/25,NA,Navy,South Florida
+NCAA,1006,11,11/15/25,NA,Kentucky,Tennessee Tech
+NCAA,1007,11,11/15/25,NA, Georgia, Texas
+NCAA,1008,11,11/15/25,NA, Brigham Young,Texas Christian
+NCAA,1009,11,11/15/25,NA,Southern Mississippi,Texas State
+NCAA,1010,11,11/15/25,NA,Missouri State,Texas-El Paso
+NCAA,1011,11,11/15/25,NA,Charlotte,Texas-San Antonio
+NCAA,1012,11,11/15/25,NA, Ohio State,UCLA
+NCAA,1013,11,11/15/25,NA,Baylor,Utah
+NCAA,1014,11,11/15/25,NA,Nevada-Las Vegas,Utah State
+NCAA,1015,11,11/15/25,NA,Duke, Virginia
+NCAA,1016,11,11/15/25,NA, Florida State,Virginia Tech
+NCAA,1017,11,11/15/25,NA, Arizona State,West Virginia
+NCAA,1018,11,11/15/25,NA, Indiana,Wisconsin
+NCAA,1019,11,11/15/25,NA,Fresno State,Wyoming
+NCAA,1020,12,11/18/25,NA,Bowling Green,Akron
+NCAA,1021,12,11/18/25,NA,Ohio,Massachusetts
+NCAA,1022,12,11/18/25,NA,Northern Illinois,Western Michigan
+NCAA,1023,12,11/19/25,NA,Kent State,Central Michigan
+NCAA,1024,12,11/19/25,NA,Buffalo,Miami (OH)
+NCAA,1025,12,11/20/25,NA,Arkansas State,Louisiana
+NCAA,1026,12,11/21/25,NA,North Carolina State, Florida State
+NCAA,1027,12,11/21/25,NA,Nevada-Las Vegas,Hawaii
+NCAA,1028,12,11/22/25,NA,Colorado, Arizona State
+NCAA,1029,12,11/22/25,NA, Texas,Arkansas
+NCAA,1030,12,11/22/25,NA,Toledo,Ball State
+NCAA,1031,12,11/22/25,NA,Arizona,Baylor
+NCAA,1032,12,11/22/25,NA,Cincinnati, Brigham Young
+NCAA,1033,12,11/22/25,NA,Stanford,California
+NCAA,1034,12,11/22/25,NA, Georgia,Charlotte
+NCAA,1035,12,11/22/25,NA,South Carolina,Coastal Carolina
+NCAA,1036,12,11/22/25,NA,Boise State,Colorado State
+NCAA,1037,12,11/22/25,NA,Florida Atlantic,Connecticut
+NCAA,1038,12,11/22/25,NA,Wake Forest,Delaware
+NCAA,1039,12,11/22/25,NA,North Carolina,Duke
+NCAA,1040,12,11/22/25,NA,Texas-San Antonio,East Carolina
+NCAA,1041,12,11/22/25,NA, Alabama,Eastern Illinois
+NCAA,1042,12,11/22/25,NA,Clemson,Furman
+NCAA,1043,12,11/22/25,NA,Troy,Georgia State
+NCAA,1044,12,11/22/25,NA,Wisconsin, Illinois
+NCAA,1045,12,11/22/25,NA,Florida International,Jacksonville State
+NCAA,1046,12,11/22/25,NA, Iowa State,Kansas
+NCAA,1047,12,11/22/25,NA,Utah,Kansas State
+NCAA,1048,12,11/22/25,NA, Vanderbilt,Kentucky
+NCAA,1049,12,11/22/25,NA,Louisiana Tech,Liberty
+NCAA,1050,12,11/22/25,NA,Texas State,Louisiana-Monroe
+NCAA,1051,12,11/22/25,NA,Southern Methodist,Louisville
+NCAA,1052,12,11/22/25,NA,Appalachian State,Marshall
+NCAA,1053,12,11/22/25,NA,Auburn,Mercer
+NCAA,1054,12,11/22/25,NA,Virginia Tech, Miami (FL)
+NCAA,1055,12,11/22/25,NA,Maryland, Michigan
+NCAA,1056,12,11/22/25,NA,Iowa,Michigan State
+NCAA,1057,12,11/22/25,NA,Northwestern,Minnesota
+NCAA,1058,12,11/22/25,NA, Oklahoma, Missouri
+NCAA,1059,12,11/22/25,NA,Kennesaw State,Missouri State
+NCAA,1060,12,11/22/25,NA, Penn State,Nebraska
+NCAA,1061,12,11/22/25,NA,Wyoming,Nevada
+NCAA,1062,12,11/22/25,NA,Air Force,New Mexico
+NCAA,1063,12,11/22/25,NA,Texas-El Paso,New Mexico State
+NCAA,1064,12,11/22/25,NA,Rice,North Texas
+NCAA,1065,12,11/22/25,NA,Central Florida,Oklahoma State
+NCAA,1066,12,11/22/25,NA,Georgia Southern,Old Dominion
+NCAA,1067,12,11/22/25,NA, Georgia Tech,Pittsburgh
+NCAA,1068,12,11/22/25,NA, Ohio State,Rutgers
+NCAA,1069,12,11/22/25,NA,Middle Tennessee State,Sam Houston
+NCAA,1070,12,11/22/25,NA, Texas A&M,Samford
+NCAA,1071,12,11/22/25,NA,San Diego State,San Jose State
+NCAA,1072,12,11/22/25,NA,Alabama-Birmingham,South Florida
+NCAA,1073,12,11/22/25,NA, Oregon,Southern California
+NCAA,1074,12,11/22/25,NA,South Alabama,Southern Mississippi
+NCAA,1075,12,11/22/25,NA, Notre Dame,Syracuse
+NCAA,1076,12,11/22/25,NA,Florida, Tennessee
+NCAA,1077,12,11/22/25,NA,Houston,Texas Christian
+NCAA,1078,12,11/22/25,NA,Temple,Tulane
+NCAA,1079,12,11/22/25,NA,Army,Tulsa
+NCAA,1080,12,11/22/25,NA,Fresno State,Utah State
+NCAA,1081,12,11/22/25,NA,UCLA,Washington
+NCAA,1082,12,11/22/25,NA,James Madison,Washington State
+NCAA,1083,12,11/22/25,NA, Louisiana State,Western Kentucky
+NCAA,1084,13,11/25/25,NA,Massachusetts,Bowling Green
+NCAA,1085,13,11/25/25,NA,Eastern Michigan,Western Michigan
+NCAA,1086,13,11/27/25,NA,Memphis,Navy
+NCAA,1087,13,11/28/25,NA,Colorado State,Air Force
+NCAA,1088,13,11/28/25,NA, Arizona State,Arizona
+NCAA,1089,13,11/28/25,NA,Texas-San Antonio,Army
+NCAA,1090,13,11/28/25,NA,Utah State,Boise State
+NCAA,1091,13,11/28/25,NA, Georgia Tech, Georgia
+NCAA,1092,13,11/28/25,NA,Purdue, Indiana
+NCAA,1093,13,11/28/25,NA,Nebraska,Iowa
+NCAA,1094,13,11/28/25,NA,Northern Illinois,Kent State
+NCAA,1095,13,11/28/25,NA,Mississippi State, Mississippi
+NCAA,1096,13,11/28/25,NA,Buffalo,Ohio
+NCAA,1097,13,11/28/25,NA,New Mexico,San Diego State
+NCAA,1098,13,11/28/25,NA, Texas, Texas A&M
+NCAA,1099,13,11/28/25,NA,Kansas,Utah
+NCAA,1100,13,11/29/25,NA,Auburn, Alabama
+NCAA,1101,13,11/29/25,NA,Tulsa,Alabama-Birmingham
+NCAA,1102,13,11/29/25,NA,Appalachian State,Arkansas State
+NCAA,1103,13,11/29/25,NA,Miami (OH),Ball State
+NCAA,1104,13,11/29/25,NA,Syracuse,Boston College
+NCAA,1105,13,11/29/25,NA, Brigham Young,Central Florida
+NCAA,1106,13,11/29/25,NA,Tulane,Charlotte
+NCAA,1107,13,11/29/25,NA,Texas Christian,Cincinnati
+NCAA,1108,13,11/29/25,NA,South Carolina,Clemson
+NCAA,1109,13,11/29/25,NA,Kansas State,Colorado
+NCAA,1110,13,11/29/25,NA,Florida Atlantic,East Carolina
+NCAA,1111,13,11/29/25,NA,Sam Houston,Florida International
+NCAA,1112,13,11/29/25,NA,Florida, Florida State
+NCAA,1113,13,11/29/25,NA,San Jose State,Fresno State
+NCAA,1114,13,11/29/25,NA,Marshall,Georgia Southern
+NCAA,1115,13,11/29/25,NA,Old Dominion,Georgia State
+NCAA,1116,13,11/29/25,NA,Baylor,Houston
+NCAA,1117,13,11/29/25,NA,Oklahoma State, Iowa State
+NCAA,1118,13,11/29/25,NA,Coastal Carolina,James Madison
+NCAA,1119,13,11/29/25,NA,Liberty,Kennesaw State
+NCAA,1120,13,11/29/25,NA,Louisville,Kentucky
+NCAA,1121,13,11/29/25,NA, Oklahoma, Louisiana State
+NCAA,1122,13,11/29/25,NA,Missouri State,Louisiana Tech
+NCAA,1123,13,11/29/25,NA,Louisiana,Louisiana-Monroe
+NCAA,1124,13,11/29/25,NA,Michigan State,Maryland
+NCAA,1125,13,11/29/25,NA,Pittsburgh, Miami (FL)
+NCAA,1126,13,11/29/25,NA,New Mexico State,Middle Tennessee State
+NCAA,1127,13,11/29/25,NA,Arkansas, Missouri
+NCAA,1128,13,11/29/25,NA,Nevada,Nevada-Las Vegas
+NCAA,1129,13,11/29/25,NA,North Carolina State,North Carolina
+NCAA,1130,13,11/29/25,NA, Illinois,Northwestern
+NCAA,1131,13,11/29/25,NA,Stanford, Notre Dame
+NCAA,1132,13,11/29/25,NA, Michigan, Ohio State
+NCAA,1133,13,11/29/25,NA,Washington, Oregon
+NCAA,1134,13,11/29/25,NA,Washington State,Oregon State
+NCAA,1135,13,11/29/25,NA,Rutgers, Penn State
+NCAA,1136,13,11/29/25,NA,South Florida,Rice
+NCAA,1137,13,11/29/25,NA,Texas State,South Alabama
+NCAA,1138,13,11/29/25,NA,California,Southern Methodist
+NCAA,1139,13,11/29/25,NA,North Texas,Temple
+NCAA,1140,13,11/29/25,NA,West Virginia, Texas Tech
+NCAA,1141,13,11/29/25,NA,Delaware,Texas-El Paso
+NCAA,1142,13,11/29/25,NA,Central Michigan,Toledo
+NCAA,1143,13,11/29/25,NA,Southern Mississippi,Troy
+NCAA,1144,13,11/29/25,NA,Southern California,UCLA
+NCAA,1145,13,11/29/25,NA, Tennessee, Vanderbilt
+NCAA,1146,13,11/29/25,NA, Virginia,Virginia Tech
+NCAA,1147,13,11/29/25,NA,Duke,Wake Forest
+NCAA,1148,13,11/29/25,NA,Jacksonville State,Western Kentucky
+NCAA,1149,13,11/29/25,NA,Minnesota,Wisconsin
+NCAA,1150,13,11/29/25,NA,Hawaii,Wyoming
+NCAA,1151,14,12/13/25,NA,Army,Navy

@@ -33,8 +33,10 @@ export type ParsedPicksheet = z.infer<typeof PicksheetSchema>
 export class LLMPicksheetParser {
   /**
    * Parse picksheet text using OpenAI with structured output
+   * @param text - The picksheet text to parse
+   * @param scheduleGames - Optional schedule games for the week to use as matching context
    */
-  static async parseWithLLM(text: string): Promise<ParsedPicksheet> {
+  static async parseWithLLM(text: string, scheduleGames?: any[]): Promise<ParsedPicksheet> {
     try {
       // Check API key
       const apiKey = process.env.OPENAI_API_KEY
@@ -55,27 +57,231 @@ export class LLMPicksheetParser {
       })
 
       console.log('Starting LLM parse with text length:', text.length)
-      
-      const systemPrompt = `You are an expert sports betting picksheet parser. Your job is to extract structured data from picksheet text and return it as valid JSON.
+      if (scheduleGames && scheduleGames.length > 0) {
+        console.log(`Using schedule context with ${scheduleGames.length} games for enhanced matching`)
+      }
 
-IMPORTANT: You must return ONLY valid JSON, no other text or explanation.
+      // Build schedule context if provided
+      let scheduleContext = ''
+      if (scheduleGames && scheduleGames.length > 0) {
+        scheduleContext = `
 
-You must return a JSON object with this exact structure:
+SCHEDULE REFERENCE FOR THIS WEEK:
+You have access to the official schedule for this week. Use this to match team names EXACTLY as they appear in the schedule.
+This eliminates ambiguity in team naming (e.g., "Florida Atlantic" vs "FAU", "Miami (FL)" vs "Miami").
+
+${scheduleGames.map((game, idx) =>
+  `${idx + 1}. ${game.away_team} @ ${game.home_team} (${game.league}, Week ${game.week})`
+).join('\n')}
+
+IMPORTANT: When parsing team names from the picksheet:
+1. Match each game to the schedule above using fuzzy matching if needed
+2. Use the EXACT team names from the schedule (away_team and home_team)
+3. This ensures consistency across all data sources
+4. If a picksheet team doesn't match any schedule game, use your best judgment for the name
+`
+      }
+
+      const systemPrompt = `You are an expert sports betting picksheet parser. Extract structured data from picksheet text and return ONLY valid JSON that conforms to the schema below.
+
+${scheduleContext}
+
+SOURCE OF TRUTH - SCHEDULE MATCHING:
+- The SCHEDULE REFERENCE above is your canonical source for team names and matchups
+- The PAIR of team names (home + away) uniquely identifies ONE game in the schedule
+- Match by finding BOTH teams in a single schedule line (order-insensitive)
+- Once matched, use the EXACT team names from the schedule (away_team and home_team fields)
+- The league is automatically determined from whichever schedule game matched both teams
+- Do NOT use abbreviations or alternate spellings in your output - always use the exact schedule name
+
+⚠️ CRITICAL: DISAMBIGUATING DUPLICATE TEAM NAMES
+- Some team names appear in MULTIPLE games (e.g., "Minnesota" in both NFL and NCAAF)
+- Use BOTH team names to identify which game: "Minnesota + Cleveland" → NFL, "Minnesota + Ohio State" → NCAA
+- The opposing team name tells you which Minnesota game it is
+- Each picksheet line is INDEPENDENT - parse the record and spread FROM THAT SPECIFIC LINE ONLY
+- Example workflow:
+  1. Picksheet: "Minnesota (2-2) -3.5 ... CLEVELAND (1-3) +3.5"
+     → Find schedule game with BOTH "Minnesota" AND "Cleveland"
+     → Match found: "Minnesota Vikings @ Cleveland Browns (NFL)"
+     → Use record (2-2) and spread -3.5 for Minnesota, record (1-3) and spread +3.5 for Cleveland
+  2. Picksheet: "Minnesota (3-1) +23.5 ... OHIO ST. (4-0) -23.5"
+     → Find schedule game with BOTH "Minnesota" AND "Ohio"
+     → Match found: "Minnesota @ Ohio State (NCAA)"
+     → Use record (3-1) and spread +23.5 for Minnesota, record (4-0) and spread -23.5 for Ohio State
+- NEVER copy data from one Minnesota game to another Minnesota game!
+
+TEAM NAME ALIASES (normalize before matching to schedule):
+
+NFL Aliases:
+- "LA RAMS" / "L.A. Rams" → "Los Angeles Rams"
+- "LA CHARGERS" / "L.A. Chargers" → "Los Angeles Chargers"
+- "NY JETS" / "N.Y. Jets" → "New York Jets"
+- "NY Giants" / "N.Y. Giants" → "New York Giants"
+- "Tampa Bay" → "Tampa Bay Buccaneers"
+- "Washington" → "Washington Commanders"
+- "New England" → "New England Patriots"
+- "Green Bay" → "Green Bay Packers"
+- "Kansas City" → "Kansas City Chiefs"
+- "San Francisco" → "San Francisco 49ers"
+
+NCAAF Aliases:
+- "Sam Houston State" / "Sam Houston St." → "Sam Houston"
+- "NEW MEXICO ST." / "New Mexico St." → "New Mexico State"
+- "San Jose St." / "SAN JOSE ST." → "San Jose State"
+- "Colorado St." / "COLORADO ST." → "Colorado State"
+- "Oklahoma St." / "OKLAHOMA ST." → "Oklahoma State"
+- "Ball St." / "BALL ST." → "Ball State"
+- "UAB" → "Alabama-Birmingham"
+- "Kansas St." / "KANSAS ST." → "Kansas State"
+- "Iowa St." / "IOWA ST." → "Iowa State"
+- "Georgia St." / "GEORGIA ST." → "Georgia State"
+- "Northern Ill" / "NORTHERN ILL" → "Northern Illinois"
+- "Miami Ohio" / "MIAMI OHIO" → "Miami (OH)"
+- "Miami Fla" / "MIAMI FLA" / "Miami FL" → "Miami (FL)"
+- "Florida St." / "FLORIDA ST." → "Florida State"
+- "UL Monroe" / "ULM" → "Louisiana-Monroe"
+- "Western Mich" / "WESTERN MICH" → "Western Michigan"
+- "Eastern Mich" / "EASTERN MICH" → "Eastern Michigan"
+- "Arkansas St." / "ARKANSAS ST." → "Arkansas State"
+- "Penn St." / "PENN ST." → "Penn State"
+- "TCU" → "Texas Christian"
+- "SMU" → "Southern Methodist"
+- "UCF" → "Central Florida"
+- "UTSA" → "Texas-San Antonio"
+- "Massachusetts" / "UMass" → "Massachusetts"
+- "Appalachian St." / "APP STATE" → "Appalachian State"
+- "Boise St." / "BOISE ST." → "Boise State"
+- "Fresno St." / "FRESNO ST." → "Fresno State"
+- "Arizona St." / "ARIZONA ST." → "Arizona State"
+- "Oregon St." / "OREGON ST." → "Oregon State"
+- "Washington St." / "WASH ST." → "Washington State"
+- "Michigan St." / "MICHIGAN ST." → "Michigan State"
+- "Ohio St." / "OHIO ST." → "Ohio State"
+- "UNLV" → "Nevada-Las Vegas"
+- "S. FLORIDA" / "S. Florida" / "South Fla" → "South Florida"
+- "FIU" → "Florida International"
+
+PICKSHEET LINE FORMAT:
+[points] [AWAY team] [AWAY record] [AWAY spread] [day/time] [HOME team] [HOME record] [HOME spread] [O/U]
+
+PARSING RULES:
+1. Points: Parse the leading number before "pt" or "points" → \`points\` (number field)
+2. Records: Parse (W-L) or (W-L-T) immediately after team name → \`awayRecord\` / \`homeRecord\` (string)
+3. Spreads: Signed number after each team belongs to that team; awaySpread and homeSpread MUST be exact opposites
+   - If one is +3.5, the other MUST be -3.5
+   - PK or PICK means 0 for both teams
+4. Day/Time: Copy day token (Thu, Fri, Sat, Sun, Mon) → \`gameDay\`, time token (5:15 PM) → \`gameTime\`
+5. Date: If a full date is present (e.g., "January 5, 2025"), store in \`gameDate\`. If NOT present, OMIT this field (do not invent)
+6. Over/Under: If "O/U" or "o/u" followed by number (e.g., "O/U 42.5") → \`overUnder\` (number). Otherwise OMIT
+7. Rankings: Ignore "#1", "#24", etc. - do NOT include in team names
+
+CRITICAL SPREAD BINDING RULE (OVERRIDES EVERYTHING):
+- The signed number immediately following a team token in the picksheet line belongs to THAT team
+- When you canonicalize team names using the SCHEDULE, PRESERVE the spread sign captured with each team
+- After mapping to schedule names, verify awaySpread === -(homeSpread); if not, you made an error
+- NEVER flip a team's spread sign because of schedule matching - the sign stays with the token it followed
+
+Example: "Minnesota (2-2) -3.5 ... CLEVELAND (1-3) +3.5"
+→ Minnesota has -3.5 (stays -3.5 even after canonicalization)
+→ Cleveland has +3.5 (stays +3.5 even after canonicalization)
+→ Result: awaySpread: -3.5, homeSpread: +3.5 ✓
+
+MATCHING ALGORITHM:
+1. Extract both team names AND their spreads from the picksheet line (bind spread to token)
+2. Apply ALIASES to normalize each team name (keep spreads bound)
+3. Fuzzy match BOTH teams (order-insensitive) to find the unique schedule game
+4. Determine which normalized team maps to away_team vs home_team in schedule
+5. Assign the spread that was bound to each team in step 1 to the correct away/home field
+6. Use EXACT \`away_team\` and \`home_team\` from schedule as final team names
+7. Set \`league\` based on schedule: NFL → "NFL", NCAA → "NCAAF"
+8. Verify awaySpread === -(homeSpread) as final check
+
+FEW-SHOT EXAMPLES:
+
+Example 1 (NFL):
+Picksheet line: "1 pt San Francisco (4-1) +5.5 Thu 5:15 PM LA RAMS (3-2) -5.5"
+Schedule match: "San Francisco 49ers @ Los Angeles Rams" (NFL)
+Output:
 {
-  "title": "optional title string",
-  "week": "optional week string",
+  "league": "NFL",
+  "awayTeam": "San Francisco 49ers",
+  "awayRecord": "(4-1)",
+  "awaySpread": 5.5,
+  "homeTeam": "Los Angeles Rams",
+  "homeRecord": "(3-2)",
+  "homeSpread": -5.5,
+  "gameDay": "Thu",
+  "gameTime": "5:15 PM",
+  "points": 1
+}
+
+Example 2 (NCAAF):
+Picksheet line: "1 pt #7 Penn St. (3-1) -25.5 Sat 12:30 PM UCLA (0-4) +25.5"
+Schedule match: "Penn State @ UCLA" (NCAA)
+Output:
+{
+  "league": "NCAAF",
+  "awayTeam": "Penn State",
+  "awayRecord": "(3-1)",
+  "awaySpread": -25.5,
+  "homeTeam": "UCLA",
+  "homeRecord": "(0-4)",
+  "homeSpread": 25.5,
+  "gameDay": "Sat",
+  "gameTime": "12:30 PM",
+  "points": 1
+}
+
+Example 3 (NFL - spread binding verification):
+Picksheet line: "1 pt Minnesota (2-2) -3.5 Sun 6:30 AM CLEVELAND (1-3) +3.5"
+Schedule match: "Minnesota Vikings @ Cleveland Browns" (NFL)
+Output:
+{
+  "league": "NFL",
+  "awayTeam": "Minnesota Vikings",
+  "awayRecord": "(2-2)",
+  "awaySpread": -3.5,
+  "homeTeam": "Cleveland Browns",
+  "homeRecord": "(1-3)",
+  "homeSpread": 3.5,
+  "gameDay": "Sun",
+  "gameTime": "6:30 AM",
+  "points": 1
+}
+
+Example 4 (NCAAF - alias canonicalization):
+Picksheet line: "1 pt UNLV (5-0) -3.5 Sat 4:00 PM WYOMING (2-2) +3.5"
+Schedule match: "Nevada-Las Vegas @ Wyoming" (NCAA)
+Output:
+{
+  "league": "NCAAF",
+  "awayTeam": "Nevada-Las Vegas",
+  "awayRecord": "(5-0)",
+  "awaySpread": -3.5,
+  "homeTeam": "Wyoming",
+  "homeRecord": "(2-2)",
+  "homeSpread": 3.5,
+  "gameDay": "Sat",
+  "gameTime": "4:00 PM",
+  "points": 1
+}
+
+OUTPUT SCHEMA (must match exactly):
+{
+  "title": "optional string",
+  "week": "optional string",
   "games": [
     {
       "league": "NFL" or "NCAAF",
-      "awayTeam": "team name",
-      "awayRecord": "optional record",
+      "awayTeam": "exact schedule name",
+      "awayRecord": "optional string",
       "awaySpread": number,
-      "homeTeam": "team name",
-      "homeRecord": "optional record", 
+      "homeTeam": "exact schedule name",
+      "homeRecord": "optional string",
       "homeSpread": number,
-      "gameDay": "optional day",
-      "gameDate": "optional date",
-      "gameTime": "optional time",
+      "gameDay": "optional string",
+      "gameDate": "optional string",
+      "gameTime": "optional string",
       "overUnder": optional number,
       "points": optional number
     }
@@ -85,74 +291,61 @@ You must return a JSON object with this exact structure:
   "ncaafGames": number
 }
 
-CRITICAL PARSING RULES:
+POST-PARSE VALIDATION CHECKLIST (verify before returning):
+✓ All team names EXACTLY match schedule strings (no abbreviations)
+✓ For every game: awaySpread === -(homeSpread) - the spread sign must match the picksheet line
+✓ DERIVE counts from the games array (DO NOT GUESS):
+  - Set totalGames = games.length
+  - Set nflGames = count of games where league === "NFL"
+  - Set ncaafGames = count of games where league === "NCAAF"
+  - Recompute these counts immediately before returning
+✓ Optional fields are OMITTED if not present (do not guess/invent)
+✓ League is "NFL" or "NCAAF" (not "NCAA")
+✓ JSON is valid and complete
+✓ Both awayTeam and homeTeam exist in the SCHEDULE for every game
 
-1. HOME vs AWAY team identification (VERY IMPORTANT - THIS IS THE PICKSHEET FORMAT):
-
-   FORMAT: [points] [AWAY team] [AWAY spread] [day/time] [HOME team] [HOME spread]
-
-   **KEY RULES**:
-   - Team in ALL CAPS = HOME team (on the right side)
-   - Team in regular case = AWAY team (on the left side)
-   - The spread immediately follows each team name
-
-   **SPECIAL CASES**:
-   - Acronym teams (TCU, USC, UCLA, BYU, SMU, UNLV, UAB, UTEP, UTSA, etc.) may appear in caps even when away
-   - If both teams appear capitalized, the NON-ACRONYM is HOME
-   - Rankings (#1, #24, etc.) don't affect home/away determination
-
-   **EXAMPLES FROM ACTUAL PICKSHEET**:
-   - "1 pt Army (1-2) +5.5 Thu 4:30 PM EAST CAROLINA (2-2) -5.5"
-     → Army = AWAY (left, regular case) with +5.5
-     → EAST CAROLINA = HOME (right, ALL CAPS) with -5.5
-
-   - "1 pt #24 TCU (3-0) +2.5 Fri 6:00 PM ARIZONA ST. (3-1) -2.5"
-     → TCU = AWAY (left side, even though it's an acronym) with +2.5
-     → ARIZONA ST. = HOME (right, ALL CAPS) with -2.5
-
-   - "1 pt Baylor (2-2) -20.5 Sat 12:30 PM OKLAHOMA ST. (1-2) +20.5"
-     → Baylor = AWAY (left, regular case) with -20.5
-     → OKLAHOMA ST. = HOME (right, ALL CAPS) with +20.5
-
-2. Spread parsing:
-   - Each team has opposite spreads (if one is +3.5, the other is -3.5)
-   - The spread belongs to the team it's next to
-   - PK or PICK means 0 spread for both teams
-   - Parse decimal spreads accurately (e.g., -3.5, +7.5)
-
-3. Over/Under (O/U) parsing:
-   - Look for "O/U", "o/u", "Over/Under" followed by a number
-   - This is the total points, store in overUnder field
-   - Common format: "O/U 42.5" or "O/U: 48"
-
-4. League identification:
-   - NFL teams: Professional teams (Cowboys, Chiefs, Packers, Bills, etc.)
-   - NFL cities: Dallas, Kansas City, Green Bay, Buffalo, etc.
-   - NCAAF indicators: State, University, Tech, A&M, rankings (#1, #11), school names
-
-5. Date and time extraction:
-   - Extract full dates like "January 5, 2025" or "Monday, January 6, 2025"
-   - Extract days of week (Monday, Tuesday, Sun, Mon, etc.)
-   - Extract times (1:00 PM, 5:20 PM, etc.)
-
-6. Records: Extract if shown in parentheses (e.g., "(7-10)", "(10-2)")
-
-7. Point values: Extract if shown (e.g., "1 pt", "2 points")
-
-Remember: Return ONLY valid JSON, no explanations or additional text.`
+Return ONLY valid JSON with no extra text or explanations.`
 
       const userPrompt = `Parse this picksheet and extract all games with their details:\n\n${text}`
 
+      // Log the full request being sent to OpenAI
+      console.log('\n' + '='.repeat(80))
+      console.log('📤 OPENAI API REQUEST')
+      console.log('='.repeat(80))
+      console.log('Model:', 'gpt-4o-mini')
+      console.log('Temperature:', 0)
+      console.log('Max Tokens:', 16000)
+      console.log('\n--- SYSTEM MESSAGE ---')
+      console.log(systemPrompt)
+      console.log('\n--- USER MESSAGE ---')
+      console.log(userPrompt)
+      console.log('='.repeat(80) + '\n')
+
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini', // Using GPT-4o-mini for better accuracy and structured output support
+        model: 'gpt-4o', // Using GPT-4o for maximum reliability with complex parsing (handles duplicate team names better)
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: 'json_object' },
         temperature: 0, // Zero temperature for most deterministic parsing
+        seed: 1, // Seed for deterministic outputs across retries
         max_tokens: 16000, // Much higher limit to avoid truncation
       })
+
+      // Log the full response received from OpenAI
+      console.log('\n' + '='.repeat(80))
+      console.log('📥 OPENAI API RESPONSE')
+      console.log('='.repeat(80))
+      console.log('Full Response Object:')
+      console.log(JSON.stringify(completion, null, 2))
+      console.log('\n--- RESPONSE CONTENT ---')
+      console.log(completion.choices[0].message.content)
+      console.log('\n--- USAGE STATS ---')
+      console.log('Prompt Tokens:', completion.usage?.prompt_tokens)
+      console.log('Completion Tokens:', completion.usage?.completion_tokens)
+      console.log('Total Tokens:', completion.usage?.total_tokens)
+      console.log('='.repeat(80) + '\n')
 
       const responseContent = completion.choices[0].message.content
       
@@ -230,6 +423,69 @@ Remember: Return ONLY valid JSON, no explanations or additional text.`
         }
       }
       
+      // Validation: Check for duplicate team names with mismatched data
+      const picksheetLines = picksheetText.trim().split('\n')
+      const teamOccurrences = new Map<string, Array<{line: string, record: string, spread: number}>>()
+
+      // Build a map of team occurrences in the picksheet
+      for (const line of picksheetLines) {
+        const recordPattern = /\([\d-]+\)/g
+        const spreadPattern = /[+-]?\d+\.?\d*/g
+
+        const records = line.match(recordPattern) || []
+        const spreads = line.match(/[+-]\d+\.?\d*/g) || []
+
+        // Extract team names (simplified - look for capitalized words between record and spread)
+        const words = line.split(/\s+/)
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i]
+          // Check if this looks like a team name (starts with capital letter, not a number/record/spread)
+          if (/^[A-Z]/.test(word) && !/^\(/.test(word) && !/^[+-]?\d/.test(word)) {
+            const teamName = word.replace(/[,.]$/, '') // Remove trailing punctuation
+
+            // Find the associated record and spread
+            let recordIdx = 0
+            let spreadIdx = 0
+            for (let j = 0; j < i; j++) {
+              if (records.includes(words[j])) recordIdx++
+              if (/^[+-]\d/.test(words[j])) spreadIdx++
+            }
+
+            if (records[recordIdx] && spreads[spreadIdx]) {
+              if (!teamOccurrences.has(teamName)) {
+                teamOccurrences.set(teamName, [])
+              }
+              teamOccurrences.get(teamName)!.push({
+                line: line,
+                record: records[recordIdx],
+                spread: parseFloat(spreads[spreadIdx])
+              })
+            }
+          }
+        }
+      }
+
+      // Validate parsed games against picksheet
+      const validationErrors: string[] = []
+      for (const game of (parsed.games || [])) {
+        // Check awaySpread + homeSpread = 0 (must be exact opposites)
+        if (game.awaySpread != null && game.homeSpread != null) {
+          const sum = Math.abs(game.awaySpread + game.homeSpread)
+          if (sum > 0.01) { // Allow tiny floating point errors
+            validationErrors.push(
+              `SPREAD_MISMATCH: ${game.awayTeam} vs ${game.homeTeam} - ` +
+              `awaySpread (${game.awaySpread}) + homeSpread (${game.homeSpread}) != 0`
+            )
+          }
+        }
+      }
+
+      if (validationErrors.length > 0) {
+        console.warn('\n⚠️  VALIDATION WARNINGS:')
+        validationErrors.forEach(err => console.warn(`  - ${err}`))
+        console.warn('')
+      }
+
       // Clean up games by replacing null with undefined for optional fields
       const cleanedGames = (parsed.games || []).map((game: any) => ({
         ...game,

@@ -12,10 +12,12 @@
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.45.0",
+    "cheerio": "^1.1.2",
     "fuse.js": "^7.1.0",
     "nanoid": "^5.1.5",
     "next": "14.2.3",
     "openai": "^5.19.1",
+    "papaparse": "^5.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^3.25.76"
