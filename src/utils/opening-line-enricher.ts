@@ -41,9 +41,12 @@ export class OpeningLineEnricher {
   /**
    * Record opening lines from comparisons
    */
-  static recordOpeningLinesFromComparisons(comparisons: any[]): void {
-    // Stub implementation - no-op for now
-    return
+  static recordOpeningLinesFromComparisons(comparisons: any[]): { recorded: number; skipped: number } {
+    // Stub implementation - return counts
+    return {
+      recorded: 0,
+      skipped: comparisons.length
+    }
   }
 
   /**

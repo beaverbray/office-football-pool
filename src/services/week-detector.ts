@@ -4,7 +4,7 @@
 
 export interface WeekInfo {
   week: number
-  season: number
+  seasonYear: number
   startDate: Date
   endDate: Date
 }
@@ -15,10 +15,10 @@ export class WeekDetector {
    */
   static getCurrentNFLWeek(): WeekInfo {
     const now = new Date()
-    const season = now.getFullYear()
+    const seasonYear = now.getFullYear()
 
     // NFL season typically starts first week of September
-    const seasonStart = new Date(season, 8, 1) // September 1
+    const seasonStart = new Date(seasonYear, 8, 1) // September 1
 
     // Calculate weeks since season start
     const weeksPassed = Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
@@ -26,7 +26,7 @@ export class WeekDetector {
 
     return {
       week: currentWeek,
-      season,
+      seasonYear,
       startDate: new Date(seasonStart.getTime() + (currentWeek - 1) * 7 * 24 * 60 * 60 * 1000),
       endDate: new Date(seasonStart.getTime() + currentWeek * 7 * 24 * 60 * 60 * 1000)
     }
@@ -37,10 +37,10 @@ export class WeekDetector {
    */
   static getCurrentNCAAWeek(): WeekInfo {
     const now = new Date()
-    const season = now.getFullYear()
+    const seasonYear = now.getFullYear()
 
     // NCAA season typically starts last week of August
-    const seasonStart = new Date(season, 7, 24) // August 24
+    const seasonStart = new Date(seasonYear, 7, 24) // August 24
 
     // Calculate weeks since season start
     const weeksPassed = Math.floor((now.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
@@ -48,7 +48,7 @@ export class WeekDetector {
 
     return {
       week: currentWeek,
-      season,
+      seasonYear,
       startDate: new Date(seasonStart.getTime() + currentWeek * 7 * 24 * 60 * 60 * 1000),
       endDate: new Date(seasonStart.getTime() + (currentWeek + 1) * 7 * 24 * 60 * 60 * 1000)
     }
@@ -58,10 +58,10 @@ export class WeekDetector {
    * Detect week from a date
    */
   static getWeekFromDate(date: Date, league: 'NFL' | 'NCAA' = 'NFL'): WeekInfo {
-    const season = date.getFullYear()
+    const seasonYear = date.getFullYear()
     const seasonStart = league === 'NFL'
-      ? new Date(season, 8, 1)  // September 1
-      : new Date(season, 7, 24) // August 24
+      ? new Date(seasonYear, 8, 1)  // September 1
+      : new Date(seasonYear, 7, 24) // August 24
 
     const weeksPassed = Math.floor((date.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
     const week = league === 'NFL'
@@ -70,7 +70,7 @@ export class WeekDetector {
 
     return {
       week,
-      season,
+      seasonYear,
       startDate: new Date(seasonStart.getTime() + (week - (league === 'NFL' ? 1 : 0)) * 7 * 24 * 60 * 60 * 1000),
       endDate: new Date(seasonStart.getTime() + (week - (league === 'NFL' ? 0 : -1)) * 7 * 24 * 60 * 60 * 1000)
     }

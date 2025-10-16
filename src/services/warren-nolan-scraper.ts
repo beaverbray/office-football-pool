@@ -272,7 +272,7 @@ export class WarrenNolanScraper {
    */
   static async scrapeCurrentWeek(): Promise<WarrenNolanScraperResult> {
     // Use WeekDetector for consistent week calculation
-    const weekInfo = WeekDetector.getCurrentNCAAFWeek()
+    const weekInfo = WeekDetector.getCurrentNCAAWeek()
 
     return this.scrapePredictionsByWeek(weekInfo.seasonYear, weekInfo.week)
   }
