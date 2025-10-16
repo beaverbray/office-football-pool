@@ -433,6 +433,32 @@ export interface Database {
           away_team?: string
         }
       }
+      current_pipeline: {
+        Row: {
+          id: string
+          pipeline_data: Json
+          picksheet_text: string | null
+          created_at: string
+          updated_at: string
+          is_current: boolean
+        }
+        Insert: {
+          id?: string
+          pipeline_data: Json
+          picksheet_text?: string | null
+          created_at?: string
+          updated_at?: string
+          is_current?: boolean
+        }
+        Update: {
+          id?: string
+          pipeline_data?: Json
+          picksheet_text?: string | null
+          created_at?: string
+          updated_at?: string
+          is_current?: boolean
+        }
+      }
     }
   }
 }

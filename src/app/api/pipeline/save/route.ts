@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import { Database } from '@/types/database'
+
+type CurrentPipelineInsert = Database['public']['Tables']['current_pipeline']['Insert']
+type CurrentPipelineRow = Database['public']['Tables']['current_pipeline']['Row']
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,21 +17,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // For now, this is a stub that just returns success
-    // In the future, this would save to a current_pipeline table:
-    // const { data, error } = await supabase
-    //   .from('current_pipeline')
-    //   .upsert({
-    //     pipeline_data: pipeline,
-    //     picksheet_text: picksheetText,
-    //     updated_at: new Date().toISOString()
-    //   })
+    // First, set all existing pipelines to is_current = false
+    const { error: updateError } = await supabase
+      .from('current_pipeline')
+      // @ts-expect-error - Supabase type inference issue with new table
+      .update({ is_current: false })
+      .eq('is_current', true)
 
-    console.log('Pipeline save requested (stub - not persisted to DB)')
+    if (updateError) {
+      console.error('Error updating previous pipelines:', updateError)
+      // Continue anyway - not critical
+    }
+
+    // Insert new current pipeline
+    const { data, error } = await supabase
+      .from('current_pipeline')
+      // @ts-expect-error - Supabase type inference issue with new table
+      .insert({
+        pipeline_data: pipeline,
+        picksheet_text: picksheetText,
+        is_current: true,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single() as { data: CurrentPipelineRow | null, error: any }
+
+    if (error || !data) {
+      console.error('Error saving pipeline to database:', error)
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Failed to save pipeline to database',
+          message: error?.message || 'No data returned'
+        },
+        { status: 500 }
+      )
+    }
+
+    console.log('Pipeline saved successfully to database:', data.id)
 
     return NextResponse.json({
       success: true,
-      message: 'Pipeline data received (not persisted - stub implementation)'
+      id: data.id,
+      message: 'Pipeline data saved successfully'
     })
   } catch (error) {
     console.error('Error saving pipeline:', error)
