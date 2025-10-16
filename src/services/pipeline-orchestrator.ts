@@ -481,11 +481,33 @@ export class PipelineOrchestrator {
         return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
       }
 
+      this.log(`Schedule has ${scheduleGames.length} games`)
+      this.log(`Picksheet has ${picksheetGames.length} games`)
+      this.log(`Market has ${marketGames.length} games`)
+
+      // Debug: Log first few schedule games
+      if (scheduleGames.length > 0) {
+        this.log('Sample schedule games:')
+        scheduleGames.slice(0, 3).forEach((g: any) => {
+          this.log(`  ${g.away_team} @ ${g.home_team} (Week ${g.week}, League: ${g.league})`)
+        })
+      }
+
+      // Debug: Log first few picksheet games
+      if (picksheetGames.length > 0) {
+        this.log('Sample picksheet games:')
+        picksheetGames.slice(0, 3).forEach((g: any) => {
+          this.log(`  ${g.awayTeam} @ ${g.homeTeam}`)
+        })
+      }
+
       // Match picksheet games to schedule
       const picksheetMatches = GameMatchingService.matchPicksheetToSchedule(
         picksheetGames,
         scheduleGames
       )
+
+      this.log(`Picksheet matches: ${picksheetMatches.size} games matched to schedule`)
 
       // Match market games to schedule
       const marketMatches = GameMatchingService.matchMarketToSchedule(
@@ -493,11 +515,13 @@ export class PipelineOrchestrator {
         scheduleGames
       )
 
+      this.log(`Market matches: ${marketMatches.size} games matched to schedule`)
+
       // Build matched games array
       const matches: any[] = []
       let matchedCount = 0
 
-      scheduleGames.forEach((scheduleGame: any, idx: number) => {
+      scheduleGames.forEach((scheduleGame: any) => {
         const picksheetMatch = picksheetMatches.get(scheduleGame.match_number)
         const marketMatch = marketMatches.get(scheduleGame.match_number)
 
@@ -706,7 +730,7 @@ export class PipelineOrchestrator {
   private async compareGames(
     picksheetGames: any[],
     marketGames: any[],
-    matchingResult: any
+    _matchingResult: any
   ): Promise<PipelineResult['comparison']> {
     const startTime = Date.now()
     this.currentStage = 'comparison'
@@ -787,7 +811,7 @@ export class PipelineOrchestrator {
           gameId: `${match.scheduleGame.away_team}-${match.scheduleGame.home_team}-${match.scheduleGame.week}`,
           homeTeam: match.scheduleGame.home_team,
           awayTeam: match.scheduleGame.away_team,
-          gameTime: match.scheduleGame.date, // Use date field from schedule table
+          gameTime: match.marketGame.gameTime || match.scheduleGame.date, // Use accurate time from market data (Odds API)
           league: match.scheduleGame.league,
           picksheetSpread,
           marketSpread,
@@ -920,7 +944,7 @@ export class PipelineOrchestrator {
    * Generate unique pipeline ID
    */
   private generatePipelineId(): string {
-    return `pipeline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    return `pipeline_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
   }
 }
 
