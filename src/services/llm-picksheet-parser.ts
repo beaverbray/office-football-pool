@@ -424,7 +424,7 @@ Return ONLY valid JSON with no extra text or explanations.`
       }
       
       // Validation: Check for duplicate team names with mismatched data
-      const picksheetLines = picksheetText.trim().split('\n')
+      const picksheetLines = text.trim().split('\n')
       const teamOccurrences = new Map<string, Array<{line: string, record: string, spread: number}>>()
 
       // Build a map of team occurrences in the picksheet
@@ -432,8 +432,8 @@ Return ONLY valid JSON with no extra text or explanations.`
         const recordPattern = /\([\d-]+\)/g
         const spreadPattern = /[+-]?\d+\.?\d*/g
 
-        const records = line.match(recordPattern) || []
-        const spreads = line.match(/[+-]\d+\.?\d*/g) || []
+        const records: string[] = line.match(recordPattern) || []
+        const spreads: string[] = line.match(/[+-]\d+\.?\d*/g) || []
 
         // Extract team names (simplified - look for capitalized words between record and spread)
         const words = line.split(/\s+/)
