@@ -335,13 +335,13 @@ export default function CompactDashboard() {
       }
 
       // Delta range filter
-      const delta = Math.abs(c.spreadDelta)
+      const delta = Math.abs(c.spreadDelta ?? 0)
       if (filters.deltaMin !== '' && delta < parseFloat(filters.deltaMin)) return false
       if (filters.deltaMax !== '' && delta > parseFloat(filters.deltaMax)) return false
 
       // Issues filter
       if (showOnlyIssues) {
-        return Math.abs(c.spreadDelta) > 3 || c.crossesKeyNumber || c.favoriteFlipped
+        return Math.abs(c.spreadDelta ?? 0) > 3 || c.crossesKeyNumber || c.favoriteFlipped
       }
 
       return true
@@ -362,11 +362,11 @@ export default function CompactDashboard() {
           compareValue = a.homeTeam.localeCompare(b.homeTeam)
           break
         case 'delta':
-          compareValue = Math.abs(a.spreadDelta) - Math.abs(b.spreadDelta)
+          compareValue = Math.abs(a.spreadDelta ?? 0) - Math.abs(b.spreadDelta ?? 0)
           break
         case 'opening':
-          const aMovement = Math.abs(a.lineMovement || 0)
-          const bMovement = Math.abs(b.lineMovement || 0)
+          const aMovement = Math.abs(a.lineMovement?.movement ?? 0)
+          const bMovement = Math.abs(b.lineMovement?.movement ?? 0)
           compareValue = aMovement - bMovement
           break
       }
@@ -377,7 +377,8 @@ export default function CompactDashboard() {
     return filtered
   }
 
-  const getRiskColor = (delta: number) => {
+  const getRiskColor = (delta: number | null) => {
+    if (delta === null) return 'text-gray-500'
     const absDelta = Math.abs(delta)
     if (absDelta <= 1) return 'text-green-500'
     if (absDelta <= 3) return 'text-orange-700'
@@ -393,11 +394,13 @@ export default function CompactDashboard() {
   // Helper to determine if a team/spread has value
   const getTeamSpreadStyle = (
     isHomeTeam: boolean,
-    poolSpread: number,
-    marketSpread: number,
+    poolSpread: number | null,
+    marketSpread: number | null,
     homeTeam: string,
     awayTeam: string
   ) => {
+    if (poolSpread === null || marketSpread === null) return ''
+
     let marketGivesValue = false
     let eloGivesValue = false
 
@@ -777,7 +780,7 @@ export default function CompactDashboard() {
 
                     const homePoolSpread = comp.picksheetSpread
                     const homeMarketSpread = comp.marketSpread
-                    const homeOpeningSpread = comp.openingSpread !== undefined ? -comp.openingSpread : undefined
+                    const homeOpeningSpread = (comp.openingSpread !== undefined && comp.openingSpread !== null) ? -comp.openingSpread : undefined
                     const homeEloSpread = eloSpread !== null ? -eloSpread : null
 
                     return (
@@ -818,8 +821,8 @@ export default function CompactDashboard() {
                             </div>
                           </td>
                           <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
-                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${comp.openingSpread !== undefined ? 'text-gray-300' : 'text-gray-600'}`}>
-                              {comp.openingSpread !== undefined
+                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${(comp.openingSpread !== undefined && comp.openingSpread !== null) ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {(comp.openingSpread !== undefined && comp.openingSpread !== null)
                                 ? `${comp.openingSpread > 0 ? '+' : ''}${comp.openingSpread.toFixed(1)}`
                                 : '-'}
                             </div>
@@ -843,7 +846,7 @@ export default function CompactDashboard() {
                             <div className={`text-[10px] sm:text-sm font-mono font-bold ${getRiskColor(comp.spreadDelta)}`}>
                               {comp.spreadDelta != null ? `${comp.spreadDelta > 0 ? '+' : ''}${comp.spreadDelta.toFixed(1)}` : '-'}
                             </div>
-                            {comp.lineMovement !== undefined && comp.lineMovement !== 0 && (
+                            {comp.lineMovement !== undefined && comp.lineMovement !== null && comp.lineMovement.movement !== 0 && (
                               <div className={`text-[7px] sm:text-[9px] font-mono mt-1 ${OpeningLineEnricher.getLineMovementColor(comp.lineMovement)}`}>
                                 {OpeningLineEnricher.formatLineMovement(comp.lineMovement)}
                               </div>

@@ -8,9 +8,12 @@ interface NavBarProps {
   onShare?: () => void
   sharing?: boolean
   showShareButton?: boolean
+  onRefresh?: () => void
+  refreshing?: boolean
+  showRefreshButton?: boolean
 }
 
-export default function NavBar({ onShare, sharing = false, showShareButton = false }: NavBarProps = {}) {
+export default function NavBar({ onShare, sharing = false, showShareButton = false, onRefresh, refreshing = false, showRefreshButton = false }: NavBarProps = {}) {
   const pathname = usePathname()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   
