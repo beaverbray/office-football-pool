@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
+import { EntityResolver } from '@/services/entity-resolution'
 
 interface PipelineResult {
   id: string
@@ -26,7 +27,7 @@ interface PipelineResult {
       homeTeam: string
       awayTeam: string
       gameTime: string
-      league?: 'NFL' | 'NCAAF'
+      league?: 'NFL' | 'NCAA'
       picksheetSpread: number
       marketSpread: number
       spreadDelta: number
@@ -44,10 +45,19 @@ interface PipelineResult {
   }
 }
 
+interface ELOPrediction {
+  homeTeam: string
+  awayTeam: string
+  predictedWinner: 'home' | 'away'
+  winProbability: number
+  spread?: number
+}
+
 export default function Home() {
   const router = useRouter()
+  const [mounted, setMounted] = useState(false)
   const [currentPipeline, setCurrentPipeline] = useState<PipelineResult | null>(null)
-  const [sortColumn, setSortColumn] = useState<'league' | 'date' | 'team' | 'poolSpread' | 'marketSpread' | 'delta' | 'relDelta' | 'flags'>('delta')
+  const [sortColumn, setSortColumn] = useState<'league' | 'date' | 'team' | 'poolSpread' | 'marketSpread' | 'elo' | 'delta' | 'relDelta' | 'flags'>('delta')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [showOnlyIssues, setShowOnlyIssues] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
@@ -55,11 +65,13 @@ export default function Home() {
   const [sharing, setSharing] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
-  
+  const [eloPredictions, setEloPredictions] = useState<ELOPrediction[]>([])
+
   // Filter states
   const [filters, setFilters] = useState({
     league: 'all' as 'all' | 'NFL' | 'NCAAF',
     dateFilter: 'all' as 'all' | 'today' | 'tomorrow' | 'week',
+    eloFilter: 'all' as 'all' | 'with' | 'without',
     poolSpreadMin: '',
     poolSpreadMax: '',
     marketSpreadMin: '',
@@ -68,10 +80,86 @@ export default function Home() {
     deltaMax: ''
   })
 
+  // Memoize EntityResolver instance to avoid recreating on every render
+  const entityResolver = useMemo(() => new EntityResolver(), [])
+
+  // Pre-normalize all team names ONCE upfront - O(n) instead of O(n²)
+  const normalizedTeamCache = useMemo(() => {
+    const cache = new Map<string, string>()
+
+    const normalizeTeam = (teamName: string): string | null => {
+      if (cache.has(teamName)) return cache.get(teamName)!
+
+      try {
+        const match =
+          entityResolver.findNFLTeamExact(teamName) ||
+          entityResolver.findNFLTeamFuzzy(teamName) ||
+          entityResolver.findNCAAFTeamExact(teamName) ||
+          entityResolver.findNCAAFTeamFuzzy(teamName)
+
+        const normalized = match?.matchedName || null
+        cache.set(teamName, normalized!)
+        return normalized
+      } catch {
+        cache.set(teamName, null!)
+        return null
+      }
+    }
+
+    // Pre-normalize all team names from comparisons and predictions
+    currentPipeline?.comparison?.comparisons?.forEach(comp => {
+      normalizeTeam(comp.homeTeam)
+      normalizeTeam(comp.awayTeam)
+    })
+
+    eloPredictions.forEach(pred => {
+      normalizeTeam(pred.homeTeam)
+      normalizeTeam(pred.awayTeam)
+    })
+
+    return cache
+  }, [eloPredictions, currentPipeline?.comparison?.comparisons, entityResolver])
+
+  // Memoize ELO prediction lookups using pre-normalized team names - O(n)
+  const eloPredictionMap = useMemo(() => {
+    const map = new Map<string, ELOPrediction>()
+    if (!currentPipeline?.comparison?.comparisons) return map
+
+    // Build a fast lookup index: normalizedHome|normalizedAway -> prediction
+    const predictionIndex = new Map<string, ELOPrediction>()
+    for (const pred of eloPredictions) {
+      const normalizedHome = normalizedTeamCache.get(pred.homeTeam)
+      const normalizedAway = normalizedTeamCache.get(pred.awayTeam)
+      if (normalizedHome && normalizedAway) {
+        predictionIndex.set(`${normalizedHome}|${normalizedAway}`, pred)
+      }
+    }
+
+    // Match comparisons to predictions using normalized names - single pass
+    for (const comp of currentPipeline.comparison.comparisons) {
+      const normalizedHome = normalizedTeamCache.get(comp.homeTeam)
+      const normalizedAway = normalizedTeamCache.get(comp.awayTeam)
+
+      if (normalizedHome && normalizedAway) {
+        const pred = predictionIndex.get(`${normalizedHome}|${normalizedAway}`)
+        if (pred) {
+          map.set(`${comp.homeTeam}|${comp.awayTeam}`, pred)
+        }
+      }
+    }
+
+    return map
+  }, [eloPredictions, currentPipeline?.comparison?.comparisons, normalizedTeamCache])
+
+  // Set mounted state
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Load data from localStorage on mount
   useEffect(() => {
     const savedData = localStorage.getItem('pipelineData')
-    
+
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData)
@@ -82,6 +170,26 @@ export default function Home() {
       }
     }
   }, [])
+
+  // Fetch ELO predictions from database
+  useEffect(() => {
+    const fetchEloPredictions = async () => {
+      try {
+        // Fetch from both NFELO and Warren Nolan sources
+        const response = await fetch('/api/predictions/latest')
+        if (response.ok) {
+          const data = await response.json()
+          setEloPredictions(data.predictions || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch ELO predictions:', error)
+      }
+    }
+
+    if (dataLoaded) {
+      fetchEloPredictions()
+    }
+  }, [dataLoaded])
 
   // Handle column header clicks for sorting
   const handleSort = (column: typeof sortColumn) => {
@@ -142,7 +250,7 @@ export default function Home() {
         tomorrow.setDate(tomorrow.getDate() + 1)
         const weekFromNow = new Date(today)
         weekFromNow.setDate(weekFromNow.getDate() + 7)
-        
+
         if (filters.dateFilter === 'today') {
           const gameDateOnly = new Date(gameDate)
           gameDateOnly.setHours(0, 0, 0, 0)
@@ -155,7 +263,16 @@ export default function Home() {
           if (gameDate < today || gameDate > weekFromNow) return false
         }
       }
-      
+
+      // ELO filter
+      if (filters.eloFilter !== 'all') {
+        const eloPred = eloPredictionMap.get(`${c.homeTeam}|${c.awayTeam}`)
+        const hasElo = eloPred && eloPred.spread != null
+
+        if (filters.eloFilter === 'with' && !hasElo) return false
+        if (filters.eloFilter === 'without' && hasElo) return false
+      }
+
       // Pool spread range filter (use absolute value)
       const poolSpread = Math.abs(c.picksheetSpread)
       if (filters.poolSpreadMin !== '' && poolSpread < parseFloat(filters.poolSpreadMin)) return false
@@ -199,6 +316,20 @@ export default function Home() {
         case 'marketSpread':
           compareValue = a.marketSpread - b.marketSpread
           break
+        case 'elo':
+          const aEloPred = eloPredictionMap.get(`${a.homeTeam}|${a.awayTeam}`)
+          const bEloPred = eloPredictionMap.get(`${b.homeTeam}|${b.awayTeam}`)
+
+          // Games without ELO predictions go to the end
+          if (!aEloPred?.spread && !bEloPred?.spread) compareValue = 0
+          else if (!aEloPred?.spread) compareValue = 1
+          else if (!bEloPred?.spread) compareValue = -1
+          else {
+            const aEloSpread = aEloPred.predictedWinner === 'home' ? aEloPred.spread : -aEloPred.spread
+            const bEloSpread = bEloPred.predictedWinner === 'home' ? bEloPred.spread : -bEloPred.spread
+            compareValue = aEloSpread - bEloSpread
+          }
+          break
         case 'delta':
           compareValue = Math.abs(a.spreadDelta) - Math.abs(b.spreadDelta)
           break
@@ -226,6 +357,66 @@ export default function Home() {
     if (absDelta <= 3) return 'text-orange-700'
     if (absDelta <= 5) return 'text-orange-800'
     return 'text-red-600'
+  }
+
+  // Helper to find matching ELO prediction for a game (now using cached map)
+  const findEloPrediction = (homeTeam: string, awayTeam: string) => {
+    return eloPredictionMap.get(`${homeTeam}|${awayTeam}`)
+  }
+
+  // Helper to determine conditional formatting for a team
+  const getTeamCellStyle = (
+    isHomeTeam: boolean,
+    poolSpread: number,
+    marketSpread: number,
+    homeTeam: string,
+    awayTeam: string
+  ) => {
+    // Spreads are from home team perspective
+    // Negative = home favored, Positive = away favored
+    //
+    // Value exists when market/ELO sees a team as stronger than the pool does
+
+    let marketGivesValue = false
+    let eloGivesValue = false
+
+    if (isHomeTeam) {
+      // Home team has value if market favors home MORE than pool does
+      // Market spread < pool spread (more negative = home more favored)
+      marketGivesValue = marketSpread < poolSpread
+
+      // Check ELO
+      const eloPred = findEloPrediction(homeTeam, awayTeam)
+      if (eloPred && eloPred.spread != null) {
+        const eloSpread = eloPred.predictedWinner === 'home' ? -eloPred.spread : eloPred.spread
+        eloGivesValue = eloSpread < poolSpread
+      }
+    } else {
+      // Away team has value if market favors away MORE than pool does
+      // Market spread > pool spread (more positive or less negative = away more favored)
+      marketGivesValue = marketSpread > poolSpread
+
+      // Check ELO
+      const eloPred = findEloPrediction(homeTeam, awayTeam)
+      if (eloPred && eloPred.spread != null) {
+        const eloSpread = eloPred.predictedWinner === 'home' ? -eloPred.spread : eloPred.spread
+        eloGivesValue = eloSpread > poolSpread
+      }
+    }
+
+    // Don't highlight if no value opportunity exists
+    if (!marketGivesValue && !eloGivesValue) return ''
+
+    // Determine color based on what gives value
+    if (marketGivesValue && eloGivesValue) {
+      return 'bg-orange-900/50' // Both market and ELO see value - orange
+    } else if (marketGivesValue) {
+      return 'bg-blue-900/50' // Market sees value - blue
+    } else if (eloGivesValue) {
+      return 'bg-green-900/50' // ELO sees value - green
+    }
+
+    return ''
   }
 
   // Helper function to determine if a game is in current week and future
@@ -265,8 +456,19 @@ export default function Home() {
     )
   }
 
+  // Show loading state during hydration
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm font-mono text-gray-500">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
   // If no data, redirect to control panel
-  if (!dataLoaded && typeof window !== 'undefined') {
+  if (!dataLoaded) {
     return (
       <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -326,11 +528,11 @@ export default function Home() {
               <div className="flex items-baseline gap-2">
                 <span className="text-[9px] sm:text-[10px] font-mono text-gray-500">AVG_DELTA:</span>
                 <span className={`text-[11px] sm:text-xs font-mono font-bold ${getRiskColor(currentPipeline.comparison.kpis.avgSpreadDelta)}`}>
-                  {currentPipeline.comparison.kpis.avgSpreadDelta.toFixed(2)}
+                  {currentPipeline.comparison.kpis.avgSpreadDelta != null ? currentPipeline.comparison.kpis.avgSpreadDelta.toFixed(2) : '-'}
                 </span>
               </div>
               <div className="text-[10px] sm:text-xs font-mono text-gray-600 mt-1">
-                MEDIAN: {currentPipeline.comparison.kpis.medianSpreadDelta.toFixed(2)}
+                MEDIAN: {currentPipeline.comparison.kpis.medianSpreadDelta != null ? currentPipeline.comparison.kpis.medianSpreadDelta.toFixed(2) : '-'}
               </div>
             </div>
 
@@ -371,10 +573,10 @@ export default function Home() {
               >
                 <span>FILTERS {showFilters ? '▼' : '►'}</span>
                 <span className="text-gray-500">
-                  {showOnlyIssues || filters.league !== 'all' || filters.dateFilter !== 'all' || 
-                   filters.poolSpreadMin || filters.poolSpreadMax || filters.marketSpreadMin || 
-                   filters.marketSpreadMax || filters.deltaMin || filters.deltaMax ? 
-                   'ACTIVE' : 'OFF'}
+                  {showOnlyIssues || filters.league !== 'all' || filters.dateFilter !== 'all' ||
+                   filters.eloFilter !== 'all' || filters.poolSpreadMin || filters.poolSpreadMax ||
+                   filters.marketSpreadMin || filters.marketSpreadMax || filters.deltaMin ||
+                   filters.deltaMax ? 'ACTIVE' : 'OFF'}
                 </span>
               </button>
               <div className="text-[10px] font-mono text-gray-500 whitespace-nowrap">
@@ -390,6 +592,7 @@ export default function Home() {
                   setFilters({
                     league: 'all',
                     dateFilter: 'all',
+                    eloFilter: 'all',
                     poolSpreadMin: '',
                     poolSpreadMax: '',
                     marketSpreadMin: '',
@@ -435,7 +638,21 @@ export default function Home() {
                   <option value="week">THIS WEEK</option>
                 </select>
               </div>
-              
+
+              {/* ELO Filter */}
+              <div>
+                <label className="block text-xs font-mono text-gray-500 mb-1">ELO</label>
+                <select
+                  value={filters.eloFilter}
+                  onChange={(e) => setFilters({...filters, eloFilter: e.target.value as 'all' | 'with' | 'without'})}
+                  className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded text-xs font-mono text-gray-300 focus:border-orange-700 focus:outline-none"
+                >
+                  <option value="all">ALL</option>
+                  <option value="with">WITH ELO</option>
+                  <option value="without">NO ELO</option>
+                </select>
+              </div>
+
               {/* Pool Spread Range */}
               <div className="w-full sm:w-36 sm:ml-4">
                 <label className="block text-xs font-mono text-gray-500 mb-1">POOL_SPREAD</label>
@@ -542,15 +759,30 @@ export default function Home() {
                 <div className="space-y-2 text-[10px] sm:text-xs font-mono">
                   <div><span className="text-orange-700">LEAGUE:</span> <span className="text-gray-400">Competition type (NFL or NCAAF)</span></div>
                   <div><span className="text-orange-700">DATE:</span> <span className="text-gray-400">Game date and kickoff time (PST)</span></div>
-                  <div><span className="text-orange-700">MATCH:</span> <span className="text-gray-400">Away team @ Home team</span></div>
+                  <div><span className="text-orange-700">HOME:</span> <span className="text-gray-400">Home team</span></div>
+                  <div><span className="text-orange-700">AWAY:</span> <span className="text-gray-400">Visiting team</span></div>
                   <div><span className="text-orange-700">POOL:</span> <span className="text-gray-400">Away team spread from office pool</span></div>
                   <div><span className="text-orange-700">MARKET:</span> <span className="text-gray-400">Away team spread from betting market</span></div>
+                  <div><span className="text-orange-700">ELO:</span> <span className="text-gray-400">Away team spread from ELO prediction model</span></div>
                   <div><span className="text-orange-700">DELTA:</span> <span className="text-gray-400">Difference between pool and market (absolute)</span></div>
                   <div><span className="text-orange-700">REL_%:</span> <span className="text-gray-400">Delta divided by pool spread</span></div>
                   <div><span className="text-orange-700">FLAG:</span> <span className="text-gray-400">K# = Key number crossed, FLP = Favorite flipped</span></div>
                   <div className="mt-3 pt-2 border-t border-zinc-800">
                     <div className="text-orange-600 mb-1">KEY_NUMBERS:</div>
                     <div className="text-gray-400">Important margins in football: 3, 7, 10, 14 points</div>
+                  </div>
+                  <div className="pt-2">
+                    <div className="text-orange-600 mb-1">CONDITIONAL_FORMATTING:</div>
+                    <div className="text-gray-400">Highlights teams with value opportunities when pool disagrees with market/ELO</div>
+                    <div className="text-gray-400 mt-1">
+                      <div className="bg-blue-900/50 px-1 rounded inline">Blue</div> = Market favors this team more than pool does
+                    </div>
+                    <div className="text-gray-400 mt-1">
+                      <div className="bg-green-900/50 px-1 rounded inline">Green</div> = ELO favors this team more than pool does
+                    </div>
+                    <div className="text-gray-400 mt-1">
+                      <div className="bg-orange-900/50 px-1 rounded inline">Orange</div> = Both market and ELO favor this team more than pool
+                    </div>
                   </div>
                   <div className="pt-2">
                     <div className="text-orange-600 mb-1">FLAGGED_FILTER:</div>
@@ -632,17 +864,21 @@ export default function Home() {
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       onClick={() => handleSort('team')}
-                      className="px-1 sm:px-2 py-1 sm:py-2 pr-1 text-left text-[10px] sm:text-sm font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
+                      className="px-1 sm:px-2 py-1 sm:py-2 text-left text-[10px] sm:text-sm font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
                     >
                       <div className="flex items-center gap-1">
-                        <span className="hidden sm:inline">MATCH</span>
-                        <span className="sm:hidden">GAME</span>
+                        HOME
                         {sortColumn === 'team' && (
                           <span className="text-orange-700">{sortDirection === 'asc' ? '▲' : '▼'}</span>
                         )}
                       </div>
+                    </th>
+                    <th
+                      className="px-1 sm:px-2 py-1 sm:py-2 text-left text-[10px] sm:text-sm font-mono text-gray-500"
+                    >
+                      AWAY
                     </th>
                     <th 
                       onClick={() => handleSort('poolSpread')}
@@ -655,7 +891,7 @@ export default function Home() {
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
                       onClick={() => handleSort('marketSpread')}
                       className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[10px] sm:text-sm font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
                     >
@@ -666,7 +902,18 @@ export default function Home() {
                         )}
                       </div>
                     </th>
-                    <th 
+                    <th
+                      onClick={() => handleSort('elo')}
+                      className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[10px] sm:text-sm font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        ELO
+                        {sortColumn === 'elo' && (
+                          <span className="text-orange-700">{sortDirection === 'asc' ? '▲' : '▼'}</span>
+                        )}
+                      </div>
+                    </th>
+                    <th
                       onClick={() => handleSort('delta')}
                       className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[10px] sm:text-sm font-mono text-gray-500 cursor-pointer hover:bg-zinc-800 transition-colors select-none"
                     >
@@ -724,7 +971,7 @@ export default function Home() {
                       ''
                     
                     // Calculate relative delta (spread delta / pool spread)
-                    const relDelta = comp.picksheetSpread !== 0 ? 
+                    const relDelta = (comp.picksheetSpread != null && comp.picksheetSpread !== 0 && comp.spreadDelta != null) ?
                       (comp.spreadDelta / Math.abs(comp.picksheetSpread)) * 100 : 0
                     
                     return (
@@ -740,14 +987,17 @@ export default function Home() {
                             <div className="text-gray-600 text-[7px] sm:text-[10px]">{timeStr}</div>
                           </div>
                         </td>
-                        <td className="px-1 sm:px-2 py-1 pr-1 min-w-[80px] sm:min-w-0">
+                        <td className={`px-1 py-1 max-w-[140px] ${getTeamCellStyle(true, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
+                          <div className="text-[10px] sm:text-xs font-mono text-gray-300 truncate">{comp.homeTeam}</div>
+                        </td>
+                        <td className={`px-1 py-1 max-w-[140px] ${getTeamCellStyle(false, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
                           <div className="text-[10px] sm:text-xs font-mono text-gray-300 truncate">{comp.awayTeam}</div>
-                          <div className="text-[10px] sm:text-xs font-mono text-gray-500 truncate">@ {comp.homeTeam}</div>
                         </td>
                         <td className="px-1 py-1 text-center">
                           <span className="font-mono text-[10px] sm:text-sm text-gray-200">
                             {/* Show away team spread (negate home spread) */}
                             {(() => {
+                              if (comp.picksheetSpread == null) return '-';
                               const awaySpread = -comp.picksheetSpread;
                               return `${awaySpread > 0 ? '+' : ''}${awaySpread.toFixed(1)}`;
                             })()}
@@ -757,14 +1007,31 @@ export default function Home() {
                           <span className="font-mono text-[10px] sm:text-sm text-gray-200">
                             {/* Show away team spread (negate home spread) */}
                             {(() => {
+                              if (comp.marketSpread == null) return '-';
                               const awaySpread = -comp.marketSpread;
                               return `${awaySpread > 0 ? '+' : ''}${awaySpread.toFixed(1)}`;
                             })()}
                           </span>
                         </td>
                         <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
+                          {(() => {
+                            const eloPred = findEloPrediction(comp.homeTeam, comp.awayTeam)
+                            if (!eloPred || eloPred.spread == null) return <span className="font-mono text-[10px] sm:text-sm text-gray-600">-</span>
+
+                            // Display ELO predicted spread from away team perspective
+                            const eloSpread = eloPred.spread
+                            const awayEloSpread = eloPred.predictedWinner === 'home' ? eloSpread : -eloSpread
+
+                            return (
+                              <span className="font-mono text-[10px] sm:text-sm text-purple-400">
+                                {awayEloSpread > 0 ? '+' : ''}{awayEloSpread.toFixed(1)}
+                              </span>
+                            )
+                          })()}
+                        </td>
+                        <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
                           <span className={`font-mono text-[10px] sm:text-sm font-bold ${getRiskColor(comp.spreadDelta)}`}>
-                            {comp.spreadDelta > 0 ? '+' : ''}{comp.spreadDelta.toFixed(1)}
+                            {comp.spreadDelta != null ? `${comp.spreadDelta > 0 ? '+' : ''}${comp.spreadDelta.toFixed(1)}` : '-'}
                           </span>
                         </td>
                         <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">

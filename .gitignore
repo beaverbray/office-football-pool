@@ -24,7 +24,12 @@ node_modules/
 # OS specific
 .DS_Store
 
+# Next.js build output
+.next/
+out/
+next-env.d.ts
+
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/
 .vercel

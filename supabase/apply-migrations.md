@@ -12,7 +12,13 @@ The database tables need to be created in your Supabase project. Follow these st
 6. Copy the entire contents of `supabase/migrations/002_rls_policies.sql`
 7. Paste it into the SQL editor
 8. Click "Run" button
-9. Verify tables are created by going to Table Editor
+9. Copy the entire contents of `supabase/migrations/004_create_predictions_table.sql`
+10. Paste it into the SQL editor
+11. Click "Run" button
+12. Copy the entire contents of `supabase/migrations/005_fix_predictions_rls_policy.sql`
+13. Paste it into the SQL editor
+14. Click "Run" button
+15. Verify tables are created by going to Table Editor
 
 ## Option 2: Using Supabase CLI
 
@@ -40,6 +46,7 @@ After applying migrations, you should see these tables in your Supabase dashboar
 - kpi_daily
 - alias_overrides
 - job_runs
+- predictions (added in migration 004)
 
 ## Testing
 
