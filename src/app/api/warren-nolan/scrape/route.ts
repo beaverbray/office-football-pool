@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { WarrenNolanScraper } from '@/services/warren-nolan-scraper'
+import { WarrenNolanScraper, type WarrenNolanPrediction } from '@/services/warren-nolan-scraper'
 import { supabase } from '@/lib/supabase'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
@@ -10,14 +10,24 @@ type PredictionInsert = Database['public']['Tables']['predictions']['Insert']
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { date, saveToDB = false } = body
+    const { date, week, season, saveToDB = false } = body
 
-    console.log('Warren Nolan scrape request:', { date, saveToDB })
+    console.log('Warren Nolan scrape request:', { date, week, season, saveToDB })
 
-    // Scrape predictions
-    const result = date
-      ? await WarrenNolanScraper.scrapePredictions(date)
-      : await WarrenNolanScraper.scrapeTodaysPredictions()
+    // Scrape predictions - prioritize week-based scraping
+    let result: any
+    if (week !== undefined && season) {
+      result = await WarrenNolanScraper.scrapePredictionsByWeek(season, week)
+    } else if (week !== undefined) {
+      // Use current season if not specified
+      const currentSeason = new Date().getFullYear()
+      result = await WarrenNolanScraper.scrapePredictionsByWeek(currentSeason, week)
+    } else if (date) {
+      result = await WarrenNolanScraper.scrapePredictions(date)
+    } else {
+      // Default to current week scraping
+      result = await WarrenNolanScraper.scrapeCurrentWeek()
+    }
 
     if (!result.success) {
       return NextResponse.json(
@@ -31,11 +41,18 @@ export async function POST(request: NextRequest) {
 
     // Optionally save to database
     if (saveToDB && result.predictions.length > 0) {
-      // Parse game date to determine week (Warren Nolan uses current date)
-      const gameDate = new Date(result.gameDate)
-      const seasonStart = new Date(gameDate.getFullYear(), 8, 1) // September 1
-      const weeksPassed = Math.floor((gameDate.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
-      const currentWeek = Math.max(0, Math.min(15, weeksPassed))
+      // Get week - either from result or calculate from date
+      let currentWeek: number
+      if (result.week !== undefined) {
+        currentWeek = result.week
+      } else if (result.gameDate) {
+        const gameDate = new Date(result.gameDate)
+        const seasonStart = new Date(gameDate.getFullYear(), 7, 24) // August 24 (Week 0)
+        const weeksPassed = Math.floor((gameDate.getTime() - seasonStart.getTime()) / (7 * 24 * 60 * 60 * 1000))
+        currentWeek = Math.max(0, Math.min(14, weeksPassed))
+      } else {
+        currentWeek = 0
+      }
 
       // Load schedule for the week to match predictions (NCAA)
       const scheduleGames = await ScheduleService.getGamesByWeek(currentWeek, 'NCAA')
@@ -54,7 +71,7 @@ export async function POST(request: NextRequest) {
       console.log(`Matched ${matchedPredictions.size} of ${result.predictions.length} Warren Nolan predictions to schedule`)
 
       // Build prediction records with schedule match info
-      const dbRecords: PredictionInsert[] = result.predictions.map(pred => {
+      const dbRecords: PredictionInsert[] = result.predictions.map((pred: WarrenNolanPrediction) => {
         // Find the schedule match for this prediction
         let scheduleMatchNumber: number | undefined
         let matchConfidence = 0
@@ -113,6 +130,8 @@ export async function POST(request: NextRequest) {
         predictions: result.predictions,
         scrapedAt: result.scrapedAt,
         gameDate: result.gameDate,
+        week: result.week,
+        season: result.season,
         savedToDb: true,
         dbRecordsCount: data?.length || 0,
         matchedCount: matchedPredictions.size
@@ -124,6 +143,8 @@ export async function POST(request: NextRequest) {
       predictions: result.predictions,
       scrapedAt: result.scrapedAt,
       gameDate: result.gameDate,
+      week: result.week,
+      season: result.season,
       savedToDb: false
     })
 
@@ -143,11 +164,21 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const date = searchParams.get('date')
+    const weekParam = searchParams.get('week')
+    const seasonParam = searchParams.get('season')
 
-    // Scrape predictions
-    const result = date
-      ? await WarrenNolanScraper.scrapePredictions(date)
-      : await WarrenNolanScraper.scrapeTodaysPredictions()
+    // Scrape predictions - prioritize week-based scraping
+    let result: any
+    if (weekParam) {
+      const week = parseInt(weekParam)
+      const season = seasonParam ? parseInt(seasonParam) : new Date().getFullYear()
+      result = await WarrenNolanScraper.scrapePredictionsByWeek(season, week)
+    } else if (date) {
+      result = await WarrenNolanScraper.scrapePredictions(date)
+    } else {
+      // Default to current week scraping
+      result = await WarrenNolanScraper.scrapeCurrentWeek()
+    }
 
     if (!result.success) {
       return NextResponse.json(
@@ -163,7 +194,9 @@ export async function GET(request: NextRequest) {
       success: true,
       predictions: result.predictions,
       scrapedAt: result.scrapedAt,
-      gameDate: result.gameDate
+      gameDate: result.gameDate,
+      week: result.week,
+      season: result.season
     })
 
   } catch (error) {

@@ -313,8 +313,8 @@ Return ONLY valid JSON with no extra text or explanations.`
       console.log('📤 OPENAI API REQUEST')
       console.log('='.repeat(80))
       console.log('Model:', 'gpt-4o-mini')
-      console.log('Temperature:', 0)
-      console.log('Max Tokens:', 16000)
+      console.log('Temperature:', 0.3)
+      console.log('Max Completion Tokens:', 16000)
       console.log('\n--- SYSTEM MESSAGE ---')
       console.log(systemPrompt)
       console.log('\n--- USER MESSAGE ---')
@@ -322,15 +322,15 @@ Return ONLY valid JSON with no extra text or explanations.`
       console.log('='.repeat(80) + '\n')
 
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o', // Using GPT-4o for maximum reliability with complex parsing (handles duplicate team names better)
+        model: 'gpt-4o-mini', // Using GPT-4o-mini - reliable for structured data extraction
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
         response_format: { type: 'json_object' },
-        temperature: 0, // Zero temperature for most deterministic parsing
+        temperature: 0.3, // Lower temperature for more consistent parsing
         seed: 1, // Seed for deterministic outputs across retries
-        max_tokens: 16000, // Much higher limit to avoid truncation
+        max_completion_tokens: 16000 // Higher limit to avoid truncation
       })
 
       // Log the full response received from OpenAI

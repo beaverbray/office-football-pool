@@ -18,6 +18,11 @@ export interface GameComparison {
   favoriteFlipped: boolean // If favorite switched between picksheet and market
   confidence: number
   matched: boolean
+  // Opening line data (optional)
+  openingSpread?: number // Away team spread from opening line
+  openingLineTimestamp?: string // When opening line was recorded
+  lineMovement?: number // Current spread - opening spread
+  lineMovementPercent?: number // Percentage movement from opening
 }
 
 export interface ComparisonKPIs {

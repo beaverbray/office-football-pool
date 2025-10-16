@@ -13,7 +13,14 @@ interface NavBarProps {
   showRefreshButton?: boolean
 }
 
-export default function NavBar({ onShare, sharing = false, showShareButton = false, onRefresh, refreshing = false, showRefreshButton = false }: NavBarProps = {}) {
+export default function NavBar({
+  onShare,
+  sharing = false,
+  showShareButton = false,
+  onRefresh,
+  refreshing = false,
+  showRefreshButton = false
+}: NavBarProps = {}) {
   const pathname = usePathname()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   
@@ -45,16 +52,6 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
                 DASHBOARD
               </Link>
               <Link
-                href="/predictions"
-                className={`px-4 py-2 text-sm font-mono rounded transition-colors ${
-                  isActive('/predictions')
-                    ? 'bg-orange-700 text-black font-bold'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
-                }`}
-              >
-                PREDICTIONS
-              </Link>
-              <Link
                 href="/control-panel"
                 className={`px-4 py-2 text-sm font-mono rounded transition-colors ${
                   isActive('/control-panel')
@@ -68,6 +65,17 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Refresh Button - Desktop */}
+            {showRefreshButton && (
+              <button
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="hidden sm:block px-3 py-1 bg-green-700 text-black font-mono text-xs font-bold rounded hover:bg-green-600 disabled:bg-zinc-800 disabled:text-zinc-600 transition-colors"
+              >
+                {refreshing ? 'REFRESHING...' : '↻ REFRESH'}
+              </button>
+            )}
+
             {/* Share Button - Desktop */}
             {showShareButton && (
               <button
@@ -78,7 +86,7 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
                 {sharing ? 'SHARING...' : 'SHARE'}
               </button>
             )}
-            
+
             {/* Mobile Menu Button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -110,17 +118,6 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
               DASHBOARD
             </Link>
             <Link
-              href="/predictions"
-              onClick={() => setShowMobileMenu(false)}
-              className={`block px-4 py-2 text-sm font-mono rounded transition-colors mb-1 ${
-                isActive('/predictions')
-                  ? 'bg-orange-700 text-black font-bold'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
-              }`}
-            >
-              PREDICTIONS
-            </Link>
-            <Link
               href="/control-panel"
               onClick={() => setShowMobileMenu(false)}
               className={`block px-4 py-2 text-sm font-mono rounded transition-colors mb-1 ${
@@ -131,6 +128,15 @@ export default function NavBar({ onShare, sharing = false, showShareButton = fal
             >
               CONTROL_PANEL
             </Link>
+            {showRefreshButton && (
+              <button
+                onClick={onRefresh}
+                disabled={refreshing}
+                className="block w-full text-left px-4 py-2 text-sm font-mono rounded transition-colors bg-green-700 text-black font-bold mt-1"
+              >
+                {refreshing ? 'REFRESHING...' : '↻ REFRESH'}
+              </button>
+            )}
             {showShareButton && (
               <button
                 onClick={onShare}
