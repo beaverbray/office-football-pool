@@ -68,7 +68,7 @@ export class ScheduleService {
       query = query.eq('league', league)
     }
 
-    const { data, error } = await query
+    const { data, error } = await query as { data: ScheduleGame[] | null, error: any }
 
     if (error) {
       console.error('Error finding game:', error)
@@ -145,7 +145,7 @@ export class ScheduleService {
       query = query.eq('league', league)
     }
 
-    const { data, error } = await query
+    const { data, error } = await query as { data: Pick<ScheduleGame, 'week'>[] | null, error: any }
 
     if (error) {
       console.error('Error fetching available weeks:', error)

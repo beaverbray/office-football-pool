@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { Database } from '@/types/database'
+
+type PredictionRow = Database['public']['Tables']['predictions']['Row']
 
 // Cache for predictions with timestamp
 let predictionsCache: { data: any[], timestamp: number } | null = null
@@ -29,7 +32,7 @@ export async function GET(request: NextRequest) {
       .from('predictions')
       .select('*')
       .order('scraped_at', { ascending: false })
-      .limit(500) // Get more rows to ensure we have all unique games
+      .limit(500) as { data: PredictionRow[] | null, error: any } // Get more rows to ensure we have all unique games
 
     if (error) {
       console.error('Error fetching predictions:', error)
@@ -49,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     // Deduplicate by game (home_team + away_team)
     // Keep only the most recent prediction for each unique game
-    const gameMap = new Map<string, any>()
+    const gameMap = new Map<string, PredictionRow>()
 
     for (const pred of allPredictions) {
       const gameKey = `${pred.home_team}|${pred.away_team}`
@@ -61,7 +64,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to ELOPrediction format
-    const transformedPredictions = Array.from(gameMap.values()).map((pred: any) => ({
+    const transformedPredictions = Array.from(gameMap.values()).map((pred: PredictionRow) => ({
       homeTeam: pred.home_team,
       awayTeam: pred.away_team,
       predictedWinner: pred.predicted_winner,

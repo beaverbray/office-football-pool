@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { Database } from '@/types/database'
+
+type ScheduleRow = Database['public']['Tables']['schedule']['Row']
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { data: weekData, error: weekError } = await supabase
       .from('schedule')
       .select('week')
-      .order('week')
+      .order('week') as { data: Pick<ScheduleRow, 'week'>[] | null, error: any }
 
     if (weekError) {
       return NextResponse.json(
@@ -31,12 +34,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const weeks = [...new Set(weekData.map(w => w.week))].sort((a, b) => a - b)
+    const weeks = [...new Set((weekData || []).map(w => w.week))].sort((a, b) => a - b)
 
     // Get distinct leagues
     const { data: leagueData, error: leagueError } = await supabase
       .from('schedule')
-      .select('league')
+      .select('league') as { data: Pick<ScheduleRow, 'league'>[] | null, error: any }
 
     if (leagueError) {
       return NextResponse.json(
@@ -45,17 +48,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const leagues = [...new Set(leagueData.map(l => l.league))]
+    const leagues = [...new Set((leagueData || []).map(l => l.league))]
 
     // If week specified, get count for that week
     let weekCount = 0
-    let weekGames: any[] = []
+    let weekGames: ScheduleRow[] = []
     if (week) {
       const { data: weekGameData, count, error: weekCountError } = await supabase
         .from('schedule')
         .select('*', { count: 'exact' })
         .eq('week', parseInt(week))
-        .limit(5)
+        .limit(5) as { data: ScheduleRow[] | null, count: number | null, error: any }
 
       if (!weekCountError) {
         weekCount = count || 0
