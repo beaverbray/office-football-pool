@@ -3,6 +3,9 @@ import { WarrenNolanScraper } from '@/services/warren-nolan-scraper'
 import { supabase } from '@/lib/supabase'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
+import { Database } from '@/types/database'
+
+type PredictionInsert = Database['public']['Tables']['predictions']['Insert']
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,7 +54,7 @@ export async function POST(request: NextRequest) {
       console.log(`Matched ${matchedPredictions.size} of ${result.predictions.length} Warren Nolan predictions to schedule`)
 
       // Build prediction records with schedule match info
-      const dbRecords = result.predictions.map(pred => {
+      const dbRecords: PredictionInsert[] = result.predictions.map(pred => {
         // Find the schedule match for this prediction
         let scheduleMatchNumber: number | undefined
         let matchConfidence = 0
@@ -73,7 +76,7 @@ export async function POST(request: NextRequest) {
           win_probability: pred.winProbability,
           confidence: pred.confidence,
           spread: pred.spread,
-          over_under: pred.overUnder,
+          over_under: pred.overUnder ?? null,
           game_date: result.gameDate,
           scraped_at: result.scrapedAt,
           metadata: {
@@ -81,13 +84,13 @@ export async function POST(request: NextRequest) {
             week: currentWeek,
             scheduleMatchNumber,
             matchConfidence,
-          }
+          } as unknown as Database['public']['Tables']['predictions']['Row']['metadata']
         }
       })
 
       const { data, error } = await supabase
         .from('predictions')
-        .insert(dbRecords)
+        .insert(dbRecords as any)
         .select()
 
       if (error) {

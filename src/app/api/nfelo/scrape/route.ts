@@ -3,6 +3,9 @@ import { NFELOScraper } from '@/services/nfelo-scraper'
 import { supabase } from '@/lib/supabase'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
+import { Database } from '@/types/database'
+
+type PredictionInsert = Database['public']['Tables']['predictions']['Insert']
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
       console.log(`Matched ${matchedPredictions.size} of ${result.predictions.length} NFELO predictions to schedule`)
 
       // Build prediction records with schedule match info
-      const predictionRecords = result.predictions.map(pred => {
+      const predictionRecords: PredictionInsert[] = result.predictions.map(pred => {
         // Find the schedule match for this prediction
         let scheduleMatchNumber: number | undefined
         let matchConfidence = 0
@@ -85,9 +88,9 @@ export async function POST(request: NextRequest) {
           away_team: pred.awayTeam,
           predicted_winner: pred.predictedWinner,
           win_probability: pred.winProbability,
-          confidence: pred.winProbability >= 70 ? 'H' : pred.winProbability >= 55 ? 'M' : 'L',
+          confidence: (pred.winProbability >= 70 ? 'H' : pred.winProbability >= 55 ? 'M' : 'L') as 'H' | 'M' | 'L',
           spread: pred.spread,
-          over_under: pred.overUnder,
+          over_under: pred.overUnder ?? null,
           game_date: new Date().toISOString().split('T')[0], // Add current date
           metadata: {
             awayElo: pred.awayElo,
@@ -96,13 +99,13 @@ export async function POST(request: NextRequest) {
             season: result.season,
             scheduleMatchNumber,
             matchConfidence,
-          },
+          } as unknown as Database['public']['Tables']['predictions']['Row']['metadata'],
         }
       })
 
       const { error: insertError } = await supabase
         .from('predictions')
-        .insert(predictionRecords)
+        .insert(predictionRecords as any)
 
       if (insertError) {
         console.error('Error saving NFELO predictions:', insertError)
