@@ -183,13 +183,18 @@ export default function ControlPanel() {
           })
         })
 
+        const saveResult = await saveResponse.json()
+
         if (!saveResponse.ok) {
-          console.warn('Failed to save to database, but continuing...')
+          console.error('Failed to save to database:', saveResult)
+          throw new Error(saveResult.message || 'Database save failed')
         } else {
-          console.log('Pipeline saved to database successfully')
+          console.log('Pipeline saved to database successfully:', saveResult)
         }
       } catch (dbError) {
-        console.warn('Database save failed:', dbError)
+        console.error('Database save error:', dbError)
+        // Show error to user but don't block the workflow
+        alert(`Warning: Failed to save to database. Share links may not work.\n\nError: ${dbError instanceof Error ? dbError.message : 'Unknown error'}\n\nData is saved locally and the dashboard will still work.`)
       }
 
       setCurrentStep('Complete! Redirecting...')

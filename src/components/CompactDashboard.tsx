@@ -737,17 +737,22 @@ export default function CompactDashboard() {
         {/* Clean Table */}
         {currentPipeline?.comparison?.comparisons && (
           <div className="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
-            <div className="overflow-x-auto max-h-[calc(100vh-180px)] sm:max-h-[calc(100vh-280px)] overflow-y-auto">
+            <div className="overflow-x-auto max-h-[70vh] sm:max-h-[calc(100vh-280px)] overflow-y-auto">
               <table className="w-full">
                 <thead className="bg-zinc-950 border-b border-zinc-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-1 sm:px-2 py-1 sm:py-2 text-left text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MATCHUP</th>
-                    <th className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950">OPEN</th>
-                    <th className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950">POOL</th>
-                    <th className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MKT</th>
-                    <th className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden md:table-cell">ELO</th>
-                    <th className="px-1 sm:px-2 py-1 sm:py-2 text-center text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950">Δ</th>
-                    <th className="px-0.5 sm:px-2 py-1 sm:py-2 text-center text-[8px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden sm:table-cell">🚩</th>
+                    <th
+                      onClick={() => handleSort('date')}
+                      className="px-2 sm:px-2 py-2 sm:py-2 text-left text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950 cursor-pointer hover:text-orange-500 transition-colors"
+                    >
+                      MATCHUP {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
+                    </th>
+                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">OPEN</th>
+                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">POOL</th>
+                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MKT</th>
+                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden md:table-cell">ELO</th>
+                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">Δ</th>
+                    <th className="px-1 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden sm:table-cell">🚩</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
@@ -787,24 +792,24 @@ export default function CompactDashboard() {
                       <React.Fragment key={idx}>
                         {/* Header Row - Game Info and Date */}
                         <tr className="bg-zinc-950 border-b border-zinc-700">
-                          <td colSpan={7} className="px-1 sm:px-2 py-1 sm:py-1.5">
+                          <td colSpan={7} className="px-2 sm:px-2 py-2 sm:py-1.5">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <span className={`text-[7px] sm:text-[9px] font-mono px-1 py-0.5 rounded ${comp.league === 'NFL' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>
+                                <span className={`text-[9px] sm:text-[9px] font-mono px-1.5 py-1 rounded ${comp.league === 'NFL' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>
                                   {comp.league || 'N/A'}
                                 </span>
-                                <span className="text-[7px] sm:text-[10px] font-mono text-gray-400">
+                                <span className="text-[10px] sm:text-[10px] font-mono text-gray-400">
                                   {dateStr} {timeStr}
                                 </span>
                               </div>
                               <div className="flex gap-1 sm:hidden">
                                 {comp.crossesKeyNumber && (
-                                  <span className="px-0.5 py-0.5 text-[6px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
+                                  <span className="px-1 py-1 text-[8px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
                                     K{comp.keyNumbersCrossed.join(',')}
                                   </span>
                                 )}
                                 {comp.favoriteFlipped && (
-                                  <span className="px-0.5 py-0.5 text-[6px] font-mono bg-purple-950 text-purple-400 rounded">
+                                  <span className="px-1 py-1 text-[8px] font-mono bg-purple-950 text-purple-400 rounded">
                                     FLP
                                   </span>
                                 )}
@@ -815,52 +820,52 @@ export default function CompactDashboard() {
 
                         {/* Away Team Row */}
                         <tr className="bg-zinc-900/30 hover:bg-zinc-700/50 transition-colors">
-                          <td className="px-1 sm:px-2 py-1 sm:py-2">
-                            <div className="text-[8px] sm:text-xs font-mono text-gray-300">
+                          <td className="px-2 sm:px-2 py-2 sm:py-2">
+                            <div className="text-[11px] sm:text-xs font-mono text-gray-300">
                               {comp.awayTeam}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
-                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${(comp.openingSpread !== undefined && comp.openingSpread !== null) ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
+                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${(comp.openingSpread !== undefined && comp.openingSpread !== null) ? 'text-gray-300' : 'text-gray-600'}`}>
                               {(comp.openingSpread !== undefined && comp.openingSpread !== null)
                                 ? `${comp.openingSpread > 0 ? '+' : ''}${comp.openingSpread.toFixed(1)}`
                                 : '-'}
                             </div>
                           </td>
-                          <td className={`px-1 sm:px-2 py-1 sm:py-2 text-center ${getTeamSpreadStyle(false, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
-                            <div className="text-[10px] sm:text-sm font-mono font-bold text-gray-200">
+                          <td className={`px-2 sm:px-2 py-2 sm:py-2 text-center ${getTeamSpreadStyle(false, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
+                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
                               {awayPoolSpread !== null ? `${awayPoolSpread > 0 ? '+' : ''}${awayPoolSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
-                            <div className="text-[10px] sm:text-sm font-mono font-bold text-gray-200">
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
+                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
                               {awayMarketSpread !== null ? `${awayMarketSpread > 0 ? '+' : ''}${awayMarketSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center hidden md:table-cell">
-                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center hidden md:table-cell">
+                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
                               {eloSpread !== null ? `${eloSpread > 0 ? '+' : ''}${eloSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center" rowSpan={2}>
-                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${getRiskColor(comp.spreadDelta)}`}>
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center" rowSpan={2}>
+                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${getRiskColor(comp.spreadDelta)}`}>
                               {comp.spreadDelta != null ? `${comp.spreadDelta > 0 ? '+' : ''}${comp.spreadDelta.toFixed(1)}` : '-'}
                             </div>
                             {comp.lineMovement !== undefined && comp.lineMovement !== null && comp.lineMovement.movement !== 0 && (
-                              <div className={`text-[7px] sm:text-[9px] font-mono mt-1 ${OpeningLineEnricher.getLineMovementColor(comp.lineMovement)}`}>
+                              <div className={`text-[9px] sm:text-[9px] font-mono mt-1 ${OpeningLineEnricher.getLineMovementColor(comp.lineMovement)}`}>
                                 {OpeningLineEnricher.formatLineMovement(comp.lineMovement)}
                               </div>
                             )}
                           </td>
-                          <td className="px-0.5 sm:px-2 py-1 sm:py-2 text-center hidden sm:table-cell" rowSpan={2}>
+                          <td className="px-1 sm:px-2 py-2 sm:py-2 text-center hidden sm:table-cell" rowSpan={2}>
                             <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
                               {comp.crossesKeyNumber && (
-                                <span className="px-0.5 sm:px-1 py-0.5 text-[6px] sm:text-[9px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
+                                <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
                                   K{comp.keyNumbersCrossed.join(',')}
                                 </span>
                               )}
                               {comp.favoriteFlipped && (
-                                <span className="px-0.5 sm:px-1 py-0.5 text-[6px] sm:text-[9px] font-mono bg-purple-950 text-purple-400 rounded">
+                                <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-purple-950 text-purple-400 rounded">
                                   FLP
                                 </span>
                               )}
@@ -870,30 +875,30 @@ export default function CompactDashboard() {
 
                         {/* Home Team Row */}
                         <tr className="bg-zinc-900/30 hover:bg-zinc-700/50 transition-colors border-b-2 border-zinc-700">
-                          <td className="px-1 sm:px-2 py-1 sm:py-2">
-                            <div className="text-[8px] sm:text-xs font-mono text-gray-300 uppercase">
+                          <td className="px-2 sm:px-2 py-2 sm:py-2">
+                            <div className="text-[11px] sm:text-xs font-mono text-gray-300 uppercase">
                               {comp.homeTeam}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
-                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${homeOpeningSpread !== undefined ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
+                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${homeOpeningSpread !== undefined ? 'text-gray-300' : 'text-gray-600'}`}>
                               {homeOpeningSpread !== undefined
                                 ? `${homeOpeningSpread > 0 ? '+' : ''}${homeOpeningSpread.toFixed(1)}`
                                 : '-'}
                             </div>
                           </td>
-                          <td className={`px-1 sm:px-2 py-1 sm:py-2 text-center ${getTeamSpreadStyle(true, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
-                            <div className="text-[10px] sm:text-sm font-mono font-bold text-gray-200">
+                          <td className={`px-2 sm:px-2 py-2 sm:py-2 text-center ${getTeamSpreadStyle(true, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
+                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
                               {homePoolSpread !== null ? `${homePoolSpread > 0 ? '+' : ''}${homePoolSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center">
-                            <div className="text-[10px] sm:text-sm font-mono font-bold text-gray-200">
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
+                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
                               {homeMarketSpread !== null ? `${homeMarketSpread > 0 ? '+' : ''}${homeMarketSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-1 sm:px-2 py-1 sm:py-2 text-center hidden md:table-cell">
-                            <div className={`text-[10px] sm:text-sm font-mono font-bold ${homeEloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
+                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center hidden md:table-cell">
+                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${homeEloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
                               {homeEloSpread !== null ? `${homeEloSpread > 0 ? '+' : ''}${homeEloSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>

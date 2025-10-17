@@ -438,25 +438,51 @@ export interface Database {
           id: string
           pipeline_data: Json
           picksheet_text: string | null
-          created_at: string
           updated_at: string
-          is_current: boolean
+          metadata: Json
         }
         Insert: {
           id?: string
           pipeline_data: Json
           picksheet_text?: string | null
-          created_at?: string
           updated_at?: string
-          is_current?: boolean
+          metadata?: Json
         }
         Update: {
           id?: string
           pipeline_data?: Json
           picksheet_text?: string | null
-          created_at?: string
           updated_at?: string
-          is_current?: boolean
+          metadata?: Json
+        }
+      }
+      shared_analyses: {
+        Row: {
+          id: string
+          share_id: string
+          pipeline_data: Json
+          created_at: string
+          expires_at: string
+          view_count: number
+          metadata: Json
+        }
+        Insert: {
+          id?: string
+          share_id: string
+          pipeline_data: Json
+          created_at?: string
+          expires_at?: string
+          view_count?: number
+          metadata?: Json
+        }
+        Update: {
+          id?: string
+          share_id?: string
+          pipeline_data?: Json
+          created_at?: string
+          expires_at?: string
+          view_count?: number
+          metadata?: Json
         }
       }
     }

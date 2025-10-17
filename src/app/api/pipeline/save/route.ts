@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { Database } from '@/types/database'
 
-type CurrentPipelineInsert = Database['public']['Tables']['current_pipeline']['Insert']
-type CurrentPipelineRow = Database['public']['Tables']['current_pipeline']['Row']
+interface CurrentPipelineRow {
+  id: string
+  pipeline_data: any
+  picksheet_text: string | null
+  updated_at: string
+  metadata: any
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,49 +21,70 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // First, set all existing pipelines to is_current = false
-    const { error: updateError } = await supabase
-      .from('current_pipeline')
-      // @ts-expect-error - Supabase type inference issue with new table
-      .update({ is_current: false })
-      .eq('is_current', true)
-
-    if (updateError) {
-      console.error('Error updating previous pipelines:', updateError)
-      // Continue anyway - not critical
-    }
-
-    // Insert new current pipeline
+    // Save to current_pipeline table using upsert (insert or update)
     const { data, error } = await supabase
       .from('current_pipeline')
-      // @ts-expect-error - Supabase type inference issue with new table
-      .insert({
+      .upsert({
+        id: 'current',
         pipeline_data: pipeline,
-        picksheet_text: picksheetText,
-        is_current: true,
-        updated_at: new Date().toISOString()
-      })
+        picksheet_text: picksheetText || null,
+        updated_at: new Date().toISOString(),
+        metadata: {
+          source: 'control-panel',
+          version: '1.0'
+        }
+      } as any)
       .select()
-      .single() as { data: CurrentPipelineRow | null, error: any }
+      .single()
 
-    if (error || !data) {
+    if (error) {
       console.error('Error saving pipeline to database:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
+
+      // If table doesn't exist, provide helpful message
+      if (error.code === '42P01') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Database table not found',
+            message: 'Please run the migration in supabase/migrations/006_create_current_pipeline.sql'
+          },
+          { status: 503 }
+        )
+      }
+
+      // RLS policy error
+      if (error.code === '42501') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Permission denied',
+            message: 'RLS policies may be preventing the insert. Check your Supabase policies.'
+          },
+          { status: 403 }
+        )
+      }
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Failed to save pipeline to database',
-          message: error?.message || 'No data returned'
+          error: 'Database error',
+          message: error.message,
+          code: error.code
         },
         { status: 500 }
       )
     }
 
-    console.log('Pipeline saved successfully to database:', data.id)
+    console.log('Pipeline saved successfully to database')
+    console.log('Saved data:', data ? 'Data returned' : 'No data returned')
+
+    const row = data as CurrentPipelineRow | null
 
     return NextResponse.json({
       success: true,
-      id: data.id,
-      message: 'Pipeline data saved successfully'
+      message: 'Pipeline data saved successfully',
+      timestamp: row?.updated_at || new Date().toISOString()
     })
   } catch (error) {
     console.error('Error saving pipeline:', error)

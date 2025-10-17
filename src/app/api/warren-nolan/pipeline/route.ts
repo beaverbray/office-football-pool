@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     // Step 1: Scrape Warren Nolan predictions
     const scrapeResult = date
       ? await WarrenNolanScraper.scrapePredictions(date)
-      : await WarrenNolanScraper.scrapeTodaysPredictions()
+      : await WarrenNolanScraper.scrapeCurrentWeek()
 
     if (!scrapeResult.success) {
       return NextResponse.json(
