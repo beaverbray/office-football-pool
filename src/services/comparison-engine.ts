@@ -1,4 +1,8 @@
 import { z } from 'zod'
+import { RobustSpreadMetric } from './robust-spread-metric'
+
+// Initialize robust spread metric singleton
+const robustMetric = RobustSpreadMetric.getInstance()
 
 // Key numbers in football betting
 const KEY_NUMBERS = [3, 7, 10, 14] // Most common margins of victory
@@ -23,6 +27,10 @@ export interface GameComparison {
   openingLineTimestamp?: string // When opening line was recorded
   lineMovement?: number // Current spread - opening spread
   lineMovementPercent?: number // Percentage movement from opening
+  // Robust spread metric data
+  marketDeltaProb?: number // Calibrated probability change [0, 1]
+  importanceLevel?: 'minimal' | 'low' | 'moderate' | 'high' | 'very-high'
+  outlierScore?: number // Unusual spread disagreement indicator
 }
 
 export interface ComparisonKPIs {
@@ -189,7 +197,30 @@ export class ComparisonEngine {
     
     // Use league from market data if available, otherwise detect
     const league = marketGame.league || this.detectLeague(marketGame.homeTeam, marketGame.awayTeam)
-    
+
+    // Calculate robust spread metrics
+    let marketDeltaProb: number | undefined
+    let importanceLevel: 'minimal' | 'low' | 'moderate' | 'high' | 'very-high' | undefined
+    let outlierScore: number | undefined
+
+    try {
+      marketDeltaProb = robustMetric.marketDeltaProb(
+        picksheetGame.spread,
+        marketGame.homeSpread
+      )
+
+      importanceLevel = robustMetric.getImportanceLevel(marketDeltaProb)
+
+      outlierScore = robustMetric.outlierScore(
+        picksheetGame.spread,
+        marketGame.homeSpread
+      )
+    } catch (error) {
+      console.error(`[metric] ERROR calculating metrics:`, error)
+      console.error(`[metric] Error details:`, error instanceof Error ? error.message : String(error))
+      console.error(`[metric] Error stack:`, error instanceof Error ? error.stack : 'No stack')
+    }
+
     return {
       gameId: marketGame.gameId,
       homeTeam: marketGame.homeTeam,
@@ -203,7 +234,10 @@ export class ComparisonEngine {
       keyNumbersCrossed: keyNumberCheck.numbers,
       favoriteFlipped,
       confidence: matchConfidence,
-      matched: true
+      matched: true,
+      marketDeltaProb,
+      importanceLevel,
+      outlierScore
     }
   }
 

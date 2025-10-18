@@ -23,7 +23,7 @@ export default function NavBar({
 }: NavBarProps = {}) {
   const pathname = usePathname()
   const [showMobileMenu, setShowMobileMenu] = useState(false)
-  
+
   const isActive = (path: string) => pathname === path
   
   return (
@@ -60,6 +60,16 @@ export default function NavBar({
                 }`}
               >
                 CONTROL_PANEL
+              </Link>
+              <Link
+                href="/model-picks"
+                className={`px-4 py-2 text-sm font-mono rounded transition-colors ${
+                  isActive('/model-picks')
+                    ? 'bg-orange-700 text-black font-bold'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
+                }`}
+              >
+                MODEL_PICKS
               </Link>
             </nav>
           </div>
@@ -127,6 +137,17 @@ export default function NavBar({
               }`}
             >
               CONTROL_PANEL
+            </Link>
+            <Link
+              href="/model-picks"
+              onClick={() => setShowMobileMenu(false)}
+              className={`block px-4 py-2 text-sm font-mono rounded transition-colors mb-1 ${
+                isActive('/model-picks')
+                  ? 'bg-orange-700 text-black font-bold'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-zinc-800'
+              }`}
+            >
+              MODEL_PICKS
             </Link>
             {showRefreshButton && (
               <button

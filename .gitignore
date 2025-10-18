@@ -33,3 +33,6 @@ next-env.d.ts
 # tasks.json
 # tasks/
 .vercel
+
+# Gap analysis directory
+gap_analysis/

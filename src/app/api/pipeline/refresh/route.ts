@@ -75,11 +75,11 @@ export async function POST() {
     // Save refreshed pipeline back to database
     const { error: updateError } = await supabase
       .from('current_pipeline')
-      .update({
+      .upsert({
+        id: 'current',
         pipeline_data: refreshedPipeline,
         updated_at: new Date().toISOString()
-      })
-      .eq('id', 'current')
+      } as any)
 
     if (updateError) {
       console.error('Failed to save refreshed pipeline:', updateError)

@@ -69,6 +69,7 @@ export default function CompactDashboard() {
   const [showGuide, setShowGuide] = useState(false)
   const [eloPredictions, setEloPredictions] = useState<ELOPrediction[]>([])
   const [refreshing, setRefreshing] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -167,7 +168,12 @@ export default function CompactDashboard() {
         if (response.ok) {
           const data = await response.json()
           if (data.pipeline) {
-            setCurrentPipeline(data.pipeline)
+            // Merge the timestamp from the API response into the pipeline object
+            const pipelineWithTimestamp = {
+              ...data.pipeline,
+              timestamp: data.updatedAt || data.pipeline.timestamp
+            }
+            setCurrentPipeline(pipelineWithTimestamp)
             setDataLoaded(true)
             console.log('Loaded pipeline from API')
             return
@@ -276,7 +282,12 @@ export default function CompactDashboard() {
       }
 
       if (data.pipeline) {
-        setCurrentPipeline(data.pipeline)
+        // Merge the timestamp from the API response into the pipeline object
+        const pipelineWithTimestamp = {
+          ...data.pipeline,
+          timestamp: data.updatedAt || data.pipeline.timestamp
+        }
+        setCurrentPipeline(pipelineWithTimestamp)
 
         // Record new opening lines if needed
         if (data.pipeline.comparison?.comparisons) {
@@ -299,6 +310,14 @@ export default function CompactDashboard() {
 
     // Apply filters
     filtered = filtered.filter(c => {
+      // Search term filter (check both home and away teams)
+      if (searchTerm.trim()) {
+        const search = searchTerm.toLowerCase()
+        const homeMatch = c.homeTeam.toLowerCase().includes(search)
+        const awayMatch = c.awayTeam.toLowerCase().includes(search)
+        if (!homeMatch && !awayMatch) return false
+      }
+
       // League filter
       if (filters.league !== 'all' && c.league !== filters.league) return false
 
@@ -377,6 +396,45 @@ export default function CompactDashboard() {
     return filtered
   }
 
+  // Group games by date, hour, and league
+  const getGroupedComparisons = () => {
+    const comparisons = getFilteredComparisons()
+    const grouped: { [key: string]: typeof comparisons } = {}
+
+    comparisons.forEach(comp => {
+      const gameDate = comp.gameTime ? new Date(comp.gameTime) : null
+      const dateStr = gameDate ?
+        gameDate.toLocaleDateString('en-US', {
+          timeZone: 'America/Los_Angeles',
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric'
+        }) : 'N/A'
+
+      // Get hour for grouping (e.g., "9AM", "12PM")
+      let hour = 'N/A'
+      if (gameDate) {
+        const timeString = gameDate.toLocaleTimeString('en-US', {
+          timeZone: 'America/Los_Angeles',
+          hour: 'numeric',
+          hour12: true
+        })
+        const parts = timeString.split(' ')
+        hour = parts.join('') // e.g., "9AM", "12PM"
+      }
+
+      const league = comp.league || 'N/A'
+      const groupKey = `${dateStr}|${hour}|${league}`
+
+      if (!grouped[groupKey]) {
+        grouped[groupKey] = []
+      }
+      grouped[groupKey].push(comp)
+    })
+
+    return grouped
+  }
+
   const getRiskColor = (delta: number | null) => {
     if (delta === null) return 'text-gray-500'
     const absDelta = Math.abs(delta)
@@ -384,6 +442,17 @@ export default function CompactDashboard() {
     if (absDelta <= 3) return 'text-orange-700'
     if (absDelta <= 5) return 'text-orange-800'
     return 'text-red-600'
+  }
+
+  const getImportanceColor = (importance: string | undefined) => {
+    switch (importance) {
+      case 'minimal': return 'text-gray-500'        // <1%
+      case 'low': return 'text-green-500'           // 1-2%
+      case 'moderate': return 'text-orange-400'     // 2-4%
+      case 'high': return 'text-orange-700'         // 4-8%
+      case 'very-high': return 'text-red-600'       // >8%
+      default: return 'text-gray-500'
+    }
   }
 
   // Helper to find matching ELO prediction for a game
@@ -481,10 +550,10 @@ export default function CompactDashboard() {
       <div className="max-w-6xl mx-auto px-2 sm:px-4 py-1 sm:py-6">
         {/* KPI Metrics */}
         {currentPipeline?.comparison?.kpis && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-4 mb-2 sm:mb-6">
+          <div className="grid grid-cols-4 gap-1.5 sm:gap-4 mb-2 sm:mb-6">
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">REMAINING:</span>
+              <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
+                <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">REM:</span>
                 <span className="text-[13px] sm:text-xs font-mono font-bold text-orange-700">
                   {(() => {
                     const now = new Date()
@@ -511,7 +580,7 @@ export default function CompactDashboard() {
             </div>
 
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+              <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
                 <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">AVG Δ:</span>
                 <span className={`text-[13px] sm:text-xs font-mono font-bold ${getRiskColor(currentPipeline.comparison.kpis.avgSpreadDelta)}`}>
                   {currentPipeline.comparison.kpis.avgSpreadDelta != null ? currentPipeline.comparison.kpis.avgSpreadDelta.toFixed(2) : '-'}
@@ -523,7 +592,7 @@ export default function CompactDashboard() {
             </div>
 
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+              <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
                 <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">KEY #:</span>
                 <span className="text-[13px] sm:text-xs font-mono font-bold text-orange-700">
                   {currentPipeline.comparison.kpis.keyNumberCrossings}
@@ -535,7 +604,7 @@ export default function CompactDashboard() {
             </div>
 
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2">
+              <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
                 <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">FLIPS:</span>
                 <span className="text-[13px] sm:text-xs font-mono font-bold text-purple-400">
                   {currentPipeline.comparison.kpis.favoriteFlips}
@@ -551,6 +620,29 @@ export default function CompactDashboard() {
         {/* Filter Controls */}
         {currentPipeline?.comparison?.comparisons && (
           <div className="bg-zinc-900 rounded border border-zinc-800 p-2 sm:p-4 mb-2 sm:mb-4">
+            {/* Search Bar */}
+            <div className="mb-2 sm:mb-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search teams..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search teams"
+                  className="w-full px-3 py-2 bg-zinc-950 border border-zinc-700 rounded text-xs sm:text-sm font-mono text-gray-300 placeholder-gray-600 focus:border-orange-700 focus:outline-none pr-20"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] sm:text-xs font-mono text-gray-500 hover:text-orange-600 transition-colors"
+                  >
+                    CLEAR
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Mobile Filter Toggle */}
             <div className="sm:hidden flex items-center justify-between gap-2 mb-2">
               <button
@@ -560,13 +652,54 @@ export default function CompactDashboard() {
                 <span>FILTERS {showFilters ? '▼' : '►'}</span>
                 <span className="text-gray-500">
                   {showOnlyIssues || filters.league !== 'all' || filters.dateFilter !== 'all' ||
-                   filters.eloFilter !== 'all' || filters.deltaMin || filters.deltaMax ? 'ACTIVE' : 'OFF'}
+                   filters.eloFilter !== 'all' || filters.deltaMin || filters.deltaMax || searchTerm ? 'ACTIVE' : 'OFF'}
                 </span>
+              </button>
+              <button
+                onClick={() => setShowGuide(!showGuide)}
+                className="px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-[9px] font-mono text-orange-600 hover:bg-zinc-800 transition-colors"
+              >
+                ℹ
               </button>
               <div className="text-[9px] font-mono text-gray-500 whitespace-nowrap">
                 {getFilteredComparisons().length}/{enrichedComparisons.length}
               </div>
             </div>
+
+            {/* Mobile Column Guide */}
+            {showGuide && (
+              <div className="sm:hidden mb-2 bg-zinc-950 border border-zinc-700 rounded p-3 z-50 shadow-lg">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-[10px] font-mono text-orange-600 font-bold">COLUMN_GUIDE</h3>
+                  <button
+                    onClick={() => setShowGuide(false)}
+                    className="text-gray-400 hover:text-orange-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-1.5 text-[9px] font-mono">
+                  <div><span className="text-orange-700">OPEN:</span> <span className="text-gray-400">Opening line spread</span></div>
+                  <div><span className="text-orange-700">MKT:</span> <span className="text-gray-400">Current market spread</span></div>
+                  <div><span className="text-orange-700">POOL:</span> <span className="text-gray-400">Office pool spread</span></div>
+                  <div><span className="text-orange-700">ELO:</span> <span className="text-gray-400">ELO predicted spread</span></div>
+                  <div><span className="text-orange-700">Δp%:</span> <span className="text-gray-400">Market delta probability (importance score)</span></div>
+                  <div className="pt-1 border-t border-zinc-700 mt-1">
+                    <div className="text-orange-700 mb-1">COLOR CODING:</div>
+                    <div><span className="text-gray-500">Gray Δp%:</span> <span className="text-gray-400">Minimal (&lt;1%)</span></div>
+                    <div><span className="text-green-500">Green Δp%:</span> <span className="text-gray-400">Low (1-2%)</span></div>
+                    <div><span className="text-orange-400">Orange Δp%:</span> <span className="text-gray-400">Moderate (2-4%)</span></div>
+                    <div><span className="text-orange-700">Dark Orange Δp%:</span> <span className="text-gray-400">High (4-8%)</span></div>
+                    <div><span className="text-red-600">Red Δp%:</span> <span className="text-gray-400">Very High (&gt;8%)</span></div>
+                    <div><span className="bg-orange-900/50 px-1">Orange BG:</span> <span className="text-gray-400">Both agree</span></div>
+                    <div><span className="bg-blue-900/50 px-1">Blue BG:</span> <span className="text-gray-400">Market value</span></div>
+                    <div><span className="bg-green-900/50 px-1">Green BG:</span> <span className="text-gray-400">ELO value</span></div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Advanced Filters */}
             <div className={`${showFilters ? 'grid grid-cols-2 gap-3' : 'hidden'} sm:flex sm:flex-wrap sm:items-end sm:gap-2 mb-1 sm:mb-2`}>
@@ -581,6 +714,7 @@ export default function CompactDashboard() {
                     deltaMax: ''
                   })
                   setShowOnlyIssues(false)
+                  setSearchTerm('')
                 }}
                 className="col-span-2 sm:col-span-1 px-3 py-1 text-xs font-mono bg-zinc-950 text-orange-600 border border-zinc-700 rounded hover:bg-zinc-800 hover:text-orange-500 transition-colors"
               >
@@ -678,9 +812,26 @@ export default function CompactDashboard() {
               </div>
             )}
 
+          </div>
+        )}
+
+        {/* Week Display and Guide Button Row */}
+        {currentPipeline?.comparison?.comparisons && (
+          <div className="hidden sm:flex justify-between items-center mb-2 relative">
+            <div className="text-xs font-mono text-gray-500">
+              WEEK {WeekDetector.getCurrentNFLWeek().week}
+            </div>
+
+            <button
+              onClick={() => setShowGuide(!showGuide)}
+              className="px-2 py-1 text-xs font-mono text-orange-600 hover:text-orange-500 transition-colors"
+            >
+              {showGuide ? '✕ CLOSE' : 'ℹ GUIDE'}
+            </button>
+
             {/* Column Guide */}
             {showGuide && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-zinc-950 border border-zinc-700 rounded p-4 z-10 shadow-lg">
+              <div className="absolute top-full right-0 mt-2 bg-zinc-950 border border-zinc-700 rounded p-4 z-50 shadow-lg w-full max-w-md">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-xs font-mono text-orange-600 font-bold">COLUMN_GUIDE</h3>
                   <button
@@ -694,30 +845,24 @@ export default function CompactDashboard() {
                 </div>
                 <div className="space-y-2 text-[10px] sm:text-xs font-mono">
                   <div><span className="text-orange-700">OPEN:</span> <span className="text-gray-400">Opening line spread (first spread recorded)</span></div>
-                  <div><span className="text-orange-700">MOVE:</span> <span className="text-gray-400">Line movement from opening to current market spread</span></div>
-                  <div><span className="text-orange-700">POOL:</span> <span className="text-gray-400">Away team spread from office pool</span></div>
-                  <div><span className="text-orange-700">MARKET:</span> <span className="text-gray-400">Current market spread (away team)</span></div>
+                  <div><span className="text-orange-700">MKT:</span> <span className="text-gray-400">Current market spread</span></div>
+                  <div><span className="text-orange-700">POOL:</span> <span className="text-gray-400">Spread from office pool picksheet</span></div>
                   <div><span className="text-orange-700">ELO:</span> <span className="text-gray-400">Predicted spread from ELO rating system</span></div>
-                  <div><span className="text-orange-700">DELTA:</span> <span className="text-gray-400">Difference between pool and market</span></div>
+                  <div><span className="text-orange-700">Δp%:</span> <span className="text-gray-400">Market delta probability - calibrated measure of spread importance (shown in home team row)</span></div>
+                  <div className="pt-2 border-t border-zinc-700 mt-2">
+                    <div className="text-orange-700 font-bold mb-2">COLOR CODING:</div>
+                    <div><span className="text-gray-500 font-bold">Gray Δp%:</span> <span className="text-gray-400">Minimal importance (&lt;1%)</span></div>
+                    <div><span className="text-green-500 font-bold">Green Δp%:</span> <span className="text-gray-400">Low importance (1-2%)</span></div>
+                    <div><span className="text-orange-400 font-bold">Orange Δp%:</span> <span className="text-gray-400">Moderate importance (2-4%)</span></div>
+                    <div><span className="text-orange-700 font-bold">Dark Orange Δp%:</span> <span className="text-gray-400">High importance (4-8%)</span></div>
+                    <div><span className="text-red-600 font-bold">Red Δp%:</span> <span className="text-gray-400">Very high importance (&gt;8%)</span></div>
+                    <div><span className="bg-orange-900/50 px-1.5 py-0.5 rounded">Orange background:</span> <span className="text-gray-400">Market & ELO both see value</span></div>
+                    <div><span className="bg-blue-900/50 px-1.5 py-0.5 rounded">Blue background:</span> <span className="text-gray-400">Market sees value in this team</span></div>
+                    <div><span className="bg-green-900/50 px-1.5 py-0.5 rounded">Green background:</span> <span className="text-gray-400">ELO sees value in this team</span></div>
+                  </div>
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Week Display and Guide Button Row */}
-        {currentPipeline?.comparison?.comparisons && (
-          <div className="hidden sm:flex justify-between items-center mb-2">
-            <div className="text-xs font-mono text-gray-500">
-              WEEK {WeekDetector.getCurrentNFLWeek().week}
-            </div>
-
-            <button
-              onClick={() => setShowGuide(!showGuide)}
-              className="px-2 py-1 text-xs font-mono text-orange-600 hover:text-orange-500 transition-colors"
-            >
-              {showGuide ? '✕ CLOSE' : 'ℹ GUIDE'}
-            </button>
           </div>
         )}
 
@@ -743,121 +888,116 @@ export default function CompactDashboard() {
                   <tr>
                     <th
                       onClick={() => handleSort('date')}
-                      className="px-2 sm:px-2 py-2 sm:py-2 text-left text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950 cursor-pointer hover:text-orange-500 transition-colors"
+                      className="px-1 sm:px-2 py-1.5 sm:py-2 text-left text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950 cursor-pointer hover:text-orange-500 transition-colors"
                     >
                       MATCHUP {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">OPEN</th>
-                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">POOL</th>
-                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MKT</th>
-                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden md:table-cell">ELO</th>
-                    <th className="px-2 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950">Δ</th>
-                    <th className="px-1 sm:px-2 py-2 sm:py-2 text-center text-[11px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden sm:table-cell">🚩</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">OPEN</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MKT</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">POOL</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">ELO</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">Δp%</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden sm:table-cell">🚩</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
-                  {getFilteredComparisons().map((comp, idx) => {
-                    const gameDate = comp.gameTime ? new Date(comp.gameTime) : null
-
-                    const dateStr = gameDate ?
-                      gameDate.toLocaleDateString('en-US', {
-                        timeZone: 'America/Los_Angeles',
-                        month: '2-digit',
-                        day: '2-digit'
-                      }) : 'N/A'
-
-                    const timeStr = gameDate ?
-                      gameDate.toLocaleTimeString('en-US', {
-                        timeZone: 'America/Los_Angeles',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true
-                      }).toLowerCase() : ''
-
-                    const eloPred = findEloPrediction(comp.homeTeam, comp.awayTeam)
-                    const eloSpread = eloPred && eloPred.spread != null
-                      ? (eloPred.predictedWinner === 'home' ? eloPred.spread : -eloPred.spread)
-                      : null
-
-                    // Calculate spreads from away team perspective
-                    const awayPoolSpread = comp.picksheetSpread != null ? -comp.picksheetSpread : null
-                    const awayMarketSpread = comp.marketSpread != null ? -comp.marketSpread : null
-
-                    const homePoolSpread = comp.picksheetSpread
-                    const homeMarketSpread = comp.marketSpread
-                    const homeOpeningSpread = (comp.openingSpread !== undefined && comp.openingSpread !== null) ? -comp.openingSpread : undefined
-                    const homeEloSpread = eloSpread !== null ? -eloSpread : null
+                  {Object.entries(getGroupedComparisons()).map(([groupKey, games]) => {
+                    const [dateStr, hour, league] = groupKey.split('|')
 
                     return (
-                      <React.Fragment key={idx}>
-                        {/* Header Row - Game Info and Date */}
-                        <tr className="bg-zinc-950 border-b border-zinc-700">
-                          <td colSpan={7} className="px-2 sm:px-2 py-2 sm:py-1.5">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className={`text-[9px] sm:text-[9px] font-mono px-1.5 py-1 rounded ${comp.league === 'NFL' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>
-                                  {comp.league || 'N/A'}
-                                </span>
-                                <span className="text-[10px] sm:text-[10px] font-mono text-gray-400">
-                                  {dateStr} {timeStr}
-                                </span>
-                              </div>
-                              <div className="flex gap-1 sm:hidden">
-                                {comp.crossesKeyNumber && (
-                                  <span className="px-1 py-1 text-[8px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
-                                    K{comp.keyNumbersCrossed.join(',')}
-                                  </span>
-                                )}
-                                {comp.favoriteFlipped && (
-                                  <span className="px-1 py-1 text-[8px] font-mono bg-purple-950 text-purple-400 rounded">
-                                    FLP
-                                  </span>
-                                )}
-                              </div>
+                      <React.Fragment key={groupKey}>
+                        {/* Date, Time, and League Group Header */}
+                        <tr className="bg-zinc-950 border-b-2 border-zinc-700">
+                          <td colSpan={8} className="px-1 sm:px-2 py-1.5 sm:py-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <span className={`text-[8px] sm:text-[10px] font-mono px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-bold ${league === 'NFL' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>
+                                {league}
+                              </span>
+                              <span className="text-[9px] sm:text-xs font-mono text-gray-400 font-bold">
+                                {dateStr}
+                              </span>
+                              <span className="text-[8px] sm:text-[10px] font-mono text-gray-500">
+                                {hour !== 'N/A' ? `@ ${hour}` : ''}
+                              </span>
                             </div>
                           </td>
                         </tr>
 
-                        {/* Away Team Row */}
-                        <tr className="bg-zinc-900/30 hover:bg-zinc-700/50 transition-colors">
-                          <td className="px-2 sm:px-2 py-2 sm:py-2">
-                            <div className="text-[11px] sm:text-xs font-mono text-gray-300">
-                              {comp.awayTeam}
-                            </div>
-                          </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
-                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${(comp.openingSpread !== undefined && comp.openingSpread !== null) ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {/* Games in this group */}
+                        {games.map((comp, idx) => {
+                          // Banded rows - alternating background colors for games
+                          const isEvenGame = idx % 2 === 0
+                          const gameBgClass = isEvenGame ? 'bg-zinc-900/10' : 'bg-zinc-800/40'
+                          const gameBorderClass = idx === games.length - 1 ? 'border-b-4 border-zinc-500' : 'border-b-[3px] border-zinc-500'
+
+                          const gameDate = comp.gameTime ? new Date(comp.gameTime) : null
+
+                          const timeStr = gameDate ?
+                            gameDate.toLocaleTimeString('en-US', {
+                              timeZone: 'America/Los_Angeles',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                              hour12: true
+                            }).toLowerCase() : ''
+
+                          const eloPred = findEloPrediction(comp.homeTeam, comp.awayTeam)
+                          const eloSpread = eloPred && eloPred.spread != null
+                            ? (eloPred.predictedWinner === 'home' ? eloPred.spread : -eloPred.spread)
+                            : null
+
+                          // Calculate spreads from away team perspective
+                          const awayPoolSpread = comp.picksheetSpread != null ? -comp.picksheetSpread : null
+                          const awayMarketSpread = comp.marketSpread != null ? -comp.marketSpread : null
+
+                          const homePoolSpread = comp.picksheetSpread
+                          const homeMarketSpread = comp.marketSpread
+                          const homeOpeningSpread = (comp.openingSpread !== undefined && comp.openingSpread !== null) ? -comp.openingSpread : undefined
+                          const homeEloSpread = eloSpread !== null ? -eloSpread : null
+
+                          // Get market delta probability and importance level
+                          const marketDeltaProb = comp.marketDeltaProb ?? 0
+                          const importanceLevel = comp.importanceLevel ?? 'minimal'
+
+                          return (
+                            <React.Fragment key={idx}>
+                              {/* Away Team Row */}
+                              <tr className={`${gameBgClass} hover:bg-zinc-700/50 transition-colors`}>
+                                <td className="px-1 sm:px-2 py-2 sm:py-2.5">
+                                  <div className="text-[10px] sm:text-xs font-mono text-gray-300">
+                                    {comp.awayTeam}
+                                  </div>
+                                  <div className="text-[8px] font-mono text-gray-500 mt-0.5">
+                                    {timeStr}
+                                  </div>
+                                </td>
+                                <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${(comp.openingSpread !== undefined && comp.openingSpread !== null) ? 'text-gray-500' : 'text-gray-600'}`}>
                               {(comp.openingSpread !== undefined && comp.openingSpread !== null)
                                 ? `${comp.openingSpread > 0 ? '+' : ''}${comp.openingSpread.toFixed(1)}`
                                 : '-'}
                             </div>
                           </td>
-                          <td className={`px-2 sm:px-2 py-2 sm:py-2 text-center ${getTeamSpreadStyle(false, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
-                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
-                              {awayPoolSpread !== null ? `${awayPoolSpread > 0 ? '+' : ''}${awayPoolSpread.toFixed(1)}` : '-'}
-                            </div>
-                          </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
-                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-200">
                               {awayMarketSpread !== null ? `${awayMarketSpread > 0 ? '+' : ''}${awayMarketSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center hidden md:table-cell">
-                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
+                          <td className={`px-0.5 sm:px-1 py-2 sm:py-2.5 text-center ${getTeamSpreadStyle(false, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
+                            <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-200">
+                              {awayPoolSpread !== null ? `${awayPoolSpread > 0 ? '+' : ''}${awayPoolSpread.toFixed(1)}` : '-'}
+                            </div>
+                          </td>
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
                               {eloSpread !== null ? `${eloSpread > 0 ? '+' : ''}${eloSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center" rowSpan={2}>
-                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${getRiskColor(comp.spreadDelta)}`}>
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${getRiskColor(comp.spreadDelta)}`}>
                               {comp.spreadDelta != null ? `${comp.spreadDelta > 0 ? '+' : ''}${comp.spreadDelta.toFixed(1)}` : '-'}
                             </div>
-                            {comp.lineMovement !== undefined && comp.lineMovement !== null && comp.lineMovement.movement !== 0 && (
-                              <div className={`text-[9px] sm:text-[9px] font-mono mt-1 ${OpeningLineEnricher.getLineMovementColor(comp.lineMovement)}`}>
-                                {OpeningLineEnricher.formatLineMovement(comp.lineMovement)}
-                              </div>
-                            )}
                           </td>
-                          <td className="px-1 sm:px-2 py-2 sm:py-2 text-center hidden sm:table-cell" rowSpan={2}>
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center hidden sm:table-cell" rowSpan={2}>
                             <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
                               {comp.crossesKeyNumber && (
                                 <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
@@ -869,44 +1009,63 @@ export default function CompactDashboard() {
                                   FLP
                                 </span>
                               )}
+                              {comp.outlierScore && comp.outlierScore > 2.0 && (
+                                <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-red-950 text-red-400 rounded">
+                                  OUT
+                                </span>
+                              )}
                             </div>
                           </td>
                         </tr>
 
                         {/* Home Team Row */}
-                        <tr className="bg-zinc-900/30 hover:bg-zinc-700/50 transition-colors border-b-2 border-zinc-700">
-                          <td className="px-2 sm:px-2 py-2 sm:py-2">
-                            <div className="text-[11px] sm:text-xs font-mono text-gray-300 uppercase">
-                              {comp.homeTeam}
+                        <tr className={`${gameBgClass} hover:bg-zinc-700/50 transition-colors ${gameBorderClass}`}>
+                          <td className="px-1 sm:px-2 py-2 sm:py-2.5">
+                            <div className="flex items-center min-h-[2.25rem]">
+                              <div className="text-[10px] sm:text-xs font-mono text-gray-300 uppercase">
+                                {comp.homeTeam}
+                              </div>
                             </div>
                           </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
-                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${homeOpeningSpread !== undefined ? 'text-gray-300' : 'text-gray-600'}`}>
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${homeOpeningSpread !== undefined ? 'text-gray-500' : 'text-gray-600'}`}>
                               {homeOpeningSpread !== undefined
                                 ? `${homeOpeningSpread > 0 ? '+' : ''}${homeOpeningSpread.toFixed(1)}`
                                 : '-'}
                             </div>
                           </td>
-                          <td className={`px-2 sm:px-2 py-2 sm:py-2 text-center ${getTeamSpreadStyle(true, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
-                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
-                              {homePoolSpread !== null ? `${homePoolSpread > 0 ? '+' : ''}${homePoolSpread.toFixed(1)}` : '-'}
-                            </div>
-                          </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center">
-                            <div className="text-[13px] sm:text-sm font-mono font-bold text-gray-200">
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-200">
                               {homeMarketSpread !== null ? `${homeMarketSpread > 0 ? '+' : ''}${homeMarketSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                          <td className="px-2 sm:px-2 py-2 sm:py-2 text-center hidden md:table-cell">
-                            <div className={`text-[13px] sm:text-sm font-mono font-bold ${homeEloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
-                              {homeEloSpread !== null ? `${homeEloSpread > 0 ? '+' : ''}${homeEloSpread.toFixed(1)}` : '-'}
+                          <td className={`px-0.5 sm:px-1 py-2 sm:py-2.5 text-center ${getTeamSpreadStyle(true, comp.picksheetSpread, comp.marketSpread, comp.homeTeam, comp.awayTeam)}`}>
+                            <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-200">
+                              {homePoolSpread !== null ? `${homePoolSpread > 0 ? '+' : ''}${homePoolSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
-                        </tr>
-                      </React.Fragment>
-                    )
-                  })}
-                </tbody>
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${homeEloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
+                              {homeEloSpread !== null ? `${homeEloSpread > 0 ? '+' : ''}${homeEloSpread.toFixed(1)}` : '-'}
+                              </div>
+                            </td>
+                          <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
+                            {marketDeltaProb !== null && marketDeltaProb > 0 ? (
+                              <div className={`text-[11px] sm:text-sm font-mono font-bold ${getImportanceColor(importanceLevel)}`}>
+                                {(marketDeltaProb * 100).toFixed(1)}%
+                              </div>
+                            ) : (
+                              <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-600">-</div>
+                            )}
+                          </td>
+                          </tr>
+                        </React.Fragment>
+                      )
+                    })}
+                  </React.Fragment>
+                )
+              })}
+            </tbody>
               </table>
             </div>
           </div>

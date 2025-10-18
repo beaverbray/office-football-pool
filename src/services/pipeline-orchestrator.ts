@@ -5,6 +5,7 @@ import { comparisonEngine, type ComparisonKPIs, type GameComparison } from './co
 import { WarrenNolanScraper } from './warren-nolan-scraper'
 import { ScheduleService } from './schedule-service'
 import { GameMatchingService } from './game-matching-service'
+import { RobustSpreadMetric } from './robust-spread-metric'
 
 export interface PipelineConfig {
   useOddsAPI?: boolean
@@ -783,6 +784,9 @@ export class PipelineOrchestrator {
         }
       }
 
+      // Initialize robust spread metric
+      const robustMetric = RobustSpreadMetric.getInstance()
+
       // Build comparison using schedule as reference
       const comparisons: any[] = scheduleMatches.map((match: any) => {
         const picksheetSpread = match.picksheetGame.spread
@@ -807,6 +811,11 @@ export class PipelineOrchestrator {
         const favoriteFlipped = (picksheetSpread > 0 && marketSpread < 0) ||
                                (picksheetSpread < 0 && marketSpread > 0)
 
+        // Calculate robust spread metrics
+        const marketDeltaProb = robustMetric.marketDeltaProb(picksheetSpread, marketSpread)
+        const importanceLevel = robustMetric.getImportanceLevel(marketDeltaProb)
+        const outlierScore = robustMetric.outlierScore(picksheetSpread, marketSpread)
+
         return {
           gameId: `${match.scheduleGame.away_team}-${match.scheduleGame.home_team}-${match.scheduleGame.week}`,
           homeTeam: match.scheduleGame.home_team,
@@ -819,7 +828,10 @@ export class PipelineOrchestrator {
           crossesKeyNumber: keyNumbersCrossed.length > 0,
           keyNumbersCrossed,
           favoriteFlipped,
-          confidence: match.confidence || 1.0
+          confidence: match.confidence || 1.0,
+          marketDeltaProb,
+          importanceLevel,
+          outlierScore
         }
       })
 

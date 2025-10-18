@@ -23,6 +23,10 @@ export interface EnrichedGameComparison {
     movement: number
     direction: 'toward' | 'away' | 'none'
   }
+  // Robust spread metric fields
+  marketDeltaProb?: number
+  importanceLevel?: 'minimal' | 'low' | 'moderate' | 'high' | 'very-high'
+  outlierScore?: number
 }
 
 export class OpeningLineEnricher {
