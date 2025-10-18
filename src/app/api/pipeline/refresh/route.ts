@@ -33,12 +33,63 @@ export async function POST() {
     }
 
     const row = data as CurrentPipelineRow
+    const currentPipeline = row.pipeline_data
 
-    // Return the current pipeline (refresh functionality can be added later)
+    // Extract picksheet games from the current pipeline
+    if (!currentPipeline?.parsing?.games || currentPipeline.parsing.games.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No picksheet games found',
+        message: 'The current pipeline does not contain picksheet games. Please re-process in Control Panel.'
+      }, { status: 400 })
+    }
+
+    console.log('Refreshing market data with', currentPipeline.parsing.games.length, 'picksheet games')
+
+    // Import pipeline orchestrator
+    const { pipelineOrchestrator } = await import('@/services/pipeline-orchestrator')
+
+    // Re-run pipeline with fresh odds
+    const refreshedPipeline = await pipelineOrchestrator.runPipeline(
+      {
+        picksheetGames: currentPipeline.parsing.games
+      },
+      {
+        useOddsAPI: true,
+        useLLM: false, // Don't need LLM since we already have structured games
+        includeLogs: false,
+        matchingThreshold: currentPipeline.config?.matchingThreshold || 0.4,
+        week: currentPipeline.config?.week
+      }
+    )
+
+    // Check if refresh found any matching games
+    if (refreshedPipeline.matching?.matches === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No matching games found',
+        message: 'The picksheet contains games that may have already finished or are not available in the odds API.'
+      }, { status: 400 })
+    }
+
+    // Save refreshed pipeline back to database
+    const { error: updateError } = await supabase
+      .from('current_pipeline')
+      .update({
+        pipeline_data: refreshedPipeline,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', 'current')
+
+    if (updateError) {
+      console.error('Failed to save refreshed pipeline:', updateError)
+      // Still return the refreshed data even if save fails
+    }
+
     return NextResponse.json({
       success: true,
-      pipeline: row.pipeline_data,
-      message: 'Returning current pipeline data. To update with latest market odds, re-process in Control Panel.'
+      pipeline: refreshedPipeline,
+      message: `Market data refreshed successfully! ${refreshedPipeline.matching?.matches || 0} games matched.`
     })
   } catch (error) {
     console.error('Error refreshing pipeline:', error)
