@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pipelineOrchestrator } from '@/services/pipeline-orchestrator'
+import { WeekDetector } from '@/services/week-detector'
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,13 +14,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Use dynamic week detection if not explicitly provided
+    const week = body.week ?? WeekDetector.getCurrentNFLWeek().week
+
     // Log configuration for debugging
     console.log('Pipeline configuration:', {
       hasPicksheetText: !!body.picksheetText,
       textLength: body.picksheetText?.length,
       useOddsAPI: body.useOddsAPI ?? true,
       useLLM: body.useLLM ?? true,
-      week: body.week,
+      week: week,
+      weekSource: body.week ? 'provided' : 'auto-detected',
       hasOddsAPIKey: !!(process.env.ODDS_API_KEY || process.env.THE_ODDS_API_KEY),
       hasOpenAIKey: !!process.env.OPENAI_API_KEY
     })
@@ -36,7 +41,7 @@ export async function POST(request: NextRequest) {
         useLLM: body.useLLM ?? true,
         includeLogs: body.includeLogs ?? false,
         matchingThreshold: body.matchingThreshold ?? 0.4, // Lowered from 0.6
-        week: body.week
+        week: week // Use dynamically detected week by default
       }
     )
 

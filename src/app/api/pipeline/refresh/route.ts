@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { WeekDetector } from '@/services/week-detector'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,11 @@ export async function POST() {
     // Import pipeline orchestrator
     const { pipelineOrchestrator } = await import('@/services/pipeline-orchestrator')
 
+    // Detect current week dynamically
+    const currentWeek = WeekDetector.getCurrentNFLWeek().week
+
+    console.log('Using current week:', currentWeek, '(previously was:', currentPipeline.config?.week, ')')
+
     // Re-run pipeline with fresh odds
     const refreshedPipeline = await pipelineOrchestrator.runPipeline(
       {
@@ -59,7 +65,7 @@ export async function POST() {
         useLLM: false, // Don't need LLM since we already have structured games
         includeLogs: false,
         matchingThreshold: currentPipeline.config?.matchingThreshold || 0.4,
-        week: currentPipeline.config?.week
+        week: currentWeek // Use dynamically detected week instead of old cached value
       }
     )
 
