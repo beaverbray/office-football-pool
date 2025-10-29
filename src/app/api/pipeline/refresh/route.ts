@@ -51,7 +51,8 @@ export async function POST() {
     const { pipelineOrchestrator } = await import('@/services/pipeline-orchestrator')
 
     // Detect current week dynamically
-    const currentWeek = WeekDetector.getCurrentNFLWeek().week
+    const nflWeek = await WeekDetector.getCurrentNFLWeek()
+    const currentWeek = nflWeek.week
 
     console.log('Using current week:', currentWeek, '(previously was:', currentPipeline.config?.week, ')')
 

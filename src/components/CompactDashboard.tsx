@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
 import { OpeningLineEnricher, type EnrichedGameComparison } from '@/utils/opening-line-enricher'
-import { WeekDetector } from '@/services/week-detector'
 
 interface PipelineResult {
   id: string
@@ -70,6 +69,7 @@ export default function CompactDashboard() {
   const [eloPredictions, setEloPredictions] = useState<ELOPrediction[]>([])
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null)
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -163,10 +163,23 @@ export default function CompactDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Try to fetch from API first
-        const response = await fetch('/api/pipeline/current')
-        if (response.ok) {
-          const data = await response.json()
+        // Fetch current week and pipeline data in parallel
+        const [weekResponse, pipelineResponse] = await Promise.all([
+          fetch('/api/week/current'),
+          fetch('/api/pipeline/current')
+        ])
+
+        // Handle week data
+        if (weekResponse.ok) {
+          const weekData = await weekResponse.json()
+          if (weekData.success && weekData.nfl?.week) {
+            setCurrentWeek(weekData.nfl.week)
+          }
+        }
+
+        // Handle pipeline data
+        if (pipelineResponse.ok) {
+          const data = await pipelineResponse.json()
           if (data.pipeline) {
             // Merge the timestamp from the API response into the pipeline object
             const pipelineWithTimestamp = {
@@ -183,7 +196,7 @@ export default function CompactDashboard() {
         console.warn('Failed to load from API, trying localStorage...', error)
       }
 
-      // Fallback to localStorage
+      // Fallback to localStorage for pipeline data
       const savedData = localStorage.getItem('pipelineData')
       if (savedData) {
         try {
@@ -819,7 +832,7 @@ export default function CompactDashboard() {
         {currentPipeline?.comparison?.comparisons && (
           <div className="hidden sm:flex justify-between items-center mb-2 relative">
             <div className="text-xs font-mono text-gray-500">
-              WEEK {WeekDetector.getCurrentNFLWeek().week}
+              {currentWeek ? `WEEK ${currentWeek}` : 'LOADING...'}
             </div>
 
             <button

@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Use dynamic week detection if not explicitly provided
-    const week = body.week ?? WeekDetector.getCurrentNFLWeek().week
+    const nflWeek = await WeekDetector.getCurrentNFLWeek()
+    const week = body.week ?? nflWeek.week
 
     // Log configuration for debugging
     console.log('Pipeline configuration:', {

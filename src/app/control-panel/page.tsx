@@ -139,13 +139,13 @@ export default function ControlPanel() {
 
       if (hasNCAAF) {
         setCurrentStep(`Fetching Warren Nolan predictions for Week ${weekInfo.ncaaf.week}...`)
-        const dateStr = new Date().toISOString().split('T')[0]
         predictionPromises.push(
           fetch('/api/warren-nolan/scrape', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              date: dateStr,
+              week: weekInfo.ncaaf.week,
+              season: weekInfo.ncaaf.seasonYear,
               saveToDB: true
             })
           })
@@ -264,12 +264,12 @@ export default function ControlPanel() {
     setWarrenNolanStatus('Scraping college football predictions...')
 
     try {
-      const dateStr = new Date().toISOString().split('T')[0]
       const response = await fetch('/api/warren-nolan/scrape', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date: dateStr,
+          week: weekInfo.ncaaf.week,
+          season: weekInfo.ncaaf.seasonYear,
           saveToDB: true
         })
       })
@@ -485,7 +485,7 @@ export default function ControlPanel() {
                     <span className="text-sm font-mono text-gray-300">Warren Nolan (NCAAF)</span>
                     <div className="flex gap-4 items-center">
                       <div className="text-xs font-mono text-gray-500">
-                        Week {weekInfo.ncaaf.week}, Today's games
+                        Week {weekInfo.ncaaf.week}, All week games
                       </div>
                       <button
                         onClick={scrapeWarrenNolan}

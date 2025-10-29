@@ -3,8 +3,12 @@ import { WeekDetector } from '@/services/week-detector'
 
 export async function GET() {
   try {
-    const nflWeek = WeekDetector.getCurrentNFLWeek()
-    const ncaafWeek = WeekDetector.getCurrentNCAAWeek()
+    // Fetch weeks in parallel for better performance
+    const [nflWeek, ncaafWeek] = await Promise.all([
+      WeekDetector.getCurrentNFLWeek(),
+      WeekDetector.getCurrentNCAAWeek()
+    ])
+
     const currentDate = new Date().toISOString().split('T')[0]
 
     return NextResponse.json({
@@ -33,3 +37,6 @@ export async function GET() {
     )
   }
 }
+
+// Revalidate every hour
+export const revalidate = 3600
