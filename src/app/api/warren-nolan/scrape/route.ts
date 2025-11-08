@@ -5,7 +5,8 @@ import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
 import { Database } from '@/types/database'
 
-type PredictionInsert = Database['public']['Tables']['predictions']['Insert']
+// TODO: Update after regenerating database types with: npx supabase gen types typescript
+type PredictionInsert = Database['public']['Tables']['analysis_predictions']['Insert']
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,12 +102,12 @@ export async function POST(request: NextRequest) {
             week: currentWeek,
             scheduleMatchNumber,
             matchConfidence,
-          } as unknown as Database['public']['Tables']['predictions']['Row']['metadata']
+          } as unknown as Database['public']['Tables']['analysis_predictions']['Row']['metadata']
         }
       })
 
       const { data, error } = await supabase
-        .from('predictions')
+        .from('afbp.analysis_predictions')
         .insert(dbRecords as any)
         .select()
 

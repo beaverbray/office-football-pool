@@ -35,7 +35,7 @@ export async function GET(
     
     // Get from Supabase
     const { data: sharedAnalysis, error } = await supabase
-      .from('shared_analyses')
+      .from('afbp.shared_analyses')
       .select('*')
       .eq('share_id', id)
       .single()
@@ -73,7 +73,7 @@ export async function GET(
     
     // Increment view count (optional)
     await supabase
-      .from('shared_analyses')
+      .from('afbp.shared_analyses')
       .update({ view_count: (sharedAnalysis.view_count || 0) + 1 })
       .eq('share_id', id)
     

@@ -12,7 +12,7 @@ export class ScheduleService {
     league?: 'NFL' | 'NCAA'
   ): Promise<ScheduleGame[]> {
     let query = supabase
-      .from('schedule')
+      .from('afbp.core_schedule')
       .select('*')
       .eq('week', week)
 
@@ -57,7 +57,7 @@ export class ScheduleService {
     league?: 'NFL' | 'NCAA'
   ): Promise<ScheduleGame | null> {
     let query = supabase
-      .from('schedule')
+      .from('afbp.core_schedule')
       .select('*')
 
     if (week) {
@@ -114,7 +114,7 @@ export class ScheduleService {
     league?: 'NFL' | 'NCAA'
   ): Promise<ScheduleGame[]> {
     let query = supabase
-      .from('schedule')
+      .from('afbp.core_schedule')
       .select('*')
       .gte('date', startDate)
       .lte('date', endDate)
@@ -138,7 +138,7 @@ export class ScheduleService {
    */
   static async getAvailableWeeks(league?: 'NFL' | 'NCAA'): Promise<number[]> {
     let query = supabase
-      .from('schedule')
+      .from('afbp.core_schedule')
       .select('week')
 
     if (league) {

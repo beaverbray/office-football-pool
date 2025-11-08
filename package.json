@@ -13,6 +13,7 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/supabase-js": "^2.45.0",
     "cheerio": "^1.1.2",
+    "csv-parse": "^6.1.0",
     "fuse.js": "^7.1.0",
     "nanoid": "^5.1.5",
     "next": "14.2.3",

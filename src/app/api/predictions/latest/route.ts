@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { Database } from '@/types/database'
 
-type PredictionRow = Database['public']['Tables']['predictions']['Row']
+// TODO: Update after regenerating database types with: npx supabase gen types typescript
+type PredictionRow = Database['public']['Tables']['analysis_predictions']['Row']
 
 // Cache for predictions with timestamp
 let predictionsCache: { data: any[], timestamp: number } | null = null
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Fetch all recent predictions, then deduplicate by game
     // We need to get more than 100 to account for duplicates, then filter
     const { data: allPredictions, error } = await supabase
-      .from('predictions')
+      .from('afbp.analysis_predictions')
       .select('*')
       .order('scraped_at', { ascending: false })
       .limit(500) as { data: PredictionRow[] | null, error: any } // Get more rows to ensure we have all unique games

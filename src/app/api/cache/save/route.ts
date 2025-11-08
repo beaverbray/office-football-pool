@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     
     // Store in Supabase
     const { data: savedData, error } = await supabase
-      .from('shared_analyses')
+      .from('afbp.shared_analyses')
       .insert({
         share_id: shareId,
         pipeline_data: data,

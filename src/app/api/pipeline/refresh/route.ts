@@ -16,7 +16,7 @@ export async function POST() {
   try {
     // Load current pipeline from database
     const { data, error } = await supabase
-      .from('current_pipeline')
+      .from('afbp.pipeline_current')
       .select('*')
       .eq('id', 'current')
       .single()
@@ -81,7 +81,7 @@ export async function POST() {
 
     // Save refreshed pipeline back to database
     const { error: updateError } = await supabase
-      .from('current_pipeline')
+      .from('afbp.pipeline_current')
       .upsert({
         id: 'current',
         pipeline_data: refreshedPipeline,
