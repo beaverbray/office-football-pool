@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     // Get total count
     const { count: totalCount, error: totalError } = await supabase
-      .from('afbp.core_schedule')
+      .from('core_schedule')
       .select('*', { count: 'exact', head: true })
 
     if (totalError) {
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     // Get distinct weeks
     const { data: weekData, error: weekError } = await supabase
-      .from('afbp.core_schedule')
+      .from('core_schedule')
       .select('week')
       .order('week') as { data: Pick<ScheduleRow, 'week'>[] | null, error: any }
 
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Get distinct leagues
     const { data: leagueData, error: leagueError } = await supabase
-      .from('afbp.core_schedule')
+      .from('core_schedule')
       .select('league') as { data: Pick<ScheduleRow, 'league'>[] | null, error: any }
 
     if (leagueError) {
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     let weekGames: ScheduleRow[] = []
     if (week) {
       const { data: weekGameData, count, error: weekCountError } = await supabase
-        .from('afbp.core_schedule')
+        .from('core_schedule')
         .select('*', { count: 'exact' })
         .eq('week', parseInt(week))
         .limit(5) as { data: ScheduleRow[] | null, count: number | null, error: any }

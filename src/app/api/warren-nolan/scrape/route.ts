@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       })
 
       const { data, error } = await supabase
-        .from('afbp.analysis_predictions')
+        .from('analysis_predictions')
         .insert(dbRecords as any)
         .select()
 

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Save to current_pipeline table using upsert (insert or update)
     const { data, error } = await supabase
-      .from('afbp.pipeline_current')
+      .from('pipeline_current')
       .upsert({
         id: 'current',
         pipeline_data: pipeline,

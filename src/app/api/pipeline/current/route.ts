@@ -15,7 +15,7 @@ export async function GET() {
   try {
     // Query the current_pipeline table for the latest pipeline
     const { data, error } = await supabase
-      .from('afbp.pipeline_current')
+      .from('pipeline_current')
       .select('*')
       .eq('id', 'current')
       .single()

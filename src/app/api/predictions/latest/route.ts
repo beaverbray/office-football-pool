@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Fetch all recent predictions, then deduplicate by game
     // We need to get more than 100 to account for duplicates, then filter
     const { data: allPredictions, error } = await supabase
-      .from('afbp.analysis_predictions')
+      .from('analysis_predictions')
       .select('*')
       .order('scraped_at', { ascending: false })
       .limit(500) as { data: PredictionRow[] | null, error: any } // Get more rows to ensure we have all unique games
