@@ -93,11 +93,12 @@ export class PipelineOrchestrator {
    */
   async runPipeline(
     input: PipelineInput,
-    config: PipelineConfig = {}
+    config: PipelineConfig = {},
+    progressCallback?: (stage: string, progress: number) => void
   ): Promise<PipelineResult> {
     const pipelineId = this.generatePipelineId()
     const startTime = Date.now()
-    
+
     const result: PipelineResult = {
       id: pipelineId,
       timestamp: new Date().toISOString(),
@@ -106,10 +107,15 @@ export class PipelineOrchestrator {
       config
     }
 
+    console.log(`\n${'='.repeat(80)}`)
+    console.log(`🚀 [PIPELINE] Starting pipeline ${pipelineId}`)
+    console.log(`${'='.repeat(80)}`)
     this.log(`Starting pipeline ${pipelineId}`)
+    progressCallback?.('initializing', 0)
 
     try {
       // Stage 0.5: Load schedule first for use in parsing
+      progressCallback?.('loading_schedule', 5)
       let scheduleGames: any[] = []
       const weekToLoad = config.week // Use provided week, or could auto-detect
       if (weekToLoad) {
@@ -123,8 +129,10 @@ export class PipelineOrchestrator {
       } else {
         this.log('No week specified, will try to load schedule after parsing')
       }
+      progressCallback?.('schedule_loaded', 10)
 
       // Stage 1: Parse picksheet (if text provided) or scrape Warren Nolan
+      progressCallback?.('parsing', 15)
       let picksheetGames = input.picksheetGames
 
       if (config.useWarrenNolan && !picksheetGames) {
@@ -144,12 +152,14 @@ export class PipelineOrchestrator {
         }
         picksheetGames = result.parsing?.games
       }
+      progressCallback?.('parsing_complete', 40)
 
       if (!picksheetGames || picksheetGames.length === 0) {
         throw new Error('No picksheet games to process')
       }
 
       // Stage 2 & 2.5: Retrieve market odds and load schedule in parallel
+      progressCallback?.('retrieving_odds', 45)
       let marketGames = input.marketGames
       const needsOdds = config.useOddsAPI && !marketGames
       const needsSchedule = scheduleGames.length === 0 && config.week
@@ -186,12 +196,14 @@ export class PipelineOrchestrator {
           }
         }
       }
+      progressCallback?.('odds_retrieved', 60)
 
       if (!marketGames || marketGames.length === 0) {
         throw new Error('No market games available for comparison')
       }
 
       // Stage 3: Match games
+      progressCallback?.('matching_games', 65)
       result.matching = await this.matchGames(
         picksheetGames,
         marketGames,
@@ -213,28 +225,45 @@ export class PipelineOrchestrator {
         result.status = 'partial'
         this.log(`Warning: Low match rate: ${(result.matching.matchRate * 100).toFixed(1)}%`)
       }
+      progressCallback?.('matching_complete', 80)
 
       // Stage 4: Compare spreads and calculate KPIs
+      progressCallback?.('comparing_spreads', 85)
       result.comparison = await this.compareGames(
         picksheetGames,
         marketGames,
         result.matching
       )
-      
+
       if (!result.comparison?.success) {
         result.status = 'partial'
         result.stage = 'comparison'
       }
+      progressCallback?.('comparison_complete', 95)
 
       result.stage = 'completed'
+      progressCallback?.('completed', 100)
       result.totalDuration = Date.now() - startTime
-      
+
       if (config.includeLogs) {
         result.logs = [...this.logs]
       }
 
       // Store result for retrieval
       this.results.set(pipelineId, result)
+
+      // Summary timing breakdown
+      console.log(`\n${'='.repeat(80)}`)
+      console.log(`✅ [PIPELINE] Pipeline ${pipelineId} completed successfully`)
+      console.log(`${'='.repeat(80)}`)
+      console.log(`📊 Timing Breakdown:`)
+      console.log(`   • Parsing:     ${result.parsing?.duration || 0}ms`)
+      console.log(`   • Odds:        ${result.oddsRetrieval?.duration || 0}ms`)
+      console.log(`   • Matching:    ${result.matching?.duration || 0}ms`)
+      console.log(`   • Comparison:  ${result.comparison?.duration || 0}ms`)
+      console.log(`   • TOTAL:       ${result.totalDuration}ms`)
+      console.log(`${'='.repeat(80)}\n`)
+
       this.log(`Pipeline ${pipelineId} completed in ${result.totalDuration}ms`)
 
       return result
@@ -242,14 +271,19 @@ export class PipelineOrchestrator {
     } catch (error) {
       result.status = 'failed'
       result.totalDuration = Date.now() - startTime
-      
+
       if (config.includeLogs) {
         result.logs = [...this.logs]
       }
-      
+
+      console.log(`\n${'='.repeat(80)}`)
+      console.error(`❌ [PIPELINE] Pipeline ${pipelineId} failed after ${result.totalDuration}ms`)
+      console.error(`   Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.log(`${'='.repeat(80)}\n`)
+
       this.log(`Pipeline ${pipelineId} failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
       this.results.set(pipelineId, result)
-      
+
       throw error
     } finally {
       this.clearLogs()
@@ -333,20 +367,26 @@ export class PipelineOrchestrator {
   ): Promise<PipelineResult['parsing']> {
     const startTime = Date.now()
     this.currentStage = 'parsing'
+    console.log(`⏱️  [PARSING] Starting LLM picksheet parsing (text length: ${text.length}, schedule games: ${scheduleGames?.length || 0})...`)
     this.log('Starting picksheet parsing')
 
     try {
-      const parsed = await LLMPicksheetParser.parseWithLLM(text, scheduleGames)
+      // Use parallel parsing with batch size of 20 games per request
+      const parsed = await LLMPicksheetParser.parseWithLLMParallel(text, scheduleGames, 20)
 
       if (!parsed || !parsed.games) {
+        const duration = Date.now() - startTime
+        console.error(`❌ [PARSING] Failed after ${duration}ms - No games parsed`)
         return {
           success: false,
           gamesFound: 0,
           error: 'Failed to parse picksheet',
-          duration: Date.now() - startTime
+          duration
         }
       }
 
+      const duration = Date.now() - startTime
+      console.log(`✅ [PARSING] Successfully parsed ${parsed.games.length} games in ${duration}ms (avg: ${(duration/parsed.games.length).toFixed(0)}ms/game)`)
       this.log(`Parsed ${parsed.games.length} games from picksheet`)
 
       // Convert to our format
@@ -361,14 +401,16 @@ export class PipelineOrchestrator {
         success: true,
         gamesFound: games.length,
         games,
-        duration: Date.now() - startTime
+        duration
       }
     } catch (error) {
+      const duration = Date.now() - startTime
+      console.error(`❌ [PARSING] Error after ${duration}ms:`, error)
       return {
         success: false,
         gamesFound: 0,
         error: error instanceof Error ? error.message : 'Unknown parsing error',
-        duration: Date.now() - startTime
+        duration
       }
     }
   }
@@ -379,6 +421,7 @@ export class PipelineOrchestrator {
   private async retrieveOdds(): Promise<PipelineResult['oddsRetrieval']> {
     const startTime = Date.now()
     this.currentStage = 'odds_retrieval'
+    console.log('⏱️  [ODDS] Starting odds retrieval from API...')
     this.log('Retrieving odds from API')
 
     try {
@@ -412,6 +455,8 @@ export class PipelineOrchestrator {
       
       const games = [...nflGames, ...ncaafGames]
 
+      const duration = Date.now() - startTime
+      console.log(`✅ [ODDS] Retrieved ${nfl.length} NFL and ${ncaaf.length} NCAAF games in ${duration}ms`)
       this.log(`Retrieved ${nfl.length} NFL and ${ncaaf.length} NCAAF games`)
 
       return {
@@ -419,15 +464,17 @@ export class PipelineOrchestrator {
         nflGames: nfl.length,
         ncaafGames: ncaaf.length,
         games,
-        duration: Date.now() - startTime
+        duration
       }
     } catch (error) {
+      const duration = Date.now() - startTime
+      console.error(`❌ [ODDS] Failed after ${duration}ms:`, error)
       return {
         success: false,
         nflGames: 0,
         ncaafGames: 0,
         error: error instanceof Error ? error.message : 'Unknown API error',
-        duration: Date.now() - startTime
+        duration
       }
     }
   }
@@ -438,6 +485,7 @@ export class PipelineOrchestrator {
   private async loadSchedule(week?: number): Promise<any> {
     const startTime = Date.now()
     this.currentStage = 'schedule_loading'
+    console.log(`⏱️  [SCHEDULE] Starting schedule load for week ${week || 'current'}...`)
     this.log('Loading schedule games...')
 
     try {
@@ -445,20 +493,24 @@ export class PipelineOrchestrator {
         ? await ScheduleService.getGamesByWeek(week)
         : await ScheduleService.getCurrentWeekGames()
 
+      const duration = Date.now() - startTime
+      console.log(`✅ [SCHEDULE] Loaded ${scheduleGames.length} games in ${duration}ms`)
       this.log(`Loaded ${scheduleGames.length} games from schedule`)
 
       return {
         success: true,
         gamesFound: scheduleGames.length,
         games: scheduleGames,
-        duration: Date.now() - startTime
+        duration
       }
     } catch (error) {
+      const duration = Date.now() - startTime
+      console.error(`❌ [SCHEDULE] Failed after ${duration}ms:`, error)
       return {
         success: false,
         gamesFound: 0,
         error: error instanceof Error ? error.message : 'Unknown schedule loading error',
-        duration: Date.now() - startTime
+        duration
       }
     }
   }

@@ -1,44 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { pipelineOrchestrator } from '@/services/pipeline-orchestrator'
+import { jobQueue } from '@/services/job-queue'
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const pipelineId = searchParams.get('id')
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const jobId = searchParams.get('jobId')
 
-  if (pipelineId) {
-    // Get specific pipeline result
-    const result = pipelineOrchestrator.getPipelineResult(pipelineId)
-    
-    if (!result) {
+    if (!jobId) {
       return NextResponse.json(
-        { error: 'Pipeline not found' },
+        { error: 'jobId parameter is required' },
+        { status: 400 }
+      )
+    }
+
+    const job = jobQueue.getJob(jobId)
+
+    if (!job) {
+      return NextResponse.json(
+        { error: 'Job not found', jobId },
         { status: 404 }
       )
     }
 
+    // Return job status without sensitive input data
     return NextResponse.json({
-      success: true,
-      pipeline: result
+      jobId: job.id,
+      status: job.status,
+      progress: job.progress,
+      stage: job.stage,
+      result: job.result,
+      error: job.error,
+      createdAt: job.createdAt,
+      startedAt: job.startedAt,
+      completedAt: job.completedAt,
+      logs: job.logs
     })
+
+  } catch (error) {
+    console.error('Status check error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+    return NextResponse.json(
+      { error: 'Failed to check job status', message: errorMessage },
+      { status: 500 }
+    )
   }
-
-  // Get all pipeline results
-  const results = pipelineOrchestrator.getAllResults()
-  
-  return NextResponse.json({
-    success: true,
-    pipelines: results,
-    total: results.length,
-    currentStage: pipelineOrchestrator.getCurrentStage()
-  })
-}
-
-// Clear pipeline history
-export async function DELETE(request: NextRequest) {
-  pipelineOrchestrator.clearResults()
-  
-  return NextResponse.json({
-    success: true,
-    message: 'Pipeline history cleared'
-  })
 }

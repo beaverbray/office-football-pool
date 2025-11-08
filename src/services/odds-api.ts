@@ -75,7 +75,7 @@ export type Market = z.infer<typeof MarketSchema>
 export type Outcome = z.infer<typeof OutcomeSchema>
 
 // Cache configuration
-const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
+const CACHE_DURATION = 30 * 60 * 1000 // 30 minutes (odds don't change frequently)
 const cache = new Map<string, { data: any; timestamp: number }>()
 
 // Rate limiting
@@ -162,7 +162,13 @@ export class OddsAPIService {
   ): Promise<OddsResponse[]> {
     const cacheKey = `odds-${sport}-${markets.join(',')}-${regions}`
     const cached = this.getCached(cacheKey)
-    if (cached) return cached
+    if (cached) {
+      console.log(`✅ [ODDS-API] Cache hit for ${sport} (${cached.length} games)`)
+      return cached
+    }
+
+    const fetchStartTime = Date.now()
+    console.log(`⏱️  [ODDS-API] Fetching ${sport} odds...`)
 
     await this.enforceRateLimit()
 
@@ -174,8 +180,6 @@ export class OddsAPIService {
     })
 
     const url = `${BASE_URL}/sports/${sport}/odds?${params}`
-    console.log(`Fetching odds from: ${url.replace(this.apiKey, 'REDACTED')}`)
-    
     const response = await fetch(url)
     
     if (!response.ok) {
@@ -207,9 +211,14 @@ export class OddsAPIService {
       const gameTime = new Date(game.commence_time)
       return gameTime > now
     })
-    
-    console.log(`Filtered ${validated.length - upcomingGames.length} live games out of ${validated.length} total games`)
-    
+
+    const fetchDuration = Date.now() - fetchStartTime
+    console.log(`✅ [ODDS-API] Fetched ${sport} odds in ${fetchDuration}ms`)
+    console.log(`   • Total games: ${validated.length}`)
+    console.log(`   • Upcoming: ${upcomingGames.length}`)
+    console.log(`   • Filtered (live): ${validated.length - upcomingGames.length}`)
+    console.log(`   • Cached for ${CACHE_DURATION / 60000} minutes`)
+
     this.setCache(cacheKey, upcomingGames)
     return upcomingGames
   }

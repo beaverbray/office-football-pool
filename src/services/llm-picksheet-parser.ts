@@ -32,6 +32,90 @@ export type ParsedPicksheet = z.infer<typeof PicksheetSchema>
 
 export class LLMPicksheetParser {
   /**
+   * Parse picksheet text using parallel OpenAI requests for faster processing
+   * @param text - The picksheet text to parse
+   * @param scheduleGames - Optional schedule games for the week to use as matching context
+   * @param batchSize - Number of games per batch (default: 20)
+   */
+  static async parseWithLLMParallel(text: string, scheduleGames?: any[], batchSize: number = 20): Promise<ParsedPicksheet> {
+    try {
+      const parseStartTime = Date.now()
+      console.log('\n⚡ [LLM-PARSER] Starting PARALLEL LLM parse')
+      console.log(`   • Text length: ${text.length} chars`)
+      console.log(`   • Batch size: ${batchSize} games per batch`)
+
+      // Split picksheet into game lines (skip empty lines)
+      const lines = text.trim().split('\n').filter(line => line.trim())
+      console.log(`   • Total lines: ${lines.length}`)
+
+      // Calculate number of batches
+      const numBatches = Math.ceil(lines.length / batchSize)
+      console.log(`   • Creating ${numBatches} parallel batches`)
+
+      // Create batches
+      const batches: string[] = []
+      for (let i = 0; i < numBatches; i++) {
+        const start = i * batchSize
+        const end = Math.min(start + batchSize, lines.length)
+        const batchLines = lines.slice(start, end)
+        batches.push(batchLines.join('\n'))
+      }
+
+      // Send all batches in parallel
+      console.log(`   • Sending ${numBatches} concurrent requests to OpenAI...`)
+      const batchStartTime = Date.now()
+
+      const batchPromises = batches.map((batchText, index) =>
+        this.parseWithLLM(batchText, scheduleGames)
+          .then(result => {
+            console.log(`   ✅ Batch ${index + 1}/${numBatches} completed: ${result.totalGames} games`)
+            return result
+          })
+          .catch(error => {
+            console.error(`   ❌ Batch ${index + 1}/${numBatches} failed:`, error.message)
+            throw error
+          })
+      )
+
+      const batchResults = await Promise.all(batchPromises)
+      const batchDuration = Date.now() - batchStartTime
+
+      console.log(`✅ [LLM-PARSER] All ${numBatches} batches completed in ${batchDuration}ms`)
+
+      // Merge all results
+      const allGames: ParsedGame[] = []
+      for (const result of batchResults) {
+        allGames.push(...result.games)
+      }
+
+      // Calculate totals
+      const nflGames = allGames.filter(g => g.league === 'NFL').length
+      const ncaafGames = allGames.filter(g => g.league === 'NCAAF').length
+
+      const mergedResult: ParsedPicksheet = {
+        title: batchResults[0]?.title,
+        week: batchResults[0]?.week,
+        games: allGames,
+        totalGames: allGames.length,
+        nflGames,
+        ncaafGames
+      }
+
+      const totalDuration = Date.now() - parseStartTime
+      console.log(`✅ [LLM-PARSER] PARALLEL parsing completed in ${totalDuration}ms`)
+      console.log(`   • Total games parsed: ${mergedResult.totalGames} (NFL: ${nflGames}, NCAAF: ${ncaafGames})`)
+      console.log(`   • Batches: ${numBatches} x ~${batchSize} games`)
+      console.log(`   • Parallel execution: ${batchDuration}ms`)
+      console.log(`   • Speedup: ${numBatches > 1 ? `~${numBatches}x faster` : 'N/A'}`)
+
+      return mergedResult
+    } catch (error) {
+      console.error('❌ [LLM-PARSER] Parallel parsing failed:', error)
+      throw error
+    }
+  }
+
+  /**
    * Parse picksheet text using OpenAI with structured output
    * @param text - The picksheet text to parse
    * @param scheduleGames - Optional schedule games for the week to use as matching context
@@ -56,9 +140,12 @@ export class LLMPicksheetParser {
         apiKey: apiKey,
       })
 
-      console.log('Starting LLM parse with text length:', text.length)
+      const parseStartTime = Date.now()
+      console.log('\n⏱️  [LLM-PARSER] Starting LLM parse')
+      console.log(`   • Text length: ${text.length} chars`)
+      console.log(`   • Schedule games: ${scheduleGames?.length || 0}`)
       if (scheduleGames && scheduleGames.length > 0) {
-        console.log(`Using schedule context with ${scheduleGames.length} games for enhanced matching`)
+        console.log(`   • Using schedule context for enhanced matching`)
       }
 
       // Build schedule context if provided
@@ -82,245 +169,59 @@ IMPORTANT: When parsing team names from the picksheet:
 `
       }
 
-      const systemPrompt = `You are an expert sports betting picksheet parser. Extract structured data from picksheet text and return ONLY valid JSON that conforms to the schema below.
+      const systemPrompt = `You are an expert sports betting picksheet parser. Extract structured data and return ONLY valid JSON.
 
 ${scheduleContext}
 
-SOURCE OF TRUTH - SCHEDULE MATCHING:
-- The SCHEDULE REFERENCE above is your canonical source for team names and matchups
-- The PAIR of team names (home + away) uniquely identifies ONE game in the schedule
-- Match by finding BOTH teams in a single schedule line (order-insensitive)
-- Once matched, use the EXACT team names from the schedule (away_team and home_team fields)
-- The league is automatically determined from whichever schedule game matched both teams
-- Do NOT use abbreviations or alternate spellings in your output - always use the exact schedule name
+SCHEDULE MATCHING (PRIMARY RULE):
+- Use the SCHEDULE REFERENCE as your canonical source for team names
+- Match using BOTH team names (order-insensitive) to find the unique game
+- Use EXACT team names from schedule (away_team/home_team fields)
+- League is determined from the matched schedule game
+- For duplicate names (e.g., "Minnesota" in NFL + NCAAF), the opponent identifies which game
 
-⚠️ CRITICAL: DISAMBIGUATING DUPLICATE TEAM NAMES
-- Some team names appear in MULTIPLE games (e.g., "Minnesota" in both NFL and NCAAF)
-- Use BOTH team names to identify which game: "Minnesota + Cleveland" → NFL, "Minnesota + Ohio State" → NCAA
-- The opposing team name tells you which Minnesota game it is
-- Each picksheet line is INDEPENDENT - parse the record and spread FROM THAT SPECIFIC LINE ONLY
-- Example workflow:
-  1. Picksheet: "Minnesota (2-2) -3.5 ... CLEVELAND (1-3) +3.5"
-     → Find schedule game with BOTH "Minnesota" AND "Cleveland"
-     → Match found: "Minnesota Vikings @ Cleveland Browns (NFL)"
-     → Use record (2-2) and spread -3.5 for Minnesota, record (1-3) and spread +3.5 for Cleveland
-  2. Picksheet: "Minnesota (3-1) +23.5 ... OHIO ST. (4-0) -23.5"
-     → Find schedule game with BOTH "Minnesota" AND "Ohio"
-     → Match found: "Minnesota @ Ohio State (NCAA)"
-     → Use record (3-1) and spread +23.5 for Minnesota, record (4-0) and spread -23.5 for Ohio State
-- NEVER copy data from one Minnesota game to another Minnesota game!
-
-TEAM NAME ALIASES (normalize before matching to schedule):
-
-NFL Aliases:
-- "LA RAMS" / "L.A. Rams" → "Los Angeles Rams"
-- "LA CHARGERS" / "L.A. Chargers" → "Los Angeles Chargers"
-- "NY JETS" / "N.Y. Jets" → "New York Jets"
-- "NY Giants" / "N.Y. Giants" → "New York Giants"
-- "Tampa Bay" → "Tampa Bay Buccaneers"
-- "Washington" → "Washington Commanders"
-- "New England" → "New England Patriots"
-- "Green Bay" → "Green Bay Packers"
-- "Kansas City" → "Kansas City Chiefs"
-- "San Francisco" → "San Francisco 49ers"
-
-NCAAF Aliases:
-- "Sam Houston State" / "Sam Houston St." → "Sam Houston"
-- "NEW MEXICO ST." / "New Mexico St." → "New Mexico State"
-- "San Jose St." / "SAN JOSE ST." → "San Jose State"
-- "Colorado St." / "COLORADO ST." → "Colorado State"
-- "Oklahoma St." / "OKLAHOMA ST." → "Oklahoma State"
-- "Ball St." / "BALL ST." → "Ball State"
-- "UAB" → "Alabama-Birmingham"
-- "Kansas St." / "KANSAS ST." → "Kansas State"
-- "Iowa St." / "IOWA ST." → "Iowa State"
-- "Georgia St." / "GEORGIA ST." → "Georgia State"
-- "Northern Ill" / "NORTHERN ILL" → "Northern Illinois"
-- "Miami Ohio" / "MIAMI OHIO" → "Miami (OH)"
-- "Miami Fla" / "MIAMI FLA" / "Miami FL" → "Miami (FL)"
-- "Florida St." / "FLORIDA ST." → "Florida State"
-- "UL Monroe" / "ULM" → "Louisiana-Monroe"
-- "Western Mich" / "WESTERN MICH" → "Western Michigan"
-- "Eastern Mich" / "EASTERN MICH" → "Eastern Michigan"
-- "Arkansas St." / "ARKANSAS ST." → "Arkansas State"
-- "Penn St." / "PENN ST." → "Penn State"
-- "TCU" → "Texas Christian"
-- "SMU" → "Southern Methodist"
-- "UCF" → "Central Florida"
-- "UTSA" → "Texas-San Antonio"
-- "Massachusetts" / "UMass" → "Massachusetts"
-- "Appalachian St." / "APP STATE" → "Appalachian State"
-- "Boise St." / "BOISE ST." → "Boise State"
-- "Fresno St." / "FRESNO ST." → "Fresno State"
-- "Arizona St." / "ARIZONA ST." → "Arizona State"
-- "Oregon St." / "OREGON ST." → "Oregon State"
-- "Washington St." / "WASH ST." → "Washington State"
-- "Michigan St." / "MICHIGAN ST." → "Michigan State"
-- "Ohio St." / "OHIO ST." → "Ohio State"
-- "UNLV" → "Nevada-Las Vegas"
-- "S. FLORIDA" / "S. Florida" / "South Fla" → "South Florida"
-- "FIU" → "Florida International"
-
-PICKSHEET LINE FORMAT:
-[points] [AWAY team] [AWAY record] [AWAY spread] [day/time] [HOME team] [HOME record] [HOME spread] [O/U]
+COMMON ALIASES (expand abbreviations):
+NFL: LA→Los Angeles, NY→New York, Tampa→Buccaneers, Washington→Commanders, New England→Patriots, Green Bay→Packers, Kansas City→Chiefs, San Francisco→49ers
+NCAAF: St.→State, TCU→Texas Christian, SMU→Southern Methodist, UCF→Central Florida, UTSA→Texas-San Antonio, UAB→Alabama-Birmingham, UMass→Massachusetts, UNLV→Nevada-Las Vegas, FIU→Florida International, Miami FL→Miami (FL), Miami OH→Miami (OH)
 
 PARSING RULES:
-1. Points: Parse the leading number before "pt" or "points" → \`points\` (number field)
-2. Records: Parse (W-L) or (W-L-T) immediately after team name → \`awayRecord\` / \`homeRecord\` (string)
-3. Spreads: Signed number after each team belongs to that team; awaySpread and homeSpread MUST be exact opposites
-   - If one is +3.5, the other MUST be -3.5
-   - PK or PICK means 0 for both teams
-4. Day/Time: Copy day token (Thu, Fri, Sat, Sun, Mon) → \`gameDay\`, time token (5:15 PM) → \`gameTime\`
-5. Date: If a full date is present (e.g., "January 5, 2025"), store in \`gameDate\`. If NOT present, OMIT this field (do not invent)
-6. Over/Under: If "O/U" or "o/u" followed by number (e.g., "O/U 42.5") → \`overUnder\` (number). Otherwise OMIT
-7. Rankings: Ignore "#1", "#24", etc. - do NOT include in team names
+1. Points: Leading number before "pt" → points field
+2. Records: (W-L) or (W-L-T) after team name → awayRecord/homeRecord
+3. Spreads: MUST be exact opposites (e.g., +3.5/-3.5). PK=0 for both. Spread sign STAYS with the team it follows in picksheet.
+4. Day/Time: Thu/Fri/Sat/Sun/Mon → gameDay, time → gameTime
+5. Date: Full date if present → gameDate (omit if not present)
+6. Over/Under: Number after "O/U" → overUnder (omit if not present)
+7. Ignore rankings (#1, #24, etc.) in team names
 
-CRITICAL SPREAD BINDING RULE (OVERRIDES EVERYTHING):
-- The signed number immediately following a team token in the picksheet line belongs to THAT team
-- When you canonicalize team names using the SCHEDULE, PRESERVE the spread sign captured with each team
-- After mapping to schedule names, verify awaySpread === -(homeSpread); if not, you made an error
-- NEVER flip a team's spread sign because of schedule matching - the sign stays with the token it followed
+WORKFLOW:
+1. Extract team names + spreads from picksheet line (bind spread to team)
+2. Normalize using aliases
+3. Match BOTH teams to schedule game
+4. Map to schedule's away_team/home_team with original spread signs
+5. Validate: awaySpread = -(homeSpread)
 
-Example: "Minnesota (2-2) -3.5 ... CLEVELAND (1-3) +3.5"
-→ Minnesota has -3.5 (stays -3.5 even after canonicalization)
-→ Cleveland has +3.5 (stays +3.5 even after canonicalization)
-→ Result: awaySpread: -3.5, homeSpread: +3.5 ✓
+OUTPUT SCHEMA:
+{"title": str?, "week": str?, "games": [{"league": "NFL"|"NCAAF", "awayTeam": str, "awayRecord": str?, "awaySpread": num, "homeTeam": str, "homeRecord": str?, "homeSpread": num, "gameDay": str?, "gameDate": str?, "gameTime": str?, "overUnder": num?, "points": num?}], "totalGames": num, "nflGames": num, "ncaafGames": num}
 
-MATCHING ALGORITHM:
-1. Extract both team names AND their spreads from the picksheet line (bind spread to token)
-2. Apply ALIASES to normalize each team name (keep spreads bound)
-3. Fuzzy match BOTH teams (order-insensitive) to find the unique schedule game
-4. Determine which normalized team maps to away_team vs home_team in schedule
-5. Assign the spread that was bound to each team in step 1 to the correct away/home field
-6. Use EXACT \`away_team\` and \`home_team\` from schedule as final team names
-7. Set \`league\` based on schedule: NFL → "NFL", NCAA → "NCAAF"
-8. Verify awaySpread === -(homeSpread) as final check
+VALIDATION:
+- awaySpread + homeSpread = 0
+- All team names match schedule exactly
+- totalGames = games.length, nflGames/ncaafGames computed from games array
+- League is "NFL" or "NCAAF"
 
-FEW-SHOT EXAMPLES:
-
-Example 1 (NFL):
-Picksheet line: "1 pt San Francisco (4-1) +5.5 Thu 5:15 PM LA RAMS (3-2) -5.5"
-Schedule match: "San Francisco 49ers @ Los Angeles Rams" (NFL)
-Output:
-{
-  "league": "NFL",
-  "awayTeam": "San Francisco 49ers",
-  "awayRecord": "(4-1)",
-  "awaySpread": 5.5,
-  "homeTeam": "Los Angeles Rams",
-  "homeRecord": "(3-2)",
-  "homeSpread": -5.5,
-  "gameDay": "Thu",
-  "gameTime": "5:15 PM",
-  "points": 1
-}
-
-Example 2 (NCAAF):
-Picksheet line: "1 pt #7 Penn St. (3-1) -25.5 Sat 12:30 PM UCLA (0-4) +25.5"
-Schedule match: "Penn State @ UCLA" (NCAA)
-Output:
-{
-  "league": "NCAAF",
-  "awayTeam": "Penn State",
-  "awayRecord": "(3-1)",
-  "awaySpread": -25.5,
-  "homeTeam": "UCLA",
-  "homeRecord": "(0-4)",
-  "homeSpread": 25.5,
-  "gameDay": "Sat",
-  "gameTime": "12:30 PM",
-  "points": 1
-}
-
-Example 3 (NFL - spread binding verification):
-Picksheet line: "1 pt Minnesota (2-2) -3.5 Sun 6:30 AM CLEVELAND (1-3) +3.5"
-Schedule match: "Minnesota Vikings @ Cleveland Browns" (NFL)
-Output:
-{
-  "league": "NFL",
-  "awayTeam": "Minnesota Vikings",
-  "awayRecord": "(2-2)",
-  "awaySpread": -3.5,
-  "homeTeam": "Cleveland Browns",
-  "homeRecord": "(1-3)",
-  "homeSpread": 3.5,
-  "gameDay": "Sun",
-  "gameTime": "6:30 AM",
-  "points": 1
-}
-
-Example 4 (NCAAF - alias canonicalization):
-Picksheet line: "1 pt UNLV (5-0) -3.5 Sat 4:00 PM WYOMING (2-2) +3.5"
-Schedule match: "Nevada-Las Vegas @ Wyoming" (NCAA)
-Output:
-{
-  "league": "NCAAF",
-  "awayTeam": "Nevada-Las Vegas",
-  "awayRecord": "(5-0)",
-  "awaySpread": -3.5,
-  "homeTeam": "Wyoming",
-  "homeRecord": "(2-2)",
-  "homeSpread": 3.5,
-  "gameDay": "Sat",
-  "gameTime": "4:00 PM",
-  "points": 1
-}
-
-OUTPUT SCHEMA (must match exactly):
-{
-  "title": "optional string",
-  "week": "optional string",
-  "games": [
-    {
-      "league": "NFL" or "NCAAF",
-      "awayTeam": "exact schedule name",
-      "awayRecord": "optional string",
-      "awaySpread": number,
-      "homeTeam": "exact schedule name",
-      "homeRecord": "optional string",
-      "homeSpread": number,
-      "gameDay": "optional string",
-      "gameDate": "optional string",
-      "gameTime": "optional string",
-      "overUnder": optional number,
-      "points": optional number
-    }
-  ],
-  "totalGames": number,
-  "nflGames": number,
-  "ncaafGames": number
-}
-
-POST-PARSE VALIDATION CHECKLIST (verify before returning):
-✓ All team names EXACTLY match schedule strings (no abbreviations)
-✓ For every game: awaySpread === -(homeSpread) - the spread sign must match the picksheet line
-✓ DERIVE counts from the games array (DO NOT GUESS):
-  - Set totalGames = games.length
-  - Set nflGames = count of games where league === "NFL"
-  - Set ncaafGames = count of games where league === "NCAAF"
-  - Recompute these counts immediately before returning
-✓ Optional fields are OMITTED if not present (do not guess/invent)
-✓ League is "NFL" or "NCAAF" (not "NCAA")
-✓ JSON is valid and complete
-✓ Both awayTeam and homeTeam exist in the SCHEDULE for every game
-
-Return ONLY valid JSON with no extra text or explanations.`
+Return ONLY valid JSON.`
 
       const userPrompt = `Parse this picksheet and extract all games with their details:\n\n${text}`
 
-      // Log the full request being sent to OpenAI
-      console.log('\n' + '='.repeat(80))
-      console.log('📤 OPENAI API REQUEST')
-      console.log('='.repeat(80))
-      console.log('Model:', 'gpt-4o-mini')
-      console.log('Temperature:', 0.3)
-      console.log('Max Completion Tokens:', 16000)
-      console.log('\n--- SYSTEM MESSAGE ---')
-      console.log(systemPrompt)
-      console.log('\n--- USER MESSAGE ---')
-      console.log(userPrompt)
-      console.log('='.repeat(80) + '\n')
+      // Calculate prompt token estimate
+      const systemPromptTokens = Math.ceil(systemPrompt.length / 4)
+      const userPromptTokens = Math.ceil(userPrompt.length / 4)
+      const estimatedInputTokens = systemPromptTokens + userPromptTokens
 
+      console.log(`   • Estimated input tokens: ~${estimatedInputTokens} (system: ~${systemPromptTokens}, user: ~${userPromptTokens})`)
+      console.log('   • Sending request to OpenAI...')
+
+      const apiStartTime = Date.now()
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini', // Using GPT-4o-mini - reliable for structured data extraction
         messages: [
@@ -332,20 +233,12 @@ Return ONLY valid JSON with no extra text or explanations.`
         seed: 1, // Seed for deterministic outputs across retries
         max_completion_tokens: 16000 // Higher limit to avoid truncation
       })
+      const apiDuration = Date.now() - apiStartTime
 
-      // Log the full response received from OpenAI
-      console.log('\n' + '='.repeat(80))
-      console.log('📥 OPENAI API RESPONSE')
-      console.log('='.repeat(80))
-      console.log('Full Response Object:')
-      console.log(JSON.stringify(completion, null, 2))
-      console.log('\n--- RESPONSE CONTENT ---')
-      console.log(completion.choices[0].message.content)
-      console.log('\n--- USAGE STATS ---')
-      console.log('Prompt Tokens:', completion.usage?.prompt_tokens)
-      console.log('Completion Tokens:', completion.usage?.completion_tokens)
-      console.log('Total Tokens:', completion.usage?.total_tokens)
-      console.log('='.repeat(80) + '\n')
+      console.log(`✅ [LLM-PARSER] OpenAI API call completed in ${apiDuration}ms`)
+      console.log(`   • Prompt tokens: ${completion.usage?.prompt_tokens}`)
+      console.log(`   • Completion tokens: ${completion.usage?.completion_tokens}`)
+      console.log(`   • Total tokens: ${completion.usage?.total_tokens}`)
 
       const responseContent = completion.choices[0].message.content
       
@@ -508,9 +401,16 @@ Return ONLY valid JSON with no extra text or explanations.`
         ncaafGames: parsed.ncaafGames || cleanedGames.filter((g: any) => g.league === 'NCAAF').length || 0,
       })
 
+      const totalDuration = Date.now() - parseStartTime
+      console.log(`✅ [LLM-PARSER] Parsing completed successfully in ${totalDuration}ms`)
+      console.log(`   • Games parsed: ${result.totalGames} (NFL: ${result.nflGames}, NCAAF: ${result.ncaafGames})`)
+      console.log(`   • API call: ${apiDuration}ms (${((apiDuration/totalDuration)*100).toFixed(1)}% of total)`)
+      console.log(`   • Processing: ${totalDuration - apiDuration}ms`)
+
       return result
     } catch (error) {
-      console.error('Error parsing with LLM:', error)
+      const totalDuration = Date.now() - parseStartTime
+      console.error(`❌ [LLM-PARSER] Parsing failed after ${totalDuration}ms:`, error)
       throw error
     }
   }

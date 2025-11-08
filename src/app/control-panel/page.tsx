@@ -66,6 +66,39 @@ export default function ControlPanel() {
     }
   }, [])
 
+  // Poll job status
+  const pollJobStatus = async (jobId: string): Promise<any> => {
+    const maxAttempts = 180 // 3 minutes max (180 * 1 second)
+    let attempts = 0
+
+    while (attempts < maxAttempts) {
+      const statusResponse = await fetch(`/api/pipeline/status?jobId=${jobId}`)
+      const statusData = await statusResponse.json()
+
+      if (!statusResponse.ok) {
+        throw new Error(statusData.error || 'Failed to check job status')
+      }
+
+      // Update progress based on job status
+      setProgressPercent(statusData.progress)
+      setCurrentStep(statusData.stage.replace(/_/g, ' '))
+
+      if (statusData.status === 'completed') {
+        return statusData.result
+      }
+
+      if (statusData.status === 'failed') {
+        throw new Error(statusData.error || 'Pipeline execution failed')
+      }
+
+      // Wait 1 second before polling again
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      attempts++
+    }
+
+    throw new Error('Pipeline execution timed out')
+  }
+
   // Run pipeline with automatic prediction fetching
   const runPipeline = async () => {
     if (!picksheetText.trim()) {
@@ -83,9 +116,9 @@ export default function ControlPanel() {
     setDetectedLeagues(null)
 
     try {
-      // Step 1: Parse picksheet to detect leagues
-      setCurrentStep('Parsing picksheet and detecting leagues...')
-      setProgressPercent(10)
+      // Step 1: Start async pipeline
+      setCurrentStep('Starting pipeline...')
+      setProgressPercent(5)
 
       const parseResponse = await fetch('/api/pipeline/run', {
         method: 'POST',
@@ -95,14 +128,23 @@ export default function ControlPanel() {
           useOddsAPI: true,
           useLLM: true,
           includeLogs: false,
-          week: weekInfo.nfl.week // Use auto-detected week for schedule context
+          week: weekInfo.nfl.week, // Use auto-detected week for schedule context
+          async: true // Enable async mode
         })
       })
 
-      const parseData = await parseResponse.json()
+      const jobData = await parseResponse.json()
 
-      if (!parseResponse.ok || !parseData.pipeline) {
-        throw new Error(parseData.error || 'Failed to parse picksheet')
+      if (!parseResponse.ok || !jobData.jobId) {
+        throw new Error(jobData.error || 'Failed to start pipeline')
+      }
+
+      // Poll for job completion
+      setCurrentStep('Processing...')
+      const parseData = { pipeline: await pollJobStatus(jobData.jobId) }
+
+      if (!parseData.pipeline) {
+        throw new Error('Failed to parse picksheet')
       }
 
       // Detect which leagues are present

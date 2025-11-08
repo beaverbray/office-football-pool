@@ -3,254 +3,185 @@
     "tasks": [
       {
         "id": 1,
-        "title": "Set up project infrastructure and database schema",
-        "description": "Initialize the project with Supabase, set up database tables for events, teams, picks, odds, matches, and comparisons according to the PRD specifications",
-        "status": "done",
+        "title": "Define Database Schema",
+        "description": "Establish the database schema in Supabase for storing events, teams, picks, odds, matches, comparisons, KPIs, and alias overrides.",
+        "details": "Create tables in Supabase for `events`, `teams`, `picks_rows`, `odds_snapshots`, `matches`, `comparisons`, `kpi_daily`, and `alias_overrides`. Use Postgres data types and ensure row-level security is configured for sensitive data.\n<info added on 2025-11-08T08:43:13.964Z>\nDesign Review Completed (2025-11-08)\n\nImplementation Status: B+ (85%) - Production-ready with critical fixes needed\n\nAll 8 required tables implemented, plus 5 additional tables (job_runs, predictions, shared_analyses, current_pipeline, historical_games, spread_buckets).\n\nTables Implemented:\n- events (001_initial_schema.sql) - Well-structured with proper indexes\n- teams (001_initial_schema.sql) - Includes JSONB aliases but missing dedicated abbreviation field\n- picks_rows (001_initial_schema.sql) - Has FK to job_runs but missing event_id, team_id, and selection details\n- odds_snapshots (001_initial_schema.sql) - Comprehensive odds storage\n- matches (001_initial_schema.sql) - Confidence scores included\n- comparisons (001_initial_schema.sql) - Delta calculations supported\n- kpi_daily (001_initial_schema.sql) - Aggregated metrics\n- alias_overrides (001_initial_schema.sql) - Manual binding support\n\nCritical Issues Found:\n1. Missing abbreviation column on teams (Subtask 1.2 requirement)\n   - Currently using JSONB aliases array\n   - Need: ALTER TABLE teams ADD COLUMN abbreviation VARCHAR(10);\n   - Migration needed: 009_add_teams_abbreviation.sql\n\n2. Picks structure unclear (Subtask 1.3 requirement)\n   - picks_rows stores raw pre-match data\n   - Missing event_id, team_id foreign keys\n   - Missing selection_type field (which team was picked)\n   - Decision needed: separate resolved_picks table OR extend picks_rows\n\n3. RLS security risks (Subtask 1.5)\n   - Overly permissive anon policies allow deletes\n   - Must remove before production\n   - Migration needed: 010_fix_anon_rls_policies.sql\n\n4. current_pipeline singleton anti-pattern\n   - Fragile CHECK constraint approach\n   - Replace with boolean flag + partial unique index\n   - Migration needed: 013_refactor_current_pipeline.sql\n\nHigh-Priority Improvements:\n5. Missing composite indexes\n   - Need: idx_picks_rows_league_date\n   - Need: idx_odds_event_market_book_time\n   - Migration needed: 011_add_composite_indexes.sql\n\n6. Table naming inconsistency\n   - Most tables plural, current_pipeline singular\n   - Document convention or standardize\n\n7. JSONB validation missing\n   - Add CHECK constraints for aliases (must be array)\n   - Add validation for key_numbers_crossed\n\n8. Nullable foreign keys undocumented\n   - events.home_team and away_team allow NULL\n   - Either add NOT NULL or document TBD scenarios\n\nStrengths:\n- Excellent PostgreSQL practices (TIMESTAMPTZ, JSONB, triggers)\n- Comprehensive RLS coverage across all tables\n- Good indexing strategy (GIN for JSONB, descending for time-series)\n- Proper foreign key cascading\n- Auto-update triggers via update_updated_at_column()\n- is_admin() function for centralized auth\n\nNew Migrations Required:\n1. 009_add_teams_abbreviation.sql - Add abbreviation column\n2. 010_fix_anon_rls_policies.sql - Remove permissive policies\n3. 011_add_composite_indexes.sql - Performance optimization\n4. 012_enhance_picks_structure.sql - Clarify picks vs resolved_picks\n5. 013_refactor_current_pipeline.sql - Fix singleton pattern\n\nReference:\nFull design review saved at: .taskmaster/reports/task-complexity-report.json\nMigration files location: supabase/migrations/\n</info added on 2025-11-08T08:43:13.964Z>\n<info added on 2025-11-08T09:54:23.723Z>\n## CRITICAL CLARIFICATION (2025-11-08)\n\nThis task describes a **PLANNED FUTURE SCHEMA**, not the current production system.\n\n### Current Production Schema (Actually Running)\n**6 tables in afbp schema** (from pipeline-flow-diagram.md):\n- afbp.core_schedule (8 uses) - Game reference data\n- afbp.pipeline_current (4 uses) - Singleton analysis state\n- afbp.analysis_predictions (3 uses) - External predictions  \n- afbp.shared_analyses (3 uses) - Shareable links\n- afbp.pipeline_job_runs (commented out) - Future tracking\n- afbp.pipeline_picks_rows (commented out) - Future raw data\n\n**Architecture**: In-memory pipeline processing, minimal persistence\n\n### Task 1 Requirements (Future Enhancement)\n**8 tables with full persistence** (this task):\n- events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides\n\n**Architecture**: Full data persistence, entity resolution, historical tracking\n\n### Migration Files Status\n**Partially implemented** in supabase/migrations/001-008:\n- Tables created but NOT integrated into application code\n- App still uses 6-table production schema\n- Design issues found (abbreviation, RLS security, singleton pattern)\n\n### Decision Required\n**Before implementing this task, decide:**\n\n**Option A: Keep Simple Production Architecture**\n- Fix security issues in current 6-table schema\n- Execute PRD migration (cleanup unused tables)\n- Mark Task 1 as \"deferred\" or \"replaced by simpler design\"\n- **Effort**: 2-4 hours\n- **Risk**: Low\n\n**Option B: Implement Full Task 1 Requirements**\n- Major refactor: in-memory → persistent storage\n- Build entity resolution service\n- Integrate odds snapshot service\n- Fix all design issues during implementation\n- **Effort**: 40-60 hours\n- **Risk**: High (architectural change)\n\n**Option C: Hybrid Approach**\n- Keep production simple\n- Add Task 1 tables for historical analysis only\n- Run both architectures in parallel\n- **Effort**: 20-30 hours\n- **Risk**: Medium (complexity)\n\n### Recommendation\n**Start with Option A**: Fix security issues in production schema first.\n\n**Critical Production Issues to Fix:**\n1. RLS security vulnerabilities (anon DELETE access)\n2. Singleton pattern documentation or improvement\n3. PRD migration (cleanup 18 unused tables)\n\n**Then Reassess**: After production is stable, decide if Task 1 features are needed.\n\n### Status Change\n**Original Status**: \"pending\" (implies ready to implement)\n**Updated Status**: Should be \"deferred\" pending architecture decision\n\nTask 1 remains valuable as a design document for future enhancements, but is NOT required for current production system.\n</info added on 2025-11-08T09:54:23.723Z>",
+        "testStrategy": "Verify schema creation by running sample queries to ensure all tables are accessible and correctly structured.",
         "priority": "high",
         "dependencies": [],
-        "details": "Create Supabase project, define all tables with proper relationships, set up row-level security policies, create indexes for performance. Tables needed: events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides, job_runs",
-        "testStrategy": "Verify table creation, test CRUD operations, validate RLS policies, check index performance",
+        "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "Initialize Supabase project",
-            "description": "Create new Supabase project and configure environment variables",
-            "details": "Set up new Supabase project, obtain API keys and database URL, configure .env files for local development\n<info added on 2025-09-05T19:36:20.501Z>\nSet up Next.js project structure and install dependencies.\n</info added on 2025-09-05T19:36:20.501Z>",
-            "status": "done",
+            "title": "Create Events Table",
+            "description": "Establish the 'events' table in Supabase to store event details.",
             "dependencies": [],
-            "parentTaskId": 1
+            "details": "Define the schema for the 'events' table using appropriate Postgres data types. Ensure that it includes fields for event ID, name, date, and type.\n<info added on 2025-11-08T08:44:15.027Z>\n## Implementation Status: ✅ Mostly Complete\n\n**Location**: supabase/migrations/001_initial_schema.sql\n\n**Implemented Fields**:\n- id (UUID PRIMARY KEY)\n- provider_key (TEXT NOT NULL) - External provider ID\n- league (VARCHAR CHECK constraint for NFL/NCAAF)\n- week_number, season_year (INTEGER NOT NULL)\n- event_date_local (TIMESTAMPTZ NOT NULL)\n- home_team, away_team (UUID FK to teams)\n- created_at, updated_at (TIMESTAMPTZ with auto-trigger)\n\n**Indexes Created**:\n- idx_events_provider_key (unique)\n- idx_events_week (composite: week_number, season_year)\n- idx_events_home_team, idx_events_away_team\n\n**Minor Gap**: No explicit \"name\" field for display (e.g., \"Patriots vs Chiefs\")\n- Can be computed from team names via JOIN\n- Consider adding if needed for performance\n\n**Status**: Core table complete, consider migration for event_name field if needed for UI display\n</info added on 2025-11-08T08:44:15.027Z>",
+            "status": "pending",
+            "testStrategy": null
           },
           {
             "id": 2,
-            "title": "Create database schema for core tables",
-            "description": "Define and create all database tables as specified in the PRD",
-            "details": "Create tables: events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides, job_runs. Set up proper indexes and relationships",
-            "status": "done",
+            "title": "Create Teams Table",
+            "description": "Establish the 'teams' table in Supabase to store team information.",
             "dependencies": [],
-            "parentTaskId": 1
+            "details": "Define the schema for the 'teams' table with fields for team ID, name, and abbreviation. Use Postgres data types for optimal storage.\n<info added on 2025-11-08T08:44:28.027Z>\n## Implementation Status: ⚠️ Critical Field Missing\n\n**Location**: supabase/migrations/001_initial_schema.sql\n\n**Implemented Fields**:\n- id (UUID PRIMARY KEY)\n- league (VARCHAR CHECK for NFL/NCAAF)\n- name_canonical (VARCHAR(100) NOT NULL)\n- aliases (JSONB DEFAULT '[]') - Array of alternative names\n- created_at, updated_at (TIMESTAMPTZ)\n\n**Indexes**:\n- idx_teams_league_canonical (composite unique)\n- idx_teams_aliases (GIN for JSONB search)\n\n**MISSING REQUIREMENT**: No dedicated `abbreviation` column (Task requirement: \"team ID, name, and abbreviation\")\n- Abbreviations currently mixed into aliases JSONB array\n- Reduces query efficiency\n- No uniqueness constraint possible\n- Difficult to enforce per-league uniqueness\n\n**Fix Required**:\n```sql\nALTER TABLE teams ADD COLUMN abbreviation VARCHAR(10);\nCREATE UNIQUE INDEX idx_teams_league_abbr ON teams(league, abbreviation);\n-- Migrate: UPDATE teams SET abbreviation = aliases->0 WHERE jsonb_array_length(aliases) > 0;\n```\n\n**Migration Needed**: 009_add_teams_abbreviation.sql\n\n**Status**: Table exists but missing required field, blocks completion\n</info added on 2025-11-08T08:44:28.027Z>",
+            "status": "pending",
+            "testStrategy": null
           },
           {
             "id": 3,
-            "title": "Configure Supabase Row Level Security (RLS)",
-            "description": "Set up RLS policies for all tables to ensure data security",
-            "details": "Create RLS policies for each table, configure service roles and user permissions, test security policies",
-            "status": "done",
+            "title": "Create Picks Rows Table",
+            "description": "Establish the 'picks_rows' table in Supabase to store individual picks data.",
             "dependencies": [],
-            "parentTaskId": 1
+            "details": "Define the schema for the 'picks_rows' table, including fields for pick ID, event ID, team ID, and selection details. Ensure proper foreign key relationships.\n<info added on 2025-11-08T08:44:39.872Z>\n## Implementation Status: ⚠️ Structure Misalignment\n\n**Location**: supabase/migrations/001_initial_schema.sql\n\n**Current Implementation** (picks_rows table):\n- Stores RAW pre-match picksheet data\n- Has: id, source_run_id (FK to job_runs), home_name_raw, away_name_raw, spreads\n- NO event_id foreign key (pre-resolution data)\n- NO team_id foreign key (teams not yet matched)\n- NO selection_type field (which team/side was picked)\n\n**Task Requirement**: \"pick ID, event ID, team ID, and selection details\"\n\n**Gap Analysis**:\nThe current picks_rows table is for UNMATCHED raw data. After entity resolution (Task 5), picks should link to:\n- Matched event_id (from matches table)\n- Selected team_id  \n- Selection type (home/away/over/under)\n\n**Design Decision Needed**:\n\n**Option A**: Add resolved fields to picks_rows\n```sql\nALTER TABLE picks_rows \nADD COLUMN matched_event_id UUID REFERENCES events(id),\nADD COLUMN selected_team_id UUID REFERENCES teams(id),\nADD COLUMN selection_type VARCHAR(20) CHECK (selection_type IN ('home', 'away', 'over', 'under'));\n```\n\n**Option B**: Create separate resolved_picks table\n```sql\nCREATE TABLE resolved_picks (\n  id UUID PRIMARY KEY,\n  picks_row_id UUID REFERENCES picks_rows(id),\n  event_id UUID NOT NULL REFERENCES events(id),\n  selected_team_id UUID REFERENCES teams(id),\n  selection_type VARCHAR(20) NOT NULL,\n  confidence_score DECIMAL(3,2)\n);\n```\n\n**Recommendation**: Option A (extend picks_rows) is simpler for current scope\n\n**Migration Needed**: 012_enhance_picks_structure.sql\n\n**Status**: Table exists but doesn't match task requirements, needs structural enhancement\n</info added on 2025-11-08T08:44:39.872Z>",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 4,
+            "title": "Create Odds Snapshots Table",
+            "description": "Establish the 'odds_snapshots' table in Supabase to store live odds data.",
+            "dependencies": [],
+            "details": "Define the schema for the 'odds_snapshots' table with fields for odds ID, event ID, odds type, and value. Ensure row-level security is configured.\n<info added on 2025-11-08T08:44:48.374Z>\n## Implementation Status: ✅ Fully Complete\n\n**Location**: supabase/migrations/001_initial_schema.sql\n\n**Implemented Fields**:\n- id (UUID PRIMARY KEY)\n- event_id (UUID FK to events) - Maps to specific game\n- event_provider_key (TEXT) - External provider reference\n- market (VARCHAR(50)) - 'spreads', 'totals', 'h2h'\n- book (VARCHAR(50)) - Bookmaker name\n- home_spread, away_spread (DECIMAL(4,1))\n- home_price, away_price (INTEGER) - American odds format\n- total_over, total_under (DECIMAL(5,1))\n- prices (JSONB) - Additional price data\n- fetched_at (TIMESTAMPTZ NOT NULL) - Snapshot timestamp\n- created_at (TIMESTAMPTZ)\n\n**Indexes**:\n- idx_odds_event (on event_id)\n- idx_odds_market (on market)\n- idx_odds_book (on book)\n- idx_odds_fetched (DESC for time-series queries)\n\n**Design Strengths**:\n- Comprehensive odds storage (spreads, totals, moneylines)\n- Supports multiple books and markets\n- Point-in-time snapshots with fetched_at\n- JSONB prices for extensibility\n- Proper indexing for common queries\n\n**Potential Enhancement** (not blocking):\n- Consider composite index: `idx_odds_event_market_book_time ON odds_snapshots(event_id, market, book, fetched_at DESC)` for faster latest-odds queries\n\n**Status**: Fully implemented and exceeds requirements\n</info added on 2025-11-08T08:44:48.374Z>",
+            "status": "pending",
+            "testStrategy": null
+          },
+          {
+            "id": 5,
+            "title": "Configure Row-Level Security",
+            "description": "Implement row-level security for sensitive data in all tables.",
+            "dependencies": [],
+            "details": "Set up row-level security policies in Supabase for the 'events', 'teams', 'picks_rows', and 'odds_snapshots' tables to protect sensitive information.\n<info added on 2025-11-08T08:45:01.079Z>\n## Implementation Status: ⚠️ Security Risks Present\n\n**Location**: supabase/migrations/002_rls_policies.sql, 003_check_and_create_missing_tables.sql\n\n**RLS Enabled**: ✅ All tables have RLS enabled\n\n**Implemented Policies**:\n- Service role: Full access to all tables\n- Authenticated users: Read access to most tables\n- Admin role: Managed via is_admin() function\n- Granular policies for SELECT vs INSERT vs ALL\n\n**Helper Function**: is_admin() checks auth.jwt() ->> 'role' = 'admin'\n\n**CRITICAL SECURITY ISSUES** (from 003_check_and_create_missing_tables.sql):\n\n1. **Overly Permissive Anon Policies** - MUST FIX BEFORE PRODUCTION\n```sql\n-- ❌ DANGEROUS: Allows anonymous users to DELETE all data\nCREATE POLICY \"Anon users can create and read job_runs\" ON job_runs\n  FOR ALL USING (true);  -- Anon can INSERT, UPDATE, DELETE everything!\n\nCREATE POLICY \"Anon users can create and read picks_rows\" ON picks_rows\n  FOR ALL USING (true);  -- Same issue\n```\n\n**Security Risks**:\n- Anonymous users can delete all job runs\n- Anonymous users can corrupt picks data  \n- No audit trail of destructive changes\n- Production deployment would be vulnerable to data loss\n\n**Required Fix**:\n```sql\n-- Remove dangerous policies\nDROP POLICY \"Anon users can create and read_job_runs\" ON job_runs;\nDROP POLICY \"Anon users can create and read picks_rows\" ON picks_rows;\n\n-- Replace with restrictive policies\nCREATE POLICY \"Anon can only read job_runs\" ON job_runs\n  FOR SELECT TO anon USING (true);\n\nCREATE POLICY \"Authenticated can insert picks_rows\" ON picks_rows\n  FOR INSERT TO authenticated USING (true);\n```\n\n2. **Inconsistent RLS Pattern**\n- Some policies use `auth.jwt() ->> 'role'`\n- Others use `auth.role()`\n- Mixing patterns makes maintenance difficult\n\n**Recommendation**: Standardize on `auth.role()` and `TO role` syntax\n\n**Migration Needed**: 010_fix_anon_rls_policies.sql\n\n**Additional Security Enhancements**:\n- Add audit logging for sensitive tables (alias_overrides, matches)\n- Consider soft deletes instead of CASCADE for events/teams\n- Add rate limiting for INSERT operations\n\n**Status**: RLS framework exists but has critical security vulnerabilities, blocking production deployment.\n</info added on 2025-11-08T08:45:01.079Z>",
+            "status": "pending",
+            "testStrategy": null
           }
         ]
       },
       {
         "id": 2,
-        "title": "Implement picksheet parser service",
-        "description": "Build a Python service that ingests raw picksheet text and extracts structured data with normalization",
-        "status": "done",
+        "title": "Implement Normalization Rules",
+        "description": "Develop normalization rules for parsing picksheet text to ensure consistent data formats.",
+        "details": "Use regex and tokenization techniques to strip rankings, unify abbreviations, and standardize date formats. Implement these rules in the Python parser service.",
+        "testStrategy": "Create unit tests with various picksheet samples to validate that normalization rules are applied correctly.",
         "priority": "high",
         "dependencies": [
-          "1"
+          1
         ],
-        "details": "Parse raw text input, extract league/date/teams/spreads/points, handle rankings like #11, normalize team names, standardize times to UTC, support both paste and file upload methods",
-        "testStrategy": "Test with various picksheet formats, verify parsing accuracy, test edge cases with rankings and abbreviations",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Build text parsing engine with regex/tokenization",
-            "description": "Create Python module for deterministic parsing of picksheet text",
-            "details": "Implement regex patterns for extracting team names, dates, spreads, totals. Handle various text formats and edge cases\n<info added on 2025-09-05T19:47:34.668Z>\nCompleted TypeScript parser implementation with regex patterns for dates, times, teams, and spreads. Handles NFL and NCAAF games with rankings and records.\n</info added on 2025-09-05T19:47:34.668Z>",
-            "status": "done",
-            "dependencies": [],
-            "parentTaskId": 2
-          },
-          {
-            "id": 2,
-            "title": "Implement team name normalization rules",
-            "description": "Create normalization logic for standardizing team names",
-            "details": "Strip rankings (#11), handle abbreviations (St. vs State), remove records (10-2), standardize common variations",
-            "status": "done",
-            "dependencies": [],
-            "parentTaskId": 2
-          }
-        ]
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 3,
-        "title": "Build The Odds API integration",
-        "description": "Create service to fetch live odds data from The Odds API for NFL and NCAAF",
-        "status": "done",
+        "title": "Develop Picksheet Ingestion Service",
+        "description": "Build a service to ingest and parse picksheet text, outputting structured rows.",
+        "details": "Implement a Python service that accepts raw text input, applies normalization rules, and outputs structured data as `picks_rows`. Use Flask or FastAPI for the service.",
+        "testStrategy": "Test the service with different picksheet formats to ensure correct parsing and output.",
         "priority": "high",
         "dependencies": [
-          "1"
+          2
         ],
-        "details": "Integrate with The Odds API, fetch spreads for NFL/NCAAF, implement caching strategy, handle rate limits, store snapshots in odds_snapshots table",
-        "testStrategy": "Mock API responses for testing, verify rate limit handling, test cache behavior, validate data storage",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Set up The Odds API authentication",
-            "description": "Configure API credentials and create connection module",
-            "details": "Register for The Odds API, obtain API key, create Python/Node module for API connection with rate limiting",
-            "status": "done",
-            "dependencies": [],
-            "parentTaskId": 3
-          },
-          {
-            "id": 2,
-            "title": "Build odds fetching service for NFL/NCAAF",
-            "description": "Implement service to fetch and cache spread data",
-            "details": "Create functions to fetch NFL and NCAAF spreads, implement caching strategy, handle rate limits and errors",
-            "status": "done",
-            "dependencies": [],
-            "parentTaskId": 3
-          }
-        ]
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 4,
-        "title": "Develop entity resolution system",
-        "description": "Implement multi-stage matching pipeline to link picksheet teams/games to live odds events",
-        "status": "done",
+        "title": "Integrate Odds Fetcher",
+        "description": "Create a service to fetch live market odds from The Odds API for NFL and NCAAF.",
+        "details": "Implement a Node.js or Python service that polls The Odds API for current spreads and caches the results in `odds_snapshots`. Ensure to handle rate limits and implement caching strategies.",
+        "testStrategy": "Simulate API responses and verify that the service correctly fetches and stores odds data.",
         "priority": "high",
         "dependencies": [
-          "2",
-          "3"
+          1
         ],
-        "details": "Normalization rules, fuzzy matching with token-set ratio, metadata filters (league, date window), LLM verification for ambiguous matches, confidence scoring, human override capability",
-        "testStrategy": "Test with known team variations, verify fuzzy matching accuracy, test LLM integration, validate confidence scores",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Build fuzzy matching engine",
-            "description": "Implement fuzzy string matching for team names",
-            "details": "Use token-set ratio and abbreviation maps, implement similarity scoring, create candidate generation logic",
-            "status": "done",
-            "dependencies": [],
-            "parentTaskId": 4
-          },
-          {
-            "id": 2,
-            "title": "Integrate LLM for ambiguous match verification",
-            "description": "Add LLM verification for low-confidence fuzzy matches",
-            "details": "Set up OpenAI/Claude API, create structured prompts for verification, implement confidence scoring",
-            "status": "done",
-            "dependencies": [],
-            "parentTaskId": 4
-          }
-        ]
+        "status": "pending",
+        "subtasks": []
       },
       {
         "id": 5,
-        "title": "Create comparison engine and KPI calculator",
-        "description": "Build service to compute spread deltas and aggregate KPIs for matched games",
-        "status": "done",
+        "title": "Implement Entity Resolution",
+        "description": "Develop a multi-stage pipeline for matching picksheet events to live odds events using LLM assistance.",
+        "details": "Create a service that normalizes names, performs fuzzy matching, and uses LLM for verification. Store results in the `matches` table with confidence scores.",
+        "testStrategy": "Use a labeled dataset to evaluate the accuracy of matches and ensure confidence scores are correctly calculated.",
         "priority": "medium",
         "dependencies": [
-          "4"
+          3,
+          4
         ],
-        "details": "Calculate spread differences, identify key number crossings, compute coverage rates, generate daily KPIs (avg/median/P95 deltas), track unmatched items",
-        "testStrategy": "Verify delta calculations, test KPI aggregation logic, validate key number crossing detection",
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 6,
-        "title": "Build API/orchestrator layer",
-        "description": "Create FastAPI or Next.js API routes to coordinate pipeline operations",
-        "status": "done",
+        "title": "Compute Comparisons and KPIs",
+        "description": "Implement logic to compute deltas and KPIs based on the comparisons between picksheet data and live odds.",
+        "details": "Create a comparator service that calculates spread deltas, coverage rates, and other KPIs, storing results in the `comparisons` and `kpi_daily` tables.",
+        "testStrategy": "Run tests with known inputs to validate that the computed deltas and KPIs are accurate.",
         "priority": "medium",
         "dependencies": [
-          "2",
-          "3",
-          "4",
-          "5"
+          5
         ],
-        "details": "Endpoints for triggering runs, reading results, managing aliases, viewing history, implement proper error handling and logging",
-        "testStrategy": "Test all API endpoints, verify error handling, test orchestration flow, validate response formats",
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 7,
-        "title": "Develop React frontend dashboard",
-        "description": "Create Next.js/React UI with matched games table, KPI tiles, and filters",
-        "status": "done",
+        "title": "Develop React Frontend",
+        "description": "Build a React dashboard to display matched games, deltas, and KPIs.",
+        "details": "Use Next.js and Supabase client to create a responsive dashboard that displays a table of matches, filters, and KPI tiles. Implement role-based access for different user types.",
+        "testStrategy": "Conduct user testing to ensure the UI is intuitive and all data is displayed correctly.",
         "priority": "medium",
         "dependencies": [
-          "6"
+          6
         ],
-        "details": "Game comparison table with deltas, KPI summary tiles, filters by league/book/threshold, responsive design, Supabase client integration",
-        "testStrategy": "Test UI components, verify data display, test filtering logic, validate responsive behavior",
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 8,
-        "title": "Implement admin controls and alias management",
-        "description": "Build UI for manual alias binding and unmatched row resolution",
-        "status": "pending",
+        "title": "Implement Admin Controls",
+        "description": "Create admin controls for manual alias binding and resolving unmatched rows.",
+        "details": "Develop UI components for alias management and a history view of changes. Ensure that changes are persisted in the `alias_overrides` table.",
+        "testStrategy": "Test the admin functionalities to ensure that alias bindings and unmatched rows can be resolved correctly.",
         "priority": "low",
         "dependencies": [
-          "7"
+          7
         ],
-        "details": "Admin interface for creating team aliases, resolving unmatched rows, viewing match history, retry failed pipeline runs",
-        "testStrategy": "Test alias CRUD operations, verify override persistence, test retry functionality",
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 9,
-        "title": "Add authentication and authorization",
-        "description": "Implement Supabase Auth with role-based access control",
-        "status": "pending",
-        "priority": "medium",
+        "title": "Set Up Job Scheduling and Monitoring",
+        "description": "Implement job scheduling for background tasks and monitoring for the services.",
+        "details": "Use Supabase cron or a hosted scheduler to run background jobs for fetching odds and processing picksheet data. Implement logging and monitoring for observability.",
+        "testStrategy": "Simulate job runs and verify that tasks are executed as scheduled and logs are generated correctly.",
+        "priority": "low",
         "dependencies": [
-          "7"
+          4,
+          5
         ],
-        "details": "Set up Supabase Auth, implement RLS policies, create user roles (analyst, reviewer, admin), secure API endpoints",
-        "testStrategy": "Test authentication flows, verify RLS enforcement, test role-based access",
+        "status": "pending",
         "subtasks": []
       },
       {
         "id": 10,
-        "title": "Implement export and reporting features",
-        "description": "Add CSV export capability and historical run browsing",
-        "status": "pending",
+        "title": "Expand to Multi-Book Support",
+        "description": "Enhance the odds fetcher to support multiple books and additional markets.",
+        "details": "Modify the odds fetcher service to handle multiple sources and markets, ensuring that data is aggregated correctly.",
+        "testStrategy": "Test the service with multiple book sources to ensure data integrity and correct aggregation.",
         "priority": "low",
         "dependencies": [
-          "7"
+          9
         ],
-        "details": "CSV export for comparison results, historical run browser, drill-down to specific dates, snapshot viewing",
-        "testStrategy": "Verify CSV generation, test historical data retrieval, validate snapshot accuracy",
-        "subtasks": []
-      },
-      {
-        "id": 11,
-        "title": "Set up monitoring and observability",
-        "description": "Implement logging, metrics, and error tracking",
         "status": "pending",
-        "priority": "low",
-        "dependencies": [
-          "6"
-        ],
-        "details": "Structured logging, per-stage metrics, error tracking, performance monitoring, set up alerts for failures",
-        "testStrategy": "Verify log output, test metric collection, validate alert triggers",
-        "subtasks": []
-      },
-      {
-        "id": 12,
-        "title": "Deploy to production infrastructure",
-        "description": "Deploy backend services and frontend to production environment",
-        "status": "pending",
-        "priority": "low",
-        "dependencies": [
-          "11"
-        ],
-        "details": "Deploy backend to serverless or container platform, deploy frontend to Vercel/Netlify, configure environment variables, set up CI/CD",
-        "testStrategy": "Test deployment process, verify environment configuration, test production endpoints",
         "subtasks": []
       }
     ],
     "metadata": {
-      "description": "Office Football Pool - Picksheet vs Market Odds Comparison Service",
-      "createdAt": "2025-01-05T19:20:00Z",
-      "updatedAt": "2025-01-05T19:20:00Z",
-      "created": "2025-09-05T19:29:57.697Z",
-      "updated": "2025-09-05T22:13:03.282Z"
+      "created": "2025-11-08T07:50:35.649Z",
+      "updated": "2025-11-08T07:50:35.649Z",
+      "description": "Tasks for master context"
     }
   }
 }

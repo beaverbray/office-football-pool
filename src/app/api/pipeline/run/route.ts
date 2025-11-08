@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pipelineOrchestrator } from '@/services/pipeline-orchestrator'
 import { WeekDetector } from '@/services/week-detector'
+import { jobQueue } from '@/services/job-queue'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,32 +19,81 @@ export async function POST(request: NextRequest) {
     const nflWeek = await WeekDetector.getCurrentNFLWeek()
     const week = body.week ?? nflWeek.week
 
+    // Check if async mode is requested (default to true for better UX)
+    const useAsync = body.async ?? true
+
+    const pipelineInput = {
+      picksheetText: body.picksheetText,
+      picksheetGames: body.picksheetGames,
+      marketGames: body.marketGames
+    }
+
+    const pipelineConfig = {
+      useOddsAPI: body.useOddsAPI ?? true,
+      useLLM: body.useLLM ?? true,
+      includeLogs: body.includeLogs ?? false,
+      matchingThreshold: body.matchingThreshold ?? 0.4,
+      week: week
+    }
+
     // Log configuration for debugging
     console.log('Pipeline configuration:', {
       hasPicksheetText: !!body.picksheetText,
       textLength: body.picksheetText?.length,
-      useOddsAPI: body.useOddsAPI ?? true,
-      useLLM: body.useLLM ?? true,
+      useOddsAPI: pipelineConfig.useOddsAPI,
+      useLLM: pipelineConfig.useLLM,
       week: week,
       weekSource: body.week ? 'provided' : 'auto-detected',
+      async: useAsync,
       hasOddsAPIKey: !!(process.env.ODDS_API_KEY || process.env.THE_ODDS_API_KEY),
       hasOpenAIKey: !!process.env.OPENAI_API_KEY
     })
 
-    // Run pipeline
+    // ASYNC MODE: Create job and return immediately
+    if (useAsync) {
+      const jobId = jobQueue.createJob({
+        input: pipelineInput,
+        config: pipelineConfig
+      })
+
+      // Execute pipeline in background (non-blocking)
+      setImmediate(async () => {
+        try {
+          jobQueue.startJob(jobId)
+          jobQueue.addLog(jobId, 'Pipeline execution started')
+
+          const result = await pipelineOrchestrator.runPipeline(
+            pipelineInput,
+            pipelineConfig,
+            // Progress callback
+            (stage: string, progress: number) => {
+              jobQueue.updateJob(jobId, { stage, progress })
+              jobQueue.addLog(jobId, `Stage: ${stage} (${progress}%)`)
+            }
+          )
+
+          jobQueue.completeJob(jobId, result)
+          jobQueue.addLog(jobId, 'Pipeline execution completed successfully')
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          jobQueue.failJob(jobId, errorMessage)
+          jobQueue.addLog(jobId, `Pipeline execution failed: ${errorMessage}`)
+          console.error('Background pipeline execution error:', error)
+        }
+      })
+
+      return NextResponse.json({
+        jobId,
+        status: 'queued',
+        message: 'Pipeline execution started in background',
+        statusEndpoint: `/api/pipeline/status?jobId=${jobId}`
+      })
+    }
+
+    // SYNC MODE: Run pipeline synchronously (legacy behavior)
     const result = await pipelineOrchestrator.runPipeline(
-      {
-        picksheetText: body.picksheetText,
-        picksheetGames: body.picksheetGames,
-        marketGames: body.marketGames
-      },
-      {
-        useOddsAPI: body.useOddsAPI ?? true,
-        useLLM: body.useLLM ?? true,
-        includeLogs: body.includeLogs ?? false,
-        matchingThreshold: body.matchingThreshold ?? 0.4, // Lowered from 0.6
-        week: week // Use dynamically detected week by default
-      }
+      pipelineInput,
+      pipelineConfig
     )
 
     return NextResponse.json({

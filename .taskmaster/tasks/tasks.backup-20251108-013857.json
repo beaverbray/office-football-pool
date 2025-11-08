@@ -1,0 +1,256 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Set up project infrastructure and database schema",
+        "description": "Initialize the project with Supabase, set up database tables for events, teams, picks, odds, matches, and comparisons according to the PRD specifications",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [],
+        "details": "Create Supabase project, define all tables with proper relationships, set up row-level security policies, create indexes for performance. Tables needed: events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides, job_runs",
+        "testStrategy": "Verify table creation, test CRUD operations, validate RLS policies, check index performance",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Initialize Supabase project",
+            "description": "Create new Supabase project and configure environment variables",
+            "details": "Set up new Supabase project, obtain API keys and database URL, configure .env files for local development\n<info added on 2025-09-05T19:36:20.501Z>\nSet up Next.js project structure and install dependencies.\n</info added on 2025-09-05T19:36:20.501Z>",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 2,
+            "title": "Create database schema for core tables",
+            "description": "Define and create all database tables as specified in the PRD",
+            "details": "Create tables: events, teams, picks_rows, odds_snapshots, matches, comparisons, kpi_daily, alias_overrides, job_runs. Set up proper indexes and relationships",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 1
+          },
+          {
+            "id": 3,
+            "title": "Configure Supabase Row Level Security (RLS)",
+            "description": "Set up RLS policies for all tables to ensure data security",
+            "details": "Create RLS policies for each table, configure service roles and user permissions, test security policies",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 1
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Implement picksheet parser service",
+        "description": "Build a Python service that ingests raw picksheet text and extracts structured data with normalization",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "Parse raw text input, extract league/date/teams/spreads/points, handle rankings like #11, normalize team names, standardize times to UTC, support both paste and file upload methods",
+        "testStrategy": "Test with various picksheet formats, verify parsing accuracy, test edge cases with rankings and abbreviations",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Build text parsing engine with regex/tokenization",
+            "description": "Create Python module for deterministic parsing of picksheet text",
+            "details": "Implement regex patterns for extracting team names, dates, spreads, totals. Handle various text formats and edge cases\n<info added on 2025-09-05T19:47:34.668Z>\nCompleted TypeScript parser implementation with regex patterns for dates, times, teams, and spreads. Handles NFL and NCAAF games with rankings and records.\n</info added on 2025-09-05T19:47:34.668Z>",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 2
+          },
+          {
+            "id": 2,
+            "title": "Implement team name normalization rules",
+            "description": "Create normalization logic for standardizing team names",
+            "details": "Strip rankings (#11), handle abbreviations (St. vs State), remove records (10-2), standardize common variations",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 2
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Build The Odds API integration",
+        "description": "Create service to fetch live odds data from The Odds API for NFL and NCAAF",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "details": "Integrate with The Odds API, fetch spreads for NFL/NCAAF, implement caching strategy, handle rate limits, store snapshots in odds_snapshots table",
+        "testStrategy": "Mock API responses for testing, verify rate limit handling, test cache behavior, validate data storage",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up The Odds API authentication",
+            "description": "Configure API credentials and create connection module",
+            "details": "Register for The Odds API, obtain API key, create Python/Node module for API connection with rate limiting",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 3
+          },
+          {
+            "id": 2,
+            "title": "Build odds fetching service for NFL/NCAAF",
+            "description": "Implement service to fetch and cache spread data",
+            "details": "Create functions to fetch NFL and NCAAF spreads, implement caching strategy, handle rate limits and errors",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 3
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Develop entity resolution system",
+        "description": "Implement multi-stage matching pipeline to link picksheet teams/games to live odds events",
+        "status": "done",
+        "priority": "high",
+        "dependencies": [
+          "2",
+          "3"
+        ],
+        "details": "Normalization rules, fuzzy matching with token-set ratio, metadata filters (league, date window), LLM verification for ambiguous matches, confidence scoring, human override capability",
+        "testStrategy": "Test with known team variations, verify fuzzy matching accuracy, test LLM integration, validate confidence scores",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Build fuzzy matching engine",
+            "description": "Implement fuzzy string matching for team names",
+            "details": "Use token-set ratio and abbreviation maps, implement similarity scoring, create candidate generation logic",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 4
+          },
+          {
+            "id": 2,
+            "title": "Integrate LLM for ambiguous match verification",
+            "description": "Add LLM verification for low-confidence fuzzy matches",
+            "details": "Set up OpenAI/Claude API, create structured prompts for verification, implement confidence scoring",
+            "status": "done",
+            "dependencies": [],
+            "parentTaskId": 4
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Create comparison engine and KPI calculator",
+        "description": "Build service to compute spread deltas and aggregate KPIs for matched games",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [
+          "4"
+        ],
+        "details": "Calculate spread differences, identify key number crossings, compute coverage rates, generate daily KPIs (avg/median/P95 deltas), track unmatched items",
+        "testStrategy": "Verify delta calculations, test KPI aggregation logic, validate key number crossing detection",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Build API/orchestrator layer",
+        "description": "Create FastAPI or Next.js API routes to coordinate pipeline operations",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [
+          "2",
+          "3",
+          "4",
+          "5"
+        ],
+        "details": "Endpoints for triggering runs, reading results, managing aliases, viewing history, implement proper error handling and logging",
+        "testStrategy": "Test all API endpoints, verify error handling, test orchestration flow, validate response formats",
+        "subtasks": []
+      },
+      {
+        "id": 7,
+        "title": "Develop React frontend dashboard",
+        "description": "Create Next.js/React UI with matched games table, KPI tiles, and filters",
+        "status": "done",
+        "priority": "medium",
+        "dependencies": [
+          "6"
+        ],
+        "details": "Game comparison table with deltas, KPI summary tiles, filters by league/book/threshold, responsive design, Supabase client integration",
+        "testStrategy": "Test UI components, verify data display, test filtering logic, validate responsive behavior",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement admin controls and alias management",
+        "description": "Build UI for manual alias binding and unmatched row resolution",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "7"
+        ],
+        "details": "Admin interface for creating team aliases, resolving unmatched rows, viewing match history, retry failed pipeline runs",
+        "testStrategy": "Test alias CRUD operations, verify override persistence, test retry functionality",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Add authentication and authorization",
+        "description": "Implement Supabase Auth with role-based access control",
+        "status": "pending",
+        "priority": "medium",
+        "dependencies": [
+          "7"
+        ],
+        "details": "Set up Supabase Auth, implement RLS policies, create user roles (analyst, reviewer, admin), secure API endpoints",
+        "testStrategy": "Test authentication flows, verify RLS enforcement, test role-based access",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Implement export and reporting features",
+        "description": "Add CSV export capability and historical run browsing",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "7"
+        ],
+        "details": "CSV export for comparison results, historical run browser, drill-down to specific dates, snapshot viewing",
+        "testStrategy": "Verify CSV generation, test historical data retrieval, validate snapshot accuracy",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Set up monitoring and observability",
+        "description": "Implement logging, metrics, and error tracking",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "6"
+        ],
+        "details": "Structured logging, per-stage metrics, error tracking, performance monitoring, set up alerts for failures",
+        "testStrategy": "Verify log output, test metric collection, validate alert triggers",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Deploy to production infrastructure",
+        "description": "Deploy backend services and frontend to production environment",
+        "status": "pending",
+        "priority": "low",
+        "dependencies": [
+          "11"
+        ],
+        "details": "Deploy backend to serverless or container platform, deploy frontend to Vercel/Netlify, configure environment variables, set up CI/CD",
+        "testStrategy": "Test deployment process, verify environment configuration, test production endpoints",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "description": "Office Football Pool - Picksheet vs Market Odds Comparison Service",
+      "createdAt": "2025-01-05T19:20:00Z",
+      "updatedAt": "2025-01-05T19:20:00Z",
+      "created": "2025-09-05T19:29:57.697Z",
+      "updated": "2025-09-05T22:13:03.282Z"
+    }
+  }
+}

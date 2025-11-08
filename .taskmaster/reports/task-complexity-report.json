@@ -1,0 +1,93 @@
+{
+	"meta": {
+		"generatedAt": "2025-11-08T08:05:05.609Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 10,
+		"analysisCount": 10,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Define Database Schema",
+			"complexityScore": 7,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "List the steps required to create each table and configure row-level security.",
+			"reasoning": "This task involves multiple tables and requires careful consideration of data types and security configurations. The complexity arises from ensuring proper relationships and security policies."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Implement Normalization Rules",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Identify specific normalization rules and the regex patterns needed for each.",
+			"reasoning": "Normalization involves parsing and transforming data formats, which can be complex due to the variety of input formats. Testing with various samples adds to the complexity."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Develop Picksheet Ingestion Service",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the service development into stages: input handling, normalization application, and output structuring.",
+			"reasoning": "Building a service requires integrating multiple components and ensuring they work together seamlessly. The complexity is heightened by the need for robust error handling and testing with different formats."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Integrate Odds Fetcher",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Outline the steps for implementing API polling, caching, and error handling.",
+			"reasoning": "Fetching live data involves dealing with external APIs, which introduces challenges such as rate limits and data consistency. The complexity lies in ensuring reliable data retrieval and storage."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Implement Entity Resolution",
+			"complexityScore": 8,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Detail the stages of normalization, matching, and verification processes.",
+			"reasoning": "This task involves complex algorithms for matching and verification, especially with the use of LLMs. The intricacies of fuzzy matching and confidence scoring add significant complexity."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Compute Comparisons and KPIs",
+			"complexityScore": 7,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Identify the KPIs to be calculated and the logic for each comparison.",
+			"reasoning": "Calculating KPIs requires a deep understanding of the underlying data and the relationships between different metrics. The complexity arises from ensuring accuracy and performance."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Develop React Frontend",
+			"complexityScore": 6,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down the frontend development into components, state management, and user access control.",
+			"reasoning": "Building a responsive dashboard involves multiple components and user interactions, which can complicate state management and accessibility. Testing for usability adds to the complexity."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Implement Admin Controls",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "List the features needed for alias management and history tracking.",
+			"reasoning": "While this task is less complex than others, it still requires careful design of UI components and data persistence, which can introduce challenges."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Set Up Job Scheduling and Monitoring",
+			"complexityScore": 6,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Outline the steps for setting up job scheduling and monitoring mechanisms.",
+			"reasoning": "Implementing background tasks and monitoring requires an understanding of scheduling systems and logging practices, adding to the complexity."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Expand to Multi-Book Support",
+			"complexityScore": 5,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Identify the changes needed to support multiple sources and how to aggregate data.",
+			"reasoning": "While this task involves modifying existing functionality, the complexity lies in ensuring data integrity and correct aggregation across multiple sources."
+		}
+	]
+}
