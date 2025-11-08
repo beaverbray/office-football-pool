@@ -58,8 +58,8 @@ export default function CompactDashboard() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [currentPipeline, setCurrentPipeline] = useState<PipelineResult | null>(null)
-  const [sortColumn, setSortColumn] = useState<'league' | 'date' | 'team' | 'delta' | 'opening'>('delta')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
+  const [sortColumn, setSortColumn] = useState<'league' | 'date' | 'team' | 'delta' | 'opening'>('date')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showOnlyIssues, setShowOnlyIssues] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
@@ -511,11 +511,11 @@ export default function CompactDashboard() {
     if (!marketGivesValue && !eloGivesValue) return ''
 
     if (marketGivesValue && eloGivesValue) {
-      return 'bg-orange-900/50' // Both market and ELO agree - strong value
+      return 'bg-orange-900/50' // Both market and model agree - strong value
     } else if (marketGivesValue) {
       return 'bg-blue-900/50' // Market sees value
     } else if (eloGivesValue) {
-      return 'bg-green-900/50' // ELO sees value
+      return 'bg-green-900/50' // Model sees value
     }
 
     return ''
@@ -697,8 +697,8 @@ export default function CompactDashboard() {
                   <div><span className="text-orange-700">OPEN:</span> <span className="text-gray-400">Opening line spread</span></div>
                   <div><span className="text-orange-700">MKT:</span> <span className="text-gray-400">Current market spread</span></div>
                   <div><span className="text-orange-700">POOL:</span> <span className="text-gray-400">Office pool spread</span></div>
-                  <div><span className="text-orange-700">ELO:</span> <span className="text-gray-400">ELO predicted spread</span></div>
-                  <div><span className="text-orange-700">Δp%:</span> <span className="text-gray-400">Market delta probability (importance score)</span></div>
+                  <div><span className="text-orange-700">MOD:</span> <span className="text-gray-400">Model predicted spread</span></div>
+                  <div><span className="text-orange-700">Δp%:</span> <span className="text-gray-400">Market delta probability = |p_pool - p_market| + key_number_weights, calibrated</span></div>
                   <div className="pt-1 border-t border-zinc-700 mt-1">
                     <div className="text-orange-700 mb-1">COLOR CODING:</div>
                     <div><span className="text-gray-500">Gray Δp%:</span> <span className="text-gray-400">Minimal (&lt;1%)</span></div>
@@ -708,7 +708,7 @@ export default function CompactDashboard() {
                     <div><span className="text-red-600">Red Δp%:</span> <span className="text-gray-400">Very High (&gt;8%)</span></div>
                     <div><span className="bg-orange-900/50 px-1">Orange BG:</span> <span className="text-gray-400">Both agree</span></div>
                     <div><span className="bg-blue-900/50 px-1">Blue BG:</span> <span className="text-gray-400">Market value</span></div>
-                    <div><span className="bg-green-900/50 px-1">Green BG:</span> <span className="text-gray-400">ELO value</span></div>
+                    <div><span className="bg-green-900/50 px-1">Green BG:</span> <span className="text-gray-400">Model value</span></div>
                   </div>
                 </div>
               </div>
@@ -766,17 +766,17 @@ export default function CompactDashboard() {
                 </select>
               </div>
 
-              {/* ELO Filter */}
+              {/* Model Filter */}
               <div>
-                <label className="block text-xs font-mono text-gray-500 mb-1">ELO</label>
+                <label className="block text-xs font-mono text-gray-500 mb-1">MODEL</label>
                 <select
                   value={filters.eloFilter}
                   onChange={(e) => setFilters({...filters, eloFilter: e.target.value as 'all' | 'with' | 'without'})}
                   className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded text-xs font-mono text-gray-300 focus:border-orange-700 focus:outline-none"
                 >
                   <option value="all">ALL</option>
-                  <option value="with">WITH ELO</option>
-                  <option value="without">NO ELO</option>
+                  <option value="with">WITH MODEL</option>
+                  <option value="without">NO MODEL</option>
                 </select>
               </div>
 
@@ -908,7 +908,7 @@ export default function CompactDashboard() {
                     <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">OPEN</th>
                     <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MKT</th>
                     <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">POOL</th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">ELO</th>
+                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MOD</th>
                     <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">Δp%</th>
                     <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden sm:table-cell">🚩</th>
                   </tr>
@@ -1012,17 +1012,17 @@ export default function CompactDashboard() {
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center hidden sm:table-cell" rowSpan={2}>
                             <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
-                              {comp.crossesKeyNumber && (
+                              {comp.crossesKeyNumber && comp.keyNumbersCrossed && comp.keyNumbersCrossed.length > 0 && comp.keyNumbersCrossed.some(n => n !== 0) && (
                                 <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
-                                  K{comp.keyNumbersCrossed.join(',')}
+                                  K{comp.keyNumbersCrossed.filter(n => n !== 0).join(',')}
                                 </span>
                               )}
-                              {comp.favoriteFlipped && (
+                              {comp.favoriteFlipped === true && (
                                 <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-purple-950 text-purple-400 rounded">
                                   FLP
                                 </span>
                               )}
-                              {comp.outlierScore && comp.outlierScore > 2.0 && (
+                              {comp.outlierScore != null && comp.outlierScore > 2.0 && (
                                 <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-red-950 text-red-400 rounded">
                                   OUT
                                 </span>

@@ -93,9 +93,12 @@ export class ComparisonEngine {
       }
     }
     
+    // Filter out 0 to prevent edge cases
+    const filteredNumbers = crossedNumbers.filter(n => n !== 0)
+
     return {
-      crosses: crossedNumbers.length > 0,
-      numbers: crossedNumbers
+      crosses: filteredNumbers.length > 0,
+      numbers: filteredNumbers
     }
   }
 

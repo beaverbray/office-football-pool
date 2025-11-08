@@ -35,17 +35,36 @@ export async function POST() {
 
     const row = data as CurrentPipelineRow
     const currentPipeline = row.pipeline_data
+    const picksheetText = row.picksheet_text
 
     // Extract picksheet games from the current pipeline
-    if (!currentPipeline?.parsing?.games || currentPipeline.parsing.games.length === 0) {
+    // Support both old format (parsing.games) and new format (comparison.comparisons)
+    let picksheetGames: any[] = []
+    let needsFullPipeline = false
+
+    if (currentPipeline?.parsing?.games && currentPipeline.parsing.games.length > 0) {
+      // Old format - already has correct structure
+      picksheetGames = currentPipeline.parsing.games
+    } else if (currentPipeline?.comparison?.comparisons && currentPipeline.comparison.comparisons.length > 0) {
+      // New format - extract games from comparisons and convert to expected structure
+      picksheetGames = currentPipeline.comparison.comparisons.map((comp: any) => ({
+        league: comp.league,
+        homeTeam: comp.homeTeam,
+        awayTeam: comp.awayTeam,
+        spread: comp.picksheetSpread, // Single spread value (home team's perspective)
+        gameTime: comp.gameTime
+      }))
+    } else if (picksheetText && picksheetText.trim().length > 0) {
+      // No valid picksheet games found, but we have picksheet text - run full pipeline
+      console.log('No picksheet games found in pipeline data, but picksheet text is available. Running full pipeline with LLM parsing.')
+      needsFullPipeline = true
+    } else {
       return NextResponse.json({
         success: false,
-        error: 'No picksheet games found',
-        message: 'The current pipeline does not contain picksheet games. Please re-process in Control Panel.'
+        error: 'No picksheet data found',
+        message: 'No picksheet games or text available. Please add a picksheet in the Control Panel.'
       }, { status: 400 })
     }
-
-    console.log('Refreshing market data with', currentPipeline.parsing.games.length, 'picksheet games')
 
     // Import pipeline orchestrator
     const { pipelineOrchestrator } = await import('@/services/pipeline-orchestrator')
@@ -54,21 +73,41 @@ export async function POST() {
     const nflWeek = await WeekDetector.getCurrentNFLWeek()
     const currentWeek = nflWeek.week
 
-    console.log('Using current week:', currentWeek, '(previously was:', currentPipeline.config?.week, ')')
+    console.log('Using current week:', currentWeek, '(previously was:', currentPipeline?.config?.week, ')')
 
-    // Re-run pipeline with fresh odds
-    const refreshedPipeline = await pipelineOrchestrator.runPipeline(
-      {
-        picksheetGames: currentPipeline.parsing.games
-      },
-      {
-        useOddsAPI: true,
-        useLLM: false, // Don't need LLM since we already have structured games
-        includeLogs: false,
-        matchingThreshold: currentPipeline.config?.matchingThreshold || 0.4,
-        week: currentWeek // Use dynamically detected week instead of old cached value
-      }
-    )
+    let refreshedPipeline
+
+    if (needsFullPipeline) {
+      // Run full pipeline with LLM parsing
+      console.log('Running full pipeline with LLM parsing from picksheet text')
+      refreshedPipeline = await pipelineOrchestrator.runPipeline(
+        {
+          text: picksheetText
+        },
+        {
+          useOddsAPI: true,
+          useLLM: true, // Use LLM to parse picksheet text
+          includeLogs: false,
+          matchingThreshold: currentPipeline?.config?.matchingThreshold || 0.4,
+          week: currentWeek
+        }
+      )
+    } else {
+      // Quick refresh with existing picksheet games
+      console.log('Refreshing market data with', picksheetGames.length, 'picksheet games')
+      refreshedPipeline = await pipelineOrchestrator.runPipeline(
+        {
+          picksheetGames: picksheetGames
+        },
+        {
+          useOddsAPI: true,
+          useLLM: false, // Don't need LLM since we already have structured games
+          includeLogs: false,
+          matchingThreshold: currentPipeline?.config?.matchingThreshold || 0.4,
+          week: currentWeek
+        }
+      )
+    }
 
     // Check if refresh found any matching games
     if (refreshedPipeline.matching?.matches === 0) {
@@ -85,6 +124,7 @@ export async function POST() {
       .upsert({
         id: 'current',
         pipeline_data: refreshedPipeline,
+        picksheet_text: picksheetText, // Preserve picksheet text
         updated_at: new Date().toISOString()
       } as any)
 
@@ -93,10 +133,14 @@ export async function POST() {
       // Still return the refreshed data even if save fails
     }
 
+    const message = needsFullPipeline
+      ? `Full pipeline completed successfully! ${refreshedPipeline.matching?.matches || 0} games matched.`
+      : `Market data refreshed successfully! ${refreshedPipeline.matching?.matches || 0} games matched.`
+
     return NextResponse.json({
       success: true,
       pipeline: refreshedPipeline,
-      message: `Market data refreshed successfully! ${refreshedPipeline.matching?.matches || 0} games matched.`
+      message
     })
   } catch (error) {
     console.error('Error refreshing pipeline:', error)

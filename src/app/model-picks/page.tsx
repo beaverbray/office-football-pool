@@ -61,59 +61,78 @@ export default function ModelPicksPage() {
   // Memoize EntityResolver instance
   const entityResolver = useMemo(() => new EntityResolver(), [])
 
-  // Pre-normalize all team names
+  // Pre-normalize all team names WITH league context
   const normalizedTeamCache = useMemo(() => {
     const cache = new Map<string, string>()
 
-    const normalizeTeam = (teamName: string): string | null => {
-      if (cache.has(teamName)) return cache.get(teamName)!
+    const normalizeTeam = (teamName: string, league?: 'NFL' | 'NCAA'): string | null => {
+      const cacheKey = league ? `${league}:${teamName}` : teamName
+      if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
       try {
-        const match =
-          entityResolver.findNFLTeamExact(teamName) ||
-          entityResolver.findNFLTeamFuzzy(teamName) ||
-          entityResolver.findNCAAFTeamExact(teamName) ||
-          entityResolver.findNCAAFTeamFuzzy(teamName)
+        let match
+
+        // If league is specified, check only that league
+        if (league === 'NFL') {
+          match = entityResolver.findNFLTeamExact(teamName) ||
+                  entityResolver.findNFLTeamFuzzy(teamName)
+        } else if (league === 'NCAA') {
+          match = entityResolver.findNCAAFTeamExact(teamName) ||
+                  entityResolver.findNCAAFTeamFuzzy(teamName)
+        } else {
+          // No league specified, try NFL first (for ELO predictions which are NFL-only), then NCAAF
+          match = entityResolver.findNFLTeamExact(teamName) ||
+                  entityResolver.findNFLTeamFuzzy(teamName) ||
+                  entityResolver.findNCAAFTeamExact(teamName) ||
+                  entityResolver.findNCAAFTeamFuzzy(teamName)
+        }
 
         const normalized = match?.matchedName || null
-        cache.set(teamName, normalized!)
+        cache.set(cacheKey, normalized!)
         return normalized
       } catch {
-        cache.set(teamName, null!)
+        cache.set(cacheKey, null!)
         return null
       }
     }
 
     currentPipeline?.comparison?.comparisons?.forEach(comp => {
-      normalizeTeam(comp.homeTeam)
-      normalizeTeam(comp.awayTeam)
+      normalizeTeam(comp.homeTeam, comp.league)
+      normalizeTeam(comp.awayTeam, comp.league)
     })
 
+    // ELO predictions are NFL-only
     eloPredictions.forEach(pred => {
-      normalizeTeam(pred.homeTeam)
-      normalizeTeam(pred.awayTeam)
+      normalizeTeam(pred.homeTeam, 'NFL')
+      normalizeTeam(pred.awayTeam, 'NFL')
     })
 
     return cache
   }, [eloPredictions, currentPipeline?.comparison?.comparisons, entityResolver])
 
-  // Memoize ELO prediction lookups
+  // Memoize ELO prediction lookups WITH league context
   const eloPredictionMap = useMemo(() => {
     const map = new Map<string, ELOPrediction>()
     if (!currentPipeline?.comparison?.comparisons) return map
 
+    // Build prediction index with NFL league context (ELO is NFL-only)
     const predictionIndex = new Map<string, ELOPrediction>()
     for (const pred of eloPredictions) {
-      const normalizedHome = normalizedTeamCache.get(pred.homeTeam)
-      const normalizedAway = normalizedTeamCache.get(pred.awayTeam)
+      const normalizedHome = normalizedTeamCache.get(`NFL:${pred.homeTeam}`)
+      const normalizedAway = normalizedTeamCache.get(`NFL:${pred.awayTeam}`)
+
       if (normalizedHome && normalizedAway) {
         predictionIndex.set(`${normalizedHome}|${normalizedAway}`, pred)
       }
     }
 
+    // Match predictions to comparisons using league-aware normalization
     for (const comp of currentPipeline.comparison.comparisons) {
-      const normalizedHome = normalizedTeamCache.get(comp.homeTeam)
-      const normalizedAway = normalizedTeamCache.get(comp.awayTeam)
+      const cacheKeyHome = comp.league ? `${comp.league}:${comp.homeTeam}` : comp.homeTeam
+      const cacheKeyAway = comp.league ? `${comp.league}:${comp.awayTeam}` : comp.awayTeam
+
+      const normalizedHome = normalizedTeamCache.get(cacheKeyHome)
+      const normalizedAway = normalizedTeamCache.get(cacheKeyAway)
 
       if (normalizedHome && normalizedAway) {
         const pred = predictionIndex.get(`${normalizedHome}|${normalizedAway}`)
@@ -380,7 +399,7 @@ export default function ModelPicksPage() {
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ%</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">REL%</th>
-                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">ELO</th>
+                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">MOD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800">
@@ -448,7 +467,7 @@ export default function ModelPicksPage() {
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ%</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">REL%</th>
-                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">ELO</th>
+                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">MOD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800">
