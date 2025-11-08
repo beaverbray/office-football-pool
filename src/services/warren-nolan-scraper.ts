@@ -148,100 +148,57 @@ export class WarrenNolanScraper {
     const scrapedAt = new Date().toISOString()
 
     try {
-      // Build URL with week parameter
-      // Warren Nolan uses type1 parameter to filter by week
-      const url = `${this.BASE_URL.replace('/2025/', `/${season}/`)}?type1=This%20Week,%20Week%20${week}&type2=All%20FBS%20Games`
+      // Get week boundaries from WeekDetector
+      // For NCAA: Week 0 starts Aug 24, Week 1 starts Aug 31, etc.
+      const seasonStart = new Date(season, 7, 24) // August 24 (month is 0-indexed)
+      const weekStartDate = new Date(seasonStart)
+      weekStartDate.setDate(seasonStart.getDate() + (week * 7))
 
-      console.log(`Fetching Warren Nolan predictions for Week ${week} from: ${url}`)
+      // Calculate end date (7 days later)
+      const weekEndDate = new Date(weekStartDate)
+      weekEndDate.setDate(weekStartDate.getDate() + 6)
 
-      // Fetch the page
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; OfficeFootballPool/1.0)',
-        },
-      })
+      // Collect predictions for all 7 days of the week
+      const allPredictions: WarrenNolanPrediction[] = []
+      const errors: string[] = []
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      console.log(`Fetching Warren Nolan predictions for Week ${week} (${season})`)
+      console.log(`  Week range: ${weekStartDate.toISOString().split('T')[0]} to ${weekEndDate.toISOString().split('T')[0]}`)
 
-      const html = await response.text()
-      const $ = cheerio.load(html)
+      // Iterate through each day of the week (7 days)
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const currentDate = new Date(weekStartDate)
+        currentDate.setDate(weekStartDate.getDate() + dayOffset)
+        const dateString = currentDate.toISOString().split('T')[0]
 
-      const predictions: WarrenNolanPrediction[] = []
-
-      // Warren Nolan uses div.pbox structure for each game
-      $('div.pbox').each((index, pboxElement) => {
         try {
-          const $pbox = $(pboxElement)
+          console.log(`  Fetching games for ${dateString}...`)
+          const dayResult = await this.scrapePredictions(dateString)
 
-          // Get game time from the header row
-          const gameTime = $pbox.find('.pbox__info-top-row .time-clock').text().trim()
-          if (!gameTime) return
-
-          // Get away team (team1) data
-          const $awayRow = $pbox.find('.pbox__info-team1-row')
-          const awayTeam = this.cleanTeamName($awayRow.find('.team-info .blue-black').first().text().trim())
-          const awayValues = $awayRow.find('td.value')
-          const awayTotal = $(awayValues[0]).text().trim() // O/U total
-          const awayProbText = $(awayValues[1]).text().trim() // Win probability
-          const awayConfidence = $(awayValues[2]).text().trim()
-
-          // Get home team (team2) data
-          const $homeRow = $pbox.find('.pbox__info-team2-row')
-          const homeTeam = this.cleanTeamName($homeRow.find('.team-info .blue-black').first().text().trim())
-          const homeValues = $homeRow.find('td.value')
-          const homeSpreadText = $(homeValues[0]).text().trim() // Spread
-          const homeProbText = $(homeValues[1]).text().trim() // Win probability
-          const homeConfidence = $(homeValues[2]).text().trim()
-
-          // Skip if essential data is missing
-          if (!awayTeam || !homeTeam) return
-
-          // Parse home team spread (negative means home is favored)
-          const homeSpread = parseFloat(homeSpreadText.replace(/[^\d.-]/g, ''))
-          if (isNaN(homeSpread)) return
-
-          // Parse win probabilities
-          const awayWinProb = parseFloat(awayProbText.replace('%', '').trim())
-          const homeWinProb = parseFloat(homeProbText.replace('%', '').trim())
-
-          // Determine predicted winner based on higher win probability
-          const predictedWinner: 'home' | 'away' = homeWinProb > awayWinProb ? 'home' : 'away'
-          const winProbability = Math.max(awayWinProb, homeWinProb)
-
-          // Use the confidence from the team with higher win probability
-          const confidenceText = homeWinProb > awayWinProb ? homeConfidence : awayConfidence
-          const confidence = this.parseConfidence(confidenceText)
-
-          // Parse over/under total
-          const overUnder = parseFloat(awayTotal)
-
-          predictions.push({
-            gameTime,
-            awayTeam,
-            homeTeam,
-            predictedWinner,
-            winProbability,
-            confidence,
-            spread: Math.abs(homeSpread),
-            overUnder: !isNaN(overUnder) ? overUnder : undefined,
-          })
+          if (dayResult.success && dayResult.predictions.length > 0) {
+            allPredictions.push(...dayResult.predictions)
+            console.log(`    Found ${dayResult.predictions.length} games`)
+          }
         } catch (err) {
-          console.warn('Error parsing game box:', err)
-          // Continue processing other games
+          const errorMsg = err instanceof Error ? err.message : 'Unknown error'
+          console.warn(`  Error fetching ${dateString}: ${errorMsg}`)
+          errors.push(`${dateString}: ${errorMsg}`)
+          // Continue to next day
         }
-      })
 
-      if (predictions.length === 0) {
-        throw new Error(`No games found for Week ${week}. The week may not have data yet or the season has ended.`)
+        // Add a small delay between requests to be respectful
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      console.log(`Successfully scraped ${predictions.length} predictions for Week ${week}`)
+      if (allPredictions.length === 0) {
+        throw new Error(`No games found for Week ${week}. ${errors.length > 0 ? 'Errors: ' + errors.join('; ') : 'The week may not have data yet or the season has ended.'}`)
+      }
+
+      console.log(`Successfully scraped ${allPredictions.length} total predictions for Week ${week}`)
 
       return {
         success: true,
-        predictions,
+        predictions: allPredictions,
         scrapedAt,
         week,
         season,
@@ -298,15 +255,19 @@ export class WarrenNolanScraper {
   }
 
   /**
-   * Format date for URL (e.g., "October 4" from "2025-10-04")
+   * Format date for URL (e.g., "Friday, November 7" from "2025-11-07")
    */
   private static formatDateForUrl(date: string): string {
     const d = new Date(date + 'T12:00:00Z') // Add time to avoid timezone issues
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ]
-    return `${months[d.getUTCMonth()]}%20${d.getUTCDate()}`
+    const dayName = days[d.getUTCDay()]
+    const monthName = months[d.getUTCMonth()]
+    const dayNum = d.getUTCDate()
+    return `${dayName},%20${monthName}%20${dayNum}`
   }
 
   /**
