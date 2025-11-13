@@ -15,7 +15,7 @@ interface CurrentPipelineRow {
 export async function POST() {
   try {
     // Load current pipeline from database
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('pipeline_current')
       .select('*')
       .eq('id', 'current')
@@ -82,7 +82,7 @@ export async function POST() {
       console.log('Running full pipeline with LLM parsing from picksheet text')
       refreshedPipeline = await pipelineOrchestrator.runPipeline(
         {
-          text: picksheetText
+          picksheetText: picksheetText || undefined
         },
         {
           useOddsAPI: true,

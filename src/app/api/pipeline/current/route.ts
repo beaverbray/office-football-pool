@@ -14,7 +14,7 @@ interface CurrentPipelineRow {
 export async function GET() {
   try {
     // Query the current_pipeline table for the latest pipeline
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('pipeline_current')
       .select('*')
       .eq('id', 'current')

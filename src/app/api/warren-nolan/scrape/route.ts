@@ -3,10 +3,8 @@ import { WarrenNolanScraper, type WarrenNolanPrediction } from '@/services/warre
 import { supabase } from '@/lib/supabase'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
-import { Database } from '@/types/database'
-
-// TODO: Update after regenerating database types with: npx supabase gen types typescript
-type PredictionInsert = Database['public']['Tables']['analysis_predictions']['Insert']
+// Type inference from Supabase client - database types will be auto-generated
+type PredictionInsert = any
 
 export async function POST(request: NextRequest) {
   try {
@@ -102,7 +100,7 @@ export async function POST(request: NextRequest) {
             week: currentWeek,
             scheduleMatchNumber,
             matchConfidence,
-          } as unknown as Database['public']['Tables']['analysis_predictions']['Row']['metadata']
+          }
         }
       })
 

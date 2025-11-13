@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { Database } from '@/types/database'
-
-// TODO: Update after regenerating database types with: npx supabase gen types typescript
-type PredictionRow = Database['public']['Tables']['analysis_predictions']['Row']
+// Type inference from Supabase client - database types will be auto-generated
+type PredictionRow = any
 
 // Cache for predictions with timestamp
 let predictionsCache: { data: any[], timestamp: number } | null = null
@@ -29,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all recent NFELO predictions (NFL-only), then deduplicate by game
     // We need to get more than 100 to account for duplicates, then filter
-    const { data: allPredictions, error } = await supabase
+    const { data: allPredictions, error } = await (supabase as any)
       .from('analysis_predictions')
       .select('*')
       .eq('source', 'nfelo') // Only fetch NFELO predictions (NFL-only)

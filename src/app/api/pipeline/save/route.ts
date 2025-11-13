@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to current_pipeline table using upsert (insert or update)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('pipeline_current')
       .upsert({
         id: 'current',

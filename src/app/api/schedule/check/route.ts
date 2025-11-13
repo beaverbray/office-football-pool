@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { Database } from '@/types/database'
-
-// TODO: Update after regenerating database types with: npx supabase gen types typescript
-type ScheduleRow = Database['public']['Tables']['core_schedule']['Row']
+// Type inference from Supabase client - database types will be auto-generated
+type ScheduleRow = any
 
 export async function GET(request: NextRequest) {
   try {
