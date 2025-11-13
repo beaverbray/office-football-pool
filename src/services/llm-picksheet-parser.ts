@@ -121,6 +121,8 @@ export class LLMPicksheetParser {
    * @param scheduleGames - Optional schedule games for the week to use as matching context
    */
   static async parseWithLLM(text: string, scheduleGames?: any[]): Promise<ParsedPicksheet> {
+    const parseStartTime = Date.now()
+
     try {
       // Check API key
       const apiKey = process.env.OPENAI_API_KEY
@@ -134,8 +136,6 @@ export class LLMPicksheetParser {
         first10: apiKey.substring(0, 10),
         last5: apiKey.substring(apiKey.length - 5)
       })
-
-      const parseStartTime = Date.now()
 
       // Initialize OpenAI client only when needed
       const openai = new OpenAI({
