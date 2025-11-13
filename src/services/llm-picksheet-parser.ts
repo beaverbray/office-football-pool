@@ -135,12 +135,13 @@ export class LLMPicksheetParser {
         last5: apiKey.substring(apiKey.length - 5)
       })
 
+      const parseStartTime = Date.now()
+
       // Initialize OpenAI client only when needed
       const openai = new OpenAI({
         apiKey: apiKey,
       })
 
-      const parseStartTime = Date.now()
       console.log('\n⏱️  [LLM-PARSER] Starting LLM parse')
       console.log(`   • Text length: ${text.length} chars`)
       console.log(`   • Schedule games: ${scheduleGames?.length || 0}`)
