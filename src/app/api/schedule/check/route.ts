@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     let weekCount = 0
     let weekGames: ScheduleRow[] = []
     if (week) {
-      const { data: weekGameData, count, error: weekCountError } = await supabase
+      const { data: weekGameData, count, error: weekCountError } = await (supabase as any)
         .from('core_schedule')
         .select('*', { count: 'exact' })
         .eq('week', parseInt(week))
