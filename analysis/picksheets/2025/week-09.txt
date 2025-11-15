@@ -1,0 +1,64 @@
+ 1 pt 	Jacksonville State (6-3) -5.5	Wed 4:30 PM	MIDDLE TENN (1-8) +5.5
+ 1 pt 	FIU (4-5) +3.5	Wed 5:00 PM	MISSOURI STATE (6-3) -3.5
+ 1 pt 	Marshall (4-5) -5.5	Thu 4:30 PM	COASTAL CAROLINA (6-3) +5.5
+ 1 pt 	Tulane (7-2) -3.5	Thu 4:30 PM	UTSA (4-5) +3.5
+ 1 pt 	Baltimore (4-5) -7.5	Thu 5:15 PM	MIAMI (3-7) +7.5
+ 1 pt 	Memphis (8-2) -14.5	Fri 4:00 PM	RICE (5-5) +14.5
+ 1 pt 	North Carolina (4-5) +1.5	Fri 4:30 PM	SYRACUSE (3-7) -1.5
+ 1 pt 	Sam Houston State (1-8) +16.5	Fri 5:00 PM	LOUISIANA TECH (5-4) -16.5
+ 1 pt 	Buffalo (5-5) +1.5	Sat 9:00 AM	BOWLING GREEN (3-7) -1.5
+ 1 pt 	Penn St. (3-6) +20.5	Sat 9:00 AM	#1 OHIO ST. (9-0) -20.5
+ 1 pt 	UCF (4-5) +4.5	Sat 9:00 AM	BAYLOR (5-4) -4.5
+ 1 pt 	West Virginia (4-6) +13.5	Sat 9:00 AM	HOUSTON (8-2) -13.5
+ 1 pt 	UAB (3-6) +11.5	Sat 9:00 AM	CONNECTICUT (7-3) -11.5
+ 1 pt 	Rutgers (5-5) +12.5	Sat 9:00 AM	ILLINOIS (6-3) -12.5
+ 1 pt 	Navy (7-2) +6.5	Sat 9:00 AM	NORTH TEXAS (8-1) -6.5
+ 1 pt 	#16 Miami Fla (7-2) -11.5	Sat 9:00 AM	SMU (7-3) +11.5
+ 1 pt 	#13 Vanderbilt (8-2) +1.5	Sat 9:00 AM	#10 TEXAS (7-2) -1.5
+ 1 pt 	Army (5-4) +0.5	Sat 9:00 AM	AIR FORCE (3-6) -0.5
+ 1 pt 	Duke (5-4) +3.5	Sat 9:00 AM	CLEMSON (5-5) -3.5
+ 1 pt 	Arizona St. (6-3) +5.5	Sat 10:00 AM	IOWA ST. (6-4) -5.5
+ 1 pt 	East Carolina (6-3) -4.5	Sat 11:00 AM	TEMPLE (5-5) +4.5
+ 1 pt 	New Mexico (6-3) +4.5	Sat 12:00 PM	UNLV (8-2) -4.5
+ 1 pt 	#19 Louisville (7-3) -10.5	Sat 12:00 PM	VIRGINIA TECH (3-6) +10.5
+ 1 pt 	#8 Texas Tech (9-1) -7.5	Sat 12:30 PM	KANSAS ST. (4-5) +7.5
+ 1 pt 	New Mexico St. (3-6) +9.5	Sat 12:30 PM	WESTERN KENTUCKY (7-2) -9.5
+ 1 pt 	UL Lafayette (4-6) +4.5	Sat 12:30 PM	SOUTH ALABAMA (2-7) -4.5
+ 1 pt 	Michigan St. (3-6) +3.5	Sat 12:30 PM	MINNESOTA (6-4) -3.5
+ 1 pt 	Delaware (5-4) +3.5	Sat 12:30 PM	LIBERTY (4-5) -3.5
+ 1 pt 	Fresno St. (6-3) +17.5	Sat 12:30 PM	BOISE ST. (6-3) -17.5
+ 1 pt 	#23 Pittsburgh (7-2) -14.5	Sat 12:30 PM	STANFORD (3-7) +14.5
+ 1 pt 	#9 Notre Dame (7-2) -28.5	Sat 12:30 PM	BOSTON COLLEGE (1-9) +28.5
+ 1 pt 	#2 Indiana (10-0) -21.5	Sat 12:30 PM	MARYLAND (4-5) +21.5
+ 1 pt 	Old Dominion (7-3) -16.5	Sat 12:30 PM	UL MONROE (3-6) +16.5
+ 1 pt 	#5 Georgia (8-1) -7.5	Sat 12:30 PM	FLORIDA (3-6) +7.5
+ 1 pt 	#20 Virginia (8-2) -3.5	Sat 12:45 PM	CALIFORNIA (6-4) +3.5
+ 1 pt 	Oklahoma St. (1-8) +24.5	Sat 1:00 PM	KANSAS (5-5) -24.5
+ 1 pt 	Mississippi St. (5-5) +4.5	Sat 1:00 PM	ARKANSAS (2-7) -4.5
+ 1 pt 	Central Mich (6-4) +4.5	Sat 1:00 PM	WESTERN MICH (6-4) -4.5
+ 1 pt 	Wyoming (4-5) +10.5	Sat 4:00 PM	SAN DIEGO ST. (7-2) -10.5
+ 1 pt 	Arizona (6-3) -4.5	Sat 4:00 PM	COLORADO (3-7) +4.5
+ 1 pt 	South Carolina (3-6) +12.5	Sat 4:00 PM	#6 MISSISSIPPI (9-1) -12.5
+ 1 pt 	Purdue (2-8) +20.5	Sat 4:00 PM	#18 MICHIGAN (7-2) -20.5
+ 1 pt 	Kentucky (4-5) +10.5	Sat 4:30 PM	AUBURN (4-6) -10.5
+ 1 pt 	#14 Georgia Tech (8-1) -5.5	Sat 4:30 PM	NO CAROLINA ST. (5-4) +5.5
+ 1 pt 	Wake Forest (6-3) +8.5	Sat 4:30 PM	FLORIDA ST. (4-5) -8.5
+ 1 pt 	Washington St. (4-5) -3.5	Sat 4:30 PM	OREGON ST. (2-8) +3.5
+ 1 pt 	#11 Oklahoma (7-2) +2.5	Sat 4:30 PM	#21 TENNESSEE (6-3) -2.5
+ 1 pt 	#17 USC (7-2) -6.5	Sat 4:30 PM	NEBRASKA (7-3) +6.5
+ 1 pt 	Arkansas St. (5-5) +7.5	Sat 5:00 PM	TROY (6-4) -7.5
+ 1 pt 	#22 Cincinnati (7-2) +8.5	Sat 7:15 PM	#15 UTAH (7-2) -8.5
+ 1 pt 	Hawaii (7-3) +2.5	Sat 7:30 PM	SAN JOSE ST. (3-6) -2.5
+ 1 pt 	Denver (8-2) +1.5	Sun 10:00 AM	HOUSTON (4-5) -1.5
+ 1 pt 	San Francisco (6-4) -2.5	Sun 10:00 AM	NY GIANTS (2-8) +2.5
+ 1 pt 	Indianapolis (8-2) -3.5	Sun 10:00 AM	PITTSBURGH (5-4) +3.5
+ 1 pt 	Carolina (5-5) +12.5	Sun 10:00 AM	GREEN BAY (5-3-1) -12.5
+ 1 pt 	Minnesota (4-5) +8.5	Sun 10:00 AM	DETROIT (6-3) -8.5
+ 1 pt 	LA Chargers (7-3) -10.5	Sun 10:00 AM	TENNESSEE (1-8) +10.5
+ 1 pt 	Atlanta (3-6) +5.5	Sun 10:00 AM	NEW ENGLAND (9-2) -5.5
+ 1 pt 	Chicago (6-3) -2.5	Sun 10:00 AM	CINCINNATI (3-6) +2.5
+ 1 pt 	Jacksonville (5-4) -3.5	Sun 1:05 PM	LAS VEGAS (2-7) +3.5
+ 1 pt 	New Orleans (2-8) +13.5	Sun 1:05 PM	LA RAMS (7-2) -13.5
+ 1 pt 	Kansas City (5-4) -1.5	Sun 1:25 PM	BUFFALO (6-3) +1.5
+ 1 pt 	Seattle (7-2) -3.5	Sun 5:20 PM	WASHINGTON (3-7) +3.5
+ 1 pt 	Arizona (3-6) +2.5	Mon 5:15 PM	DALLAS (3-5-1) -2.5

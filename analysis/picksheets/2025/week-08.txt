@@ -1,0 +1,64 @@
+ 1 pt 	Middle Tenn (1-8) +8.5	Wed 4:30 PM	DELAWARE (5-4) -8.5
+ 1 pt 	Missouri State (6-3) -1.5	Wed 6:00 PM	NEW MEXICO ST. (3-6) +1.5
+ 1 pt 	South Alabama (2-7) -6.5	Thu 4:30 PM	GEORGIA ST. (1-8) +6.5
+ 1 pt 	Minnesota (4-5) +3.5	Thu 5:15 PM	LA CHARGERS (7-3) -3.5
+ 1 pt 	North Texas (8-1) -26.5	Fri 4:00 PM	CHARLOTTE 49ERS (1-8) +26.5
+ 1 pt 	California (6-4) +4.5	Fri 4:30 PM	VIRGINIA TECH (3-6) -4.5
+ 1 pt 	Boise St. (6-3) -21.5	Fri 7:00 PM	NEVADA (1-8) +21.5
+ 1 pt 	Bowling Green (3-7) -8.5	Sat 9:00 AM	KENT STATE (4-6) +8.5
+ 1 pt 	Kansas St. (4-5) +2.5	Sat 9:00 AM	KANSAS (5-5) -2.5
+ 1 pt 	#25 S. Florida (7-2) -4.5	Sat 9:00 AM	MEMPHIS (8-2) +4.5
+ 1 pt 	Appalachian State (4-5) +13.5	Sat 9:00 AM	OLD DOMINION (7-3) -13.5
+ 1 pt 	Rutgers (5-5) -2.5	Sat 9:00 AM	PURDUE (2-8) +2.5
+ 1 pt 	Ohio (6-4) -12.5	Sat 9:00 AM	EASTERN MICH (3-7) +12.5
+ 1 pt 	SMU (7-3) -3.5	Sat 9:00 AM	WAKE FOREST (6-3) +3.5
+ 1 pt 	UCLA (3-6) +24.5	Sat 9:00 AM	#2 INDIANA (10-0) -24.5
+ 1 pt 	Northwestern (5-4) +7.5	Sat 9:00 AM	NEBRASKA (7-3) -7.5
+ 1 pt 	Syracuse (3-7) +17.5	Sat 9:00 AM	#14 GEORGIA TECH (8-1) -17.5
+ 1 pt 	#20 Virginia (8-2) -10.5	Sat 9:00 AM	NORTH CAROLINA (4-5) +10.5
+ 1 pt 	#6 Mississippi (9-1) +4.5	Sat 9:00 AM	#11 OKLAHOMA (7-2) -4.5
+ 1 pt 	Auburn (4-6) +0.5	Sat 9:45 AM	ARKANSAS (2-7) -0.5
+ 1 pt 	Akron (4-7) +9.5	Sat 10:00 AM	BUFFALO (5-5) -9.5
+ 1 pt 	Connecticut (7-3) -10.5	Sat 12:00 PM	RICE (5-5) +10.5
+ 1 pt 	Utah St. (5-4) +2.5	Sat 12:00 PM	NEW MEXICO (6-3) -2.5
+ 1 pt 	Illinois (6-3) +4.5	Sat 12:30 PM	WASHINGTON (6-3) -4.5
+ 1 pt 	Temple (5-5) -6.5	Sat 12:30 PM	TULSA (2-7) +6.5
+ 1 pt 	No Carolina St. (5-4) +6.5	Sat 12:30 PM	#23 PITTSBURGH (7-2) -6.5
+ 1 pt 	San Diego St. (7-2) -3.5	Sat 12:30 PM	FRESNO ST. (6-3) +3.5
+ 1 pt 	Massachusetts (0-10) +16.5	Sat 12:30 PM	CENTRAL MICH (6-4) -16.5
+ 1 pt 	Western Mich (6-4) +2.5	Sat 12:30 PM	MIAMI OHIO (5-5) -2.5
+ 1 pt 	Ball St. (4-5) +5.5	Sat 12:30 PM	NORTHERN ILL (3-7) -5.5
+ 1 pt 	#4 Alabama (8-1) -12.5	Sat 12:30 PM	SOUTH CAROLINA (3-6) +12.5
+ 1 pt 	Florida Atl. (4-5) +15.5	Sat 12:30 PM	NAVY (7-2) -15.5
+ 1 pt 	Missouri (6-3) +2.5	Sat 12:30 PM	#13 VANDERBILT (8-2) -2.5
+ 1 pt 	UL Monroe (3-6) +12.5	Sat 12:30 PM	SOUTHERN MISS (7-2) -12.5
+ 1 pt 	Minnesota (6-4) +8.5	Sat 12:30 PM	IOWA (6-3) -8.5
+ 1 pt 	#12 BYU (8-1) +2.5	Sat 12:30 PM	IOWA ST. (6-4) -2.5
+ 1 pt 	Toledo (6-4) +1.5	Sat 12:30 PM	WASHINGTON ST. (4-5) -1.5
+ 1 pt 	Oklahoma St. (1-8) +38.5	Sat 1:00 PM	#8 TEXAS TECH (9-1) -38.5
+ 1 pt 	Baylor (5-4) +4.5	Sat 1:00 PM	#22 CINCINNATI (7-2) -4.5
+ 1 pt 	#10 Texas (7-2) -6.5	Sat 1:15 PM	MISSISSIPPI ST. (5-5) +6.5
+ 1 pt 	TCU (6-3) -15.5	Sat 3:00 PM	WEST VIRGINIA (4-6) +15.5
+ 1 pt 	Stanford (3-7) +30.5	Sat 4:00 PM	#16 MIAMI FLA (7-2) -30.5
+ 1 pt 	UL Lafayette (4-6) +9.5	Sat 4:00 PM	TROY (6-4) -9.5
+ 1 pt 	Georgia Southern (4-5) +2.5	Sat 4:00 PM	ARKANSAS ST. (5-5) -2.5
+ 1 pt 	Wisconsin (3-6) +33.5	Sat 4:00 PM	#7 OREGON (9-1) -33.5
+ 1 pt 	#3 Texas A&M (9-0) -2.5	Sat 4:30 PM	LSU (5-4) +2.5
+ 1 pt 	#18 Michigan (7-2) -13.5	Sat 4:30 PM	MICHIGAN ST. (3-6) +13.5
+ 1 pt 	Colorado St. (2-7) +5.5	Sat 4:30 PM	WYOMING (4-5) -5.5
+ 1 pt 	Boston College (1-9) +25.5	Sat 4:30 PM	#19 LOUISVILLE (7-3) -25.5
+ 1 pt 	#21 Tennessee (6-3) -9.5	Sat 4:45 PM	KENTUCKY (4-5) +9.5
+ 1 pt 	Houston (8-2) +7.5	Sat 5:00 PM	ARIZONA ST. (6-3) -7.5
+ 1 pt 	Colorado (3-7) +13.5	Sat 7:15 PM	#15 UTAH (7-2) -13.5
+ 1 pt 	NY Jets (2-8) +6.5	Sun 10:00 AM	CINCINNATI (3-6) -6.5
+ 1 pt 	Buffalo (6-3) -7.5	Sun 10:00 AM	CAROLINA (5-5) +7.5
+ 1 pt 	San Francisco (6-4) +0.5	Sun 10:00 AM	HOUSTON (4-5) -0.5
+ 1 pt 	NY Giants (2-8) +7.5	Sun 10:00 AM	PHILADELPHIA (7-2) -7.5
+ 1 pt 	Cleveland (2-7) +6.5	Sun 10:00 AM	NEW ENGLAND (9-2) -6.5
+ 1 pt 	Chicago (6-3) +6.5	Sun 10:00 AM	BALTIMORE (4-5) -6.5
+ 1 pt 	Miami (3-7) +7.5	Sun 10:00 AM	ATLANTA (3-6) -7.5
+ 1 pt 	Tampa Bay (6-3) -4.5	Sun 1:05 PM	NEW ORLEANS (2-8) +4.5
+ 1 pt 	Dallas (3-5-1) +3.5	Sun 1:25 PM	DENVER (8-2) -3.5
+ 1 pt 	Tennessee (1-8) +14.5	Sun 1:25 PM	INDIANAPOLIS (8-2) -14.5
+ 1 pt 	Green Bay (5-3-1) -3.5	Sun 5:20 PM	PITTSBURGH (5-4) +3.5
+ 1 pt 	Washington (3-7) +10.5	Mon 5:15 PM	KANSAS CITY (5-4) -10.5

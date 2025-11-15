@@ -1,0 +1,50 @@
+{
+  "name": "office-football-pool",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "load-historical-data": "tsx scripts/load-historical-data.ts",
+    "load-historical-data:dry-run": "tsx scripts/load-historical-data.ts --dry-run",
+    "load-picksheets": "tsx scripts/load-picksheets.ts",
+    "load-picksheets:dry-run": "tsx scripts/load-picksheets.ts --dry-run",
+    "fetch-odds": "tsx scripts/fetch-odds-cron.ts",
+    "fetch-odds:nfl": "tsx scripts/fetch-odds-cron.ts nfl",
+    "fetch-odds:ncaaf": "tsx scripts/fetch-odds-cron.ts ncaaf",
+    "analyze-patterns": "tsx scripts/analyze-patterns.ts",
+    "analyze-patterns:nfl": "tsx scripts/analyze-patterns.ts --league=NFL",
+    "analyze-patterns:ncaaf": "tsx scripts/analyze-patterns.ts --league=NCAAF"
+  },
+  "dependencies": {
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "cheerio": "^1.1.2",
+    "csv-parse": "^6.1.0",
+    "fuse.js": "^7.1.0",
+    "nanoid": "^5.1.5",
+    "next": "14.2.3",
+    "openai": "^5.19.1",
+    "papaparse": "^5.5.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.3",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.3",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.6",
+    "typescript": "^5"
+  }
+}

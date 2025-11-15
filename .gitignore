@@ -36,3 +36,32 @@ next-env.d.ts
 
 # Gap analysis directory
 gap_analysis/
+
+# Python artifacts
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+
+# SQL backups and debug files (root only)
+/*.sql
+/*_backup.sql
+/docker_*.sql
+
+# Test and debug files
+/test-*.txt
+/test-*.md
+/test-*.sh
+/check-*.sql
+/debug-*.sql
+/check-*.mjs
+
+# Temporary directories
+.temp/
+backups/
+
+# Build artifacts
+tsconfig.tsbuildinfo
+*.tsbuildinfo

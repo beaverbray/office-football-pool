@@ -1,0 +1,2 @@
+# This file ensures the picksheets directory structure is tracked in git
+# Individual picksheet .txt files can be committed or gitignored as needed
