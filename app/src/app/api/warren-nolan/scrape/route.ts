@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { WarrenNolanScraper, type WarrenNolanPrediction } from '@/services/warren-nolan-scraper'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
 // Type inference from Supabase client - database types will be auto-generated
@@ -104,7 +104,11 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      const { data, error } = await supabase
+      if (!supabaseAdmin) {
+        throw new Error('Service role key not configured')
+      }
+
+      const { data, error } = await supabaseAdmin
         .from('analysis_predictions')
         .insert(dbRecords as any)
         .select()

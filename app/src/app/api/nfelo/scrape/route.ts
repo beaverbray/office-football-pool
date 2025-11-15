@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { NFELOScraper } from '@/services/nfelo-scraper'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
 // Type inference from Supabase client - database types will be auto-generated
@@ -102,7 +102,11 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      const { error: insertError } = await supabase
+      if (!supabaseAdmin) {
+        throw new Error('Service role key not configured')
+      }
+
+      const { error: insertError } = await supabaseAdmin
         .from('analysis_predictions')
         .insert(predictionRecords as any)
 
