@@ -13,18 +13,25 @@ import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
 import { OddsAPIService, OddsResponse, MARKETS } from './odds-api'
 
-// Supabase client configuration
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Lazy-load Supabase client to avoid build-time errors
+let supabase: ReturnType<typeof createClient<Database>> | null = null
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing SUPABASE environment variables for odds fetcher')
+function getSupabaseClient() {
+  if (supabase) return supabase
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing SUPABASE environment variables for odds fetcher')
+  }
+
+  supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    db: { schema: 'afbp' as any }
+  })
+
+  return supabase
 }
-
-// Use service role key for server-side operations
-const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  db: { schema: 'afbp' as any }
-})
 
 export interface OddsSnapshot {
   event_id?: string
@@ -61,11 +68,11 @@ export class OddsFetcherService {
   ): Promise<string | null> {
     try {
       // First try to find existing event
-      const { data: existingEvent, error: findError } = await supabase
+      const { data: existingEvent, error: findError } = await getSupabaseClient()
         .from('events')
         .select('id')
         .eq('provider_event_id', providerEventId)
-        .single()
+        .maybeSingle<{ id: string }>()
 
       if (existingEvent && !findError) {
         return existingEvent.id
@@ -174,7 +181,7 @@ export class OddsFetcherService {
     for (let i = 0; i < snapshots.length; i += batchSize) {
       const batch = snapshots.slice(i, i + batchSize)
 
-      const { error } = await supabase
+      const { error } = await getSupabaseClient()
         .from('odds_snapshots')
         .insert(batch as any) // Cast needed due to schema type differences
 
@@ -276,7 +283,7 @@ export class OddsFetcherService {
    * Get latest odds for a specific event
    */
   async getLatestOddsForEvent(eventId: string): Promise<any[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('odds_snapshots')
       .select('*')
       .eq('event_id', eventId)
@@ -299,7 +306,7 @@ export class OddsFetcherService {
     book: string,
     market: string = 'spread'
   ): Promise<any[]> {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('odds_snapshots')
       .select('*')
       .eq('event_provider_key', eventProviderKey)

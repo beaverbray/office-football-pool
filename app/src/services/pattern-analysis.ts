@@ -102,7 +102,19 @@ export class PatternAnalysisService {
       ORDER BY league, bias_direction
     `
 
-    const { data, error } = await supabase.rpc('exec_sql' as any, { sql: query }) as any
+    // Note: This requires a custom RPC function 'exec_sql' in the database
+    // If not available, this will fail gracefully
+    let data: any = null
+    let error: any = null
+
+    try {
+      const result = await (supabase as any).rpc('exec_sql', { sql: query })
+      data = result.data
+      error = result.error
+    } catch (e) {
+      console.warn('exec_sql RPC not available, returning empty analysis')
+      return { overall: this.getEmptySpreadBias(), by_league: {} }
+    }
 
     if (error) {
       console.error('Error analyzing spread bias:', error)
@@ -175,7 +187,17 @@ export class PatternAnalysisService {
       ORDER BY league
     `
 
-    const { data, error } = await supabase.rpc('exec_sql' as any, { sql: query }) as any
+    let data: any = null
+    let error: any = null
+
+    try {
+      const result = await (supabase as any).rpc('exec_sql', { sql: query })
+      data = result.data
+      error = result.error
+    } catch (e) {
+      console.warn('exec_sql RPC not available, returning empty analysis')
+      return []
+    }
 
     if (error || !data) {
       console.error('Error analyzing league patterns:', error)
@@ -224,7 +246,24 @@ export class PatternAnalysisService {
 
     // Replace parameterized query with direct substitution for now
     const finalQuery = query.replace('$1', `'${league}'`)
-    const { data, error } = await supabase.rpc('exec_sql' as any, { sql: finalQuery }) as any
+
+    let data: any = null
+    let error: any = null
+
+    try {
+      const result = await (supabase as any).rpc('exec_sql', { sql: finalQuery })
+      data = result.data
+      error = result.error
+    } catch (e) {
+      console.warn('exec_sql RPC not available, returning empty analysis')
+      return keyNumbers.map(kn => ({
+        key_number: kn,
+        occurrences: 0,
+        pool_advantage_rate: 0,
+        avg_edge_when_crossed: 0,
+        push_rate_change: 0
+      }))
+    }
 
     if (error || !data) {
       console.error('Error analyzing key numbers:', error)
@@ -279,7 +318,17 @@ export class PatternAnalysisService {
       ORDER BY league, n_games DESC
     `
 
-    const { data, error } = await supabase.rpc('exec_sql' as any, { sql: query }) as any
+    let data: any = null
+    let error: any = null
+
+    try {
+      const result = await (supabase as any).rpc('exec_sql', { sql: query })
+      data = result.data
+      error = result.error
+    } catch (e) {
+      console.warn('exec_sql RPC not available, returning empty analysis')
+      return []
+    }
 
     if (error || !data) {
       console.error('Error analyzing historical spread buckets:', error)
