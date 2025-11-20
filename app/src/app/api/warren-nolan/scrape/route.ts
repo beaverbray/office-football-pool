@@ -13,14 +13,18 @@ export async function POST(request: NextRequest) {
 
     console.log('Warren Nolan scrape request:', { date, week, season, saveToDB })
 
+    // ESPN shows upcoming week, so subtract 1 to get current/recent week
+    const adjustedWeek = week !== undefined ? Math.max(0, week - 1) : week
+    console.log(`Adjusted week from ${week} to ${adjustedWeek} (ESPN shows upcoming games)`)
+
     // Scrape predictions - prioritize week-based scraping
     let result: any
-    if (week !== undefined && season) {
-      result = await WarrenNolanScraper.scrapePredictionsByWeek(season, week)
-    } else if (week !== undefined) {
+    if (adjustedWeek !== undefined && season) {
+      result = await WarrenNolanScraper.scrapePredictionsByWeek(season, adjustedWeek)
+    } else if (adjustedWeek !== undefined) {
       // Use current season if not specified
       const currentSeason = new Date().getFullYear()
-      result = await WarrenNolanScraper.scrapePredictionsByWeek(currentSeason, week)
+      result = await WarrenNolanScraper.scrapePredictionsByWeek(currentSeason, adjustedWeek)
     } else if (date) {
       result = await WarrenNolanScraper.scrapePredictions(date)
     } else {
@@ -56,15 +60,23 @@ export async function POST(request: NextRequest) {
       // Load schedule for the week to match predictions (NCAA)
       const scheduleGames = await ScheduleService.getGamesByWeek(currentWeek, 'NCAA')
 
+      console.log(`Loaded ${scheduleGames.length} schedule games for week ${currentWeek}`)
+      if (scheduleGames.length > 0) {
+        console.log(`Sample schedule game: ${scheduleGames[0].away_team} @ ${scheduleGames[0].home_team}`)
+      }
+      if (result.predictions.length > 0) {
+        console.log(`Sample prediction: ${result.predictions[0].awayTeam} @ ${result.predictions[0].homeTeam}`)
+      }
+
       if (scheduleGames.length === 0) {
         console.warn(`No NCAA schedule games found for week ${currentWeek}`)
       }
 
-      // Match predictions to schedule
+      // Match predictions to schedule (use 'NCAA' to match schedule table league value)
       const matchedPredictions = GameMatchingService.matchPredictionsToSchedule(
         result.predictions,
         scheduleGames,
-        'NCAAF'
+        'NCAA' as any
       )
 
       console.log(`Matched ${matchedPredictions.size} of ${result.predictions.length} Warren Nolan predictions to schedule`)

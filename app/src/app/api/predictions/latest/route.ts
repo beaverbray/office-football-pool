@@ -25,12 +25,12 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Fetch all recent NFELO predictions (NFL-only), then deduplicate by game
+    // Fetch all recent predictions from NFELO (NFL) and Warren Nolan (NCAAF)
     // We need to get more than 100 to account for duplicates, then filter
     const { data: allPredictions, error } = await (supabase as any)
       .from('analysis_predictions')
       .select('*')
-      .eq('source', 'nfelo') // Only fetch NFELO predictions (NFL-only)
+      .in('source', ['nfelo', 'warren-nolan']) // Fetch both NFL and NCAAF predictions
       .order('scraped_at', { ascending: false })
       .limit(500) as { data: PredictionRow[] | null, error: any } // Get more rows to ensure we have all unique games
 
@@ -63,13 +63,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Transform to ELOPrediction format
+    // Transform to prediction format (include source to distinguish NFL vs NCAAF)
     const transformedPredictions = Array.from(gameMap.values()).map((pred: PredictionRow) => ({
       homeTeam: pred.home_team,
       awayTeam: pred.away_team,
       predictedWinner: pred.predicted_winner,
       winProbability: pred.win_probability,
       spread: pred.spread,
+      source: pred.source, // Include source (nfelo or warren-nolan)
+      confidence: pred.confidence, // Include confidence level
     }))
 
     // Update cache

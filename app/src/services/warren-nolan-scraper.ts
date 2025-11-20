@@ -83,7 +83,8 @@ export class WarrenNolanScraper {
           // Skip if essential data is missing
           if (!awayTeam || !homeTeam) return
 
-          // Parse home team spread (negative means home is favored)
+          // Parse home team spread
+          // Warren Nolan shows: negative = home is underdog (away favored), positive = home is favorite
           const homeSpread = parseFloat(homeSpreadText.replace(/[^\d.-]/g, ''))
           if (isNaN(homeSpread)) return
 
@@ -91,12 +92,14 @@ export class WarrenNolanScraper {
           const awayWinProb = parseFloat(awayProbText.replace('%', '').trim())
           const homeWinProb = parseFloat(homeProbText.replace('%', '').trim())
 
-          // Determine predicted winner based on higher win probability
-          const predictedWinner: 'home' | 'away' = homeWinProb > awayWinProb ? 'home' : 'away'
-          const winProbability = Math.max(awayWinProb, homeWinProb)
+          // Determine predicted winner based on spread
+          // Negative spread = home is underdog (away team favored)
+          // Positive spread = home is favorite
+          const predictedWinner: 'home' | 'away' = homeSpread < 0 ? 'away' : 'home'
+          const winProbability = homeSpread < 0 ? awayWinProb : homeWinProb
 
-          // Use the confidence from the team with higher win probability
-          const confidenceText = homeWinProb > awayWinProb ? homeConfidence : awayConfidence
+          // Use the confidence from the predicted winner (based on spread)
+          const confidenceText = predictedWinner === 'home' ? homeConfidence : awayConfidence
           const confidence = this.parseConfidence(confidenceText)
 
           // Parse over/under total
