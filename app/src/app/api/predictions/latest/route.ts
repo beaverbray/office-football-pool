@@ -64,12 +64,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to prediction format (include source to distinguish NFL vs NCAAF)
+    // Note: PostgreSQL numeric types come back as strings in JSON, so we parse them
     const transformedPredictions = Array.from(gameMap.values()).map((pred: PredictionRow) => ({
       homeTeam: pred.home_team,
       awayTeam: pred.away_team,
       predictedWinner: pred.predicted_winner,
-      winProbability: pred.win_probability,
-      spread: pred.spread,
+      winProbability: pred.win_probability != null ? parseFloat(pred.win_probability) : null,
+      spread: pred.spread != null ? parseFloat(pred.spread) : null,
       source: pred.source, // Include source (nfelo or warren-nolan)
       confidence: pred.confidence, // Include confidence level
     }))
