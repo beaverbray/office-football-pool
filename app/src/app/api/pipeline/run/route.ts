@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { pipelineOrchestrator } from '@/services/pipeline-orchestrator'
 import { WeekDetector } from '@/services/week-detector'
-import { jobQueue } from '@/services/job-queue'
+import { supabaseJobQueue } from '@/services/job-queue-supabase'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,33 +51,33 @@ export async function POST(request: NextRequest) {
 
     // ASYNC MODE: Create job and return immediately
     if (useAsync) {
-      const jobId = jobQueue.createJob({
+      const jobId = await supabaseJobQueue.createJob({
         input: pipelineInput,
         config: pipelineConfig
       })
 
       // Execute pipeline in background (non-blocking)
+      // Note: In serverless, this runs in the same request but doesn't block response
       setImmediate(async () => {
         try {
-          jobQueue.startJob(jobId)
-          jobQueue.addLog(jobId, 'Pipeline execution started')
+          await supabaseJobQueue.startJob(jobId)
+          await supabaseJobQueue.addLog(jobId, 'Pipeline execution started')
 
           const result = await pipelineOrchestrator.runPipeline(
             pipelineInput,
             pipelineConfig,
             // Progress callback
-            (stage: string, progress: number) => {
-              jobQueue.updateJob(jobId, { stage, progress })
-              jobQueue.addLog(jobId, `Stage: ${stage} (${progress}%)`)
+            async (stage: string, progress: number) => {
+              await supabaseJobQueue.updateJob(jobId, { stage, progress })
             }
           )
 
-          jobQueue.completeJob(jobId, result)
-          jobQueue.addLog(jobId, 'Pipeline execution completed successfully')
+          await supabaseJobQueue.completeJob(jobId, result)
+          await supabaseJobQueue.addLog(jobId, 'Pipeline execution completed successfully')
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-          jobQueue.failJob(jobId, errorMessage)
-          jobQueue.addLog(jobId, `Pipeline execution failed: ${errorMessage}`)
+          await supabaseJobQueue.failJob(jobId, errorMessage)
+          await supabaseJobQueue.addLog(jobId, `Pipeline execution failed: ${errorMessage}`)
           console.error('Background pipeline execution error:', error)
         }
       })

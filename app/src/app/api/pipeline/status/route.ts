@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jobQueue } from '@/services/job-queue'
+import { supabaseJobQueue } from '@/services/job-queue-supabase'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const job = jobQueue.getJob(jobId)
+    const job = await supabaseJobQueue.getJob(jobId)
 
     if (!job) {
       return NextResponse.json(
