@@ -3,6 +3,10 @@ import { pipelineOrchestrator } from '@/services/pipeline-orchestrator'
 import { WeekDetector } from '@/services/week-detector'
 import { supabaseJobQueue } from '@/services/job-queue-supabase'
 
+// Supabase Edge Function URL
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://eoslblqescncxcypkmvj.supabase.co'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -49,48 +53,46 @@ export async function POST(request: NextRequest) {
       hasOpenAIKey: !!process.env.OPENAI_API_KEY
     })
 
-    // ASYNC MODE: Create job and return immediately
+    // ASYNC MODE: Create job and invoke Edge Function
     if (useAsync) {
       const jobId = await supabaseJobQueue.createJob({
         input: pipelineInput,
         config: pipelineConfig
       })
 
-      // Execute pipeline in background (non-blocking)
-      // Note: In serverless, this runs in the same request but doesn't block response
-      setImmediate(async () => {
-        try {
-          await supabaseJobQueue.startJob(jobId)
-          await supabaseJobQueue.addLog(jobId, 'Pipeline execution started')
+      // Invoke Supabase Edge Function (fire-and-forget)
+      // The Edge Function has a 2-minute timeout vs Vercel's 10 seconds
+      const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/run-pipeline`
 
-          const result = await pipelineOrchestrator.runPipeline(
-            pipelineInput,
-            pipelineConfig,
-            // Progress callback
-            async (stage: string, progress: number) => {
-              await supabaseJobQueue.updateJob(jobId, { stage, progress })
-            }
-          )
+      console.log(`Invoking Edge Function: ${edgeFunctionUrl}`)
 
-          await supabaseJobQueue.completeJob(jobId, result)
-          await supabaseJobQueue.addLog(jobId, 'Pipeline execution completed successfully')
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-          await supabaseJobQueue.failJob(jobId, errorMessage)
-          await supabaseJobQueue.addLog(jobId, `Pipeline execution failed: ${errorMessage}`)
-          console.error('Background pipeline execution error:', error)
-        }
+      // Fire and forget - don't await the response
+      fetch(edgeFunctionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          job_id: jobId,
+          picksheet_text: body.picksheetText,
+          week: week,
+          config: pipelineConfig
+        })
+      }).catch(err => {
+        console.error('Edge Function invocation error:', err)
+        // Don't fail the request - the job is created, Edge Function may still work
       })
 
       return NextResponse.json({
         jobId,
         status: 'queued',
-        message: 'Pipeline execution started in background',
+        message: 'Pipeline execution started in Edge Function',
         statusEndpoint: `/api/pipeline/status?jobId=${jobId}`
       })
     }
 
-    // SYNC MODE: Run pipeline synchronously (legacy behavior)
+    // SYNC MODE: Run pipeline synchronously (legacy behavior - will timeout on Vercel free tier)
     const result = await pipelineOrchestrator.runPipeline(
       pipelineInput,
       pipelineConfig
