@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseJobQueue } from '@/services/job-queue-supabase'
 
+// Disable Next.js route caching
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
@@ -23,6 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Return job status without sensitive input data
+    // Disable caching to ensure fresh status on each poll
     return NextResponse.json({
       jobId: job.id,
       status: job.status,
@@ -34,6 +39,11 @@ export async function GET(request: NextRequest) {
       startedAt: job.startedAt,
       completedAt: job.completedAt,
       logs: job.logs
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Pragma': 'no-cache'
+      }
     })
 
   } catch (error) {
