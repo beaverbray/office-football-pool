@@ -1,7 +1,7 @@
 ---
 id: task-002
 title: Update NavBar refresh button text and styling
-status: In Progress
+status: Done
 assignee: []
 created_date: '2025-12-06 09:13'
 updated_date: '2025-12-06 09:32'
@@ -35,8 +35,18 @@ Update the NavBar component to reflect the enhanced refresh functionality.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Desktop refresh button shows 'REFRESH ALL' instead of 'REFRESH'
-- [ ] #2 Mobile menu refresh button shows 'REFRESH ALL'
-- [ ] #3 Loading state shows 'REFRESHING ALL...' or similar
-- [ ] #4 Button styling is consistent with the enhanced functionality
+- [x] #1 Desktop refresh button shows 'REFRESH ALL' instead of 'REFRESH'
+- [x] #2 Mobile menu refresh button shows 'REFRESH ALL'
+- [x] #3 Loading state shows 'REFRESHING ALL...' or similar
+- [x] #4 Button styling is consistent with the enhanced functionality
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Updated both desktop (line 85) and mobile (line 158) button text:
+- Normal state: '↻ REFRESH ALL'
+- Loading state: 'REFRESHING ALL...'
+
+Used replace_all to update both occurrences. TypeScript check passes.
+<!-- SECTION:NOTES:END -->
