@@ -349,154 +349,248 @@ const handleRefresh = async () => {
 
 ---
 
-### Phase 2: Picksheet Scraper (CLI First)
+### Phase 2: Automated Picksheet Fetch (GitHub Actions)
 
-**Goal:** Automated picksheet fetching for local development
+**Goal:** Scheduled, fully-automated picksheet fetching once per week
 
-**Components:**
-1. `app/src/services/picksheet-scraper.ts` - Puppeteer-based scraper
-2. `scripts/fetch-picksheet.ts` - CLI entry point
-3. `package.json` script: `npm run fetch-picksheet`
+**Why GitHub Actions:**
+- Puppeteer/Chromium **cannot run on Vercel** (serverless limitation)
+- Supabase Edge Functions also serverless - no browser support
+- GitHub Actions runs in a **full VM** - Puppeteer works natively
+- **Free** for public repos, generous free tier for private
+- Only need to fetch picksheet **once per week** (it doesn't change)
+- Can be triggered manually via workflow_dispatch
 
-#### Task 2.1: Create Picksheet Scraper Service
+**Architecture:**
 
-**File:** `app/src/services/picksheet-scraper.ts`
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  GitHub Actions (scheduled: Thursday 6PM PT)                                │
+│  Or manual trigger via workflow_dispatch                                    │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+                           │ runs in Ubuntu VM with Node.js + Puppeteer
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Fetch Picksheet Script: scripts/fetch-picksheet.ts                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  1. Calculate weekId from current NFL week (ESPN API)                       │
+│  2. Launch Puppeteer (headless Chrome)                                      │
+│  3. Login to splashsports.com                                               │
+│  4. Navigate to officefootballpool.com/picksheet_print.cfm?weekid=XXX       │
+│  5. Extract picksheet text from page                                        │
+│  6. POST picksheet to Supabase (pipeline_current table)                     │
+│  7. Trigger /api/refresh-all on the Next.js app                             │
+└──────────────────────────┬──────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Next.js App: /api/refresh-all                                              │
+│  - Scrapes predictions (NFELO, Warren Nolan)                                │
+│  - Fetches fresh odds                                                       │
+│  - Updates dashboard                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Key challenges:**
-- Login via `app.splashsports.com/sign-in`
-- Navigate to `officefootballpool.com/picksheet_print.cfm?weekid=XXX`
-- Extract text content
-- Handle auth failures gracefully
+**Cost:** Free (GitHub Actions free tier: 2,000 minutes/month for private repos)
 
-**Week ID Calculation (needs validation):**
+#### Task 2.1: Create Picksheet Fetch Script
+
+**File:** `app/scripts/fetch-picksheet.ts`
+
+**Responsibilities:**
+1. Calculate weekId from current NFL week (ESPN API)
+2. Launch Puppeteer and login to splashsports.com
+3. Navigate to picksheet page with calculated weekId
+4. Extract picksheet text
+5. Save to Supabase `pipeline_current` table
+6. Optionally trigger `/api/refresh-all`
+
+**Implementation Pattern:**
+
+```typescript
+import puppeteer from 'puppeteer'
+import { createClient } from '@supabase/supabase-js'
+
+// Known reference: Week 14, 2024 season = weekId 648
+const REFERENCE = { weekId: 648, nflWeek: 14, season: 2024 }
+
+async function calculateWeekId(): Promise<number> {
+  const response = await fetch(
+    'http://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'
+  )
+  const data = await response.json()
+  const week = data.week?.number ?? 1
+  const season = data.season?.year ?? new Date().getFullYear()
+
+  const weeksSinceReference =
+    ((season - REFERENCE.season) * 18) + (week - REFERENCE.nflWeek)
+  return REFERENCE.weekId + weeksSinceReference
+}
+
+async function fetchPicksheet() {
+  const weekId = await calculateWeekId()
+  console.log(`Fetching picksheet for weekId: ${weekId}`)
+
+  const browser = await puppeteer.launch({ headless: true })
+  const page = await browser.newPage()
+
+  // Login to splashsports.com
+  await page.goto('https://app.splashsports.com/sign-in')
+  await page.type('input[name="email"]', process.env.OFFICE_POOL_EMAIL!)
+  await page.type('input[name="password"]', process.env.OFFICE_POOL_PASSWORD!)
+  await page.click('button[type="submit"]')
+  await page.waitForNavigation()
+
+  // Navigate to picksheet
+  await page.goto(
+    `https://www.officefootballpool.com/picksheet_print.cfm?weekid=${weekId}`
+  )
+
+  // Extract picksheet text
+  const picksheetText = await page.evaluate(() => document.body.innerText)
+
+  await browser.close()
+
+  // Save to Supabase
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // ... save picksheet and trigger refresh
+}
+```
+
+#### Task 2.2: Create GitHub Actions Workflow
+
+**File:** `.github/workflows/fetch-picksheet.yml`
+
+```yaml
+name: Fetch Picksheet
+
+on:
+  schedule:
+    # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
+    - cron: '0 2 * * 5'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Fetch picksheet
+        working-directory: app
+        env:
+          OFFICE_POOL_EMAIL: ${{ secrets.OFFICE_POOL_EMAIL }}
+          OFFICE_POOL_PASSWORD: ${{ secrets.OFFICE_POOL_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: npx tsx scripts/fetch-picksheet.ts
+```
+
+**Required GitHub Secrets:**
+- `OFFICE_POOL_EMAIL` - Login email for splashsports.com
+- `OFFICE_POOL_PASSWORD` - Login password
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (for writes)
+- `APP_URL` - Production app URL (e.g., https://your-app.vercel.app)
+
+#### Task 2.3: Week ID Calculation
+
+**Logic (needs validation with known weeks):**
 
 ```typescript
 // Known reference: Week 14, 2024 season = weekId 648
 const REFERENCE = { weekId: 648, nflWeek: 14, season: 2024 }
 
 function calculateWeekId(nflWeek: number, season: number): number {
-  // Assumption: 18 weeks per season, weekId increments sequentially
   const weeksSinceReference =
     ((season - REFERENCE.season) * 18) + (nflWeek - REFERENCE.nflWeek)
   return REFERENCE.weekId + weeksSinceReference
 }
-```
 
-**Environment Variables:**
-
-```env
-OFFICE_POOL_EMAIL=your-email@example.com
-OFFICE_POOL_PASSWORD=your-password
-```
-
-#### Task 2.2: Create CLI Script
-
-**File:** `app/scripts/fetch-picksheet.ts`
-
-```typescript
-#!/usr/bin/env npx tsx
-import { PicksheetScraper } from '../src/services/picksheet-scraper'
-
-async function main() {
-  const weekId = process.argv[2] ? parseInt(process.argv[2]) : undefined
-  const result = await PicksheetScraper.fetch(weekId)
-
-  if (result.success) {
-    console.log(`Fetched ${result.gameCount} games for week ${result.weekId}`)
-    console.log(result.picksheetText)
-  } else {
-    console.error('Failed:', result.error)
-    process.exit(1)
-  }
-}
-
-main()
-```
-
-**Package.json addition:**
-
-```json
-{
-  "scripts": {
-    "fetch-picksheet": "npx tsx scripts/fetch-picksheet.ts"
-  }
+// Get current week from ESPN API
+async function getCurrentWeekId(): Promise<number> {
+  const response = await fetch(
+    'http://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'
+  )
+  const data = await response.json()
+  const week = data.week?.number ?? 1
+  const season = data.season?.year ?? new Date().getFullYear()
+  return calculateWeekId(week, season)
 }
 ```
+
+#### Task 2.4: Add Puppeteer Dependency
+
+**File:** `app/package.json`
+
+```bash
+npm install puppeteer
+```
+
+Note: Puppeteer will only be used in the GitHub Actions environment, not in the Next.js app.
+The script is standalone and doesn't need to be bundled with the web app.
+
+#### Task 2.5: Manual Trigger Option
+
+The GitHub Actions workflow supports `workflow_dispatch`, allowing manual trigger from:
+1. GitHub Actions UI (Actions tab → Fetch Picksheet → Run workflow)
+2. GitHub CLI: `gh workflow run fetch-picksheet.yml`
+3. GitHub API
+
+For most users, the scheduled Thursday run is sufficient since the picksheet doesn't change during the week.
 
 ---
 
-### Phase 3: Full Automation (Future)
+### Phase 3: Monitoring and Reliability
 
-**Goal:** One-click refresh including picksheet fetch
+**Goal:** Ensure scheduled fetches are working and handle failures gracefully
 
-**Decision Required:** Serverless browser solution
+#### Task 3.1: Add Logging Table
 
-| Option | Pros | Cons | Cost |
-|--------|------|------|------|
-| **Browserless.io** | Works in Vercel, managed | External dependency | ~$0.01/request |
-| **Puppeteer on Railway** | Self-hosted, no limits | Requires server management | ~$5/mo |
-| **GitHub Actions** | Free, reliable | Not on-demand (scheduled only) | Free |
-| **Keep CLI + Manual** | Simple, no cost | Still requires manual step | Free |
-
-**Recommendation:** Start with CLI (Phase 2), consider Browserless.io for Phase 3 if on-demand is truly needed.
-
-#### Task 3.1: Create `/api/picksheet/fetch` Endpoint
-
-Only implement if using Browserless.io or dedicated server.
-
-**File:** `app/src/app/api/picksheet/fetch/route.ts`
-
-```typescript
-export async function POST(request: NextRequest) {
-  // Check if we're in an environment that supports browser automation
-  if (!process.env.BROWSERLESS_API_KEY && !canRunPuppeteerLocally()) {
-    return NextResponse.json({
-      success: false,
-      error: 'Picksheet fetch not available in this environment',
-      suggestion: 'Please paste picksheet manually in Control Panel'
-    }, { status: 501 })
-  }
-
-  const result = await PicksheetScraper.fetch()
-  return NextResponse.json(result)
-}
+```sql
+CREATE TABLE afbp.picksheet_fetch_log (
+  id SERIAL PRIMARY KEY,
+  triggered_at TIMESTAMPTZ DEFAULT NOW(),
+  week_id INTEGER,
+  nfl_week INTEGER,
+  success BOOLEAN,
+  error_message TEXT,
+  duration_ms INTEGER,
+  source TEXT  -- 'github_actions' | 'manual'
+);
 ```
 
-#### Task 3.2: Update `/api/refresh-all` to Include Picksheet
+The fetch script should log results to this table for monitoring.
 
-Add picksheet fetch as optional first step:
+#### Task 3.2: GitHub Actions Notifications
 
-```typescript
-// In /api/refresh-all/route.ts
-const { skipPicksheet = true } = await request.json()
+GitHub Actions provides built-in failure notifications:
+- Email notification on workflow failure (enabled by default)
+- Can add Slack/Discord notifications via marketplace actions
+- Workflow run history visible in GitHub UI
 
-if (!skipPicksheet && isPicksheetFetchAvailable()) {
-  const picksheetResult = await PicksheetScraper.fetch()
-  if (picksheetResult.success) {
-    // Run full pipeline with fresh picksheet
-    await pipelineOrchestrator.runPipeline({
-      picksheetText: picksheetResult.picksheetText
-    }, { useLLM: true, ... })
-  }
-}
-```
+#### Task 3.3: Fallback to Manual
 
----
-
-### Phase 4: Scheduled Refresh (Optional)
-
-**Goal:** Auto-refresh at key times
-
-**Options:**
-1. **Vercel Cron** - Simple, built-in
-2. **GitHub Actions** - Free, flexible
-3. **External cron service** - More control
-
-**Suggested Schedule:**
-- Thursday 6:00 PM PT (before TNF)
-- Sunday 9:00 AM PT (before early games)
-- Sunday 1:00 PM PT (before late games)
-- Monday 5:00 PM PT (before MNF)
+If GitHub Actions fetch fails, the system falls back gracefully:
+- Dashboard shows "Last updated: X hours ago"
+- User can still paste picksheet manually in Control Panel
+- `/api/refresh-all` continues to work with cached picksheet
+- Can manually trigger workflow from GitHub UI
 
 ---
 
@@ -582,9 +676,8 @@ await supabaseAdmin.from('analysis_predictions').insert(records)
 | File | Phase | Description |
 |------|-------|-------------|
 | `app/src/app/api/refresh-all/route.ts` | 1 | Main orchestration endpoint |
-| `app/src/services/picksheet-scraper.ts` | 2 | Puppeteer-based scraper |
-| `app/scripts/fetch-picksheet.ts` | 2 | CLI entry point |
-| `app/src/app/api/picksheet/fetch/route.ts` | 3 | API endpoint for scraper |
+| `app/scripts/fetch-picksheet.ts` | 2 | Puppeteer script for picksheet scraping |
+| `.github/workflows/fetch-picksheet.yml` | 2 | GitHub Actions workflow |
 
 ### Modified Files
 
@@ -592,8 +685,7 @@ await supabaseAdmin.from('analysis_predictions').insert(records)
 |------|-------|---------|
 | `app/src/components/CompactDashboard.tsx` | 1 | Update handleRefresh(), add timing display |
 | `app/src/components/NavBar.tsx` | 1 | Update button text |
-| `app/package.json` | 2 | Add fetch-picksheet script |
-| `app/.env.example` | 2 | Add OFFICE_POOL_EMAIL/PASSWORD |
+| `app/package.json` | 2 | Add puppeteer dependency |
 
 ---
 
