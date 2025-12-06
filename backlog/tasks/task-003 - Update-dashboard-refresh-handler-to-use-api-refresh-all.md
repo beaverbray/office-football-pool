@@ -1,9 +1,10 @@
 ---
 id: task-003
 title: Update dashboard refresh handler to use /api/refresh-all
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-12-06 09:14'
+updated_date: '2025-12-06 09:30'
 labels:
   - phase-1
   - frontend
