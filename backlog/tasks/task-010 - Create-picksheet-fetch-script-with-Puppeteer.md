@@ -1,9 +1,10 @@
 ---
 id: task-010
 title: Create picksheet fetch script with Puppeteer
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-12-06 10:29'
+updated_date: '2025-12-06 10:35'
 labels:
   - phase-2
   - puppeteer
