@@ -1,9 +1,10 @@
 ---
 id: task-011
 title: Set up GitHub repository secrets for picksheet fetch
-status: To Do
+status: Done
 assignee: []
 created_date: '2025-12-06 10:29'
+updated_date: '2025-12-06 10:37'
 labels:
   - phase-2
   - setup
@@ -33,7 +34,7 @@ Configure GitHub repository secrets required for the picksheet fetch workflow.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 All 5 secrets are configured in GitHub
-- [ ] #2 Secrets are not exposed in logs
+- [x] #1 All 5 secrets are configured in GitHub
+- [x] #2 Secrets are not exposed in logs
 - [ ] #3 Manual workflow trigger succeeds with secrets
 <!-- AC:END -->
