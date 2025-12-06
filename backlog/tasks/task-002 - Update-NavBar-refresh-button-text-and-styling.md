@@ -4,11 +4,13 @@ title: Update NavBar refresh button text and styling
 status: To Do
 assignee: []
 created_date: '2025-12-06 09:13'
+updated_date: '2025-12-06 09:14'
 labels:
   - phase-1
   - frontend
   - refresh-all
-dependencies: []
+dependencies:
+  - task-001
 priority: medium
 ---
 
