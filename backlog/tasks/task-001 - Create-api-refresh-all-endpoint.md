@@ -1,10 +1,10 @@
 ---
 id: task-001
 title: Create /api/refresh-all endpoint
-status: In Progress
+status: Done
 assignee: []
 created_date: '2025-12-06 09:13'
-updated_date: '2025-12-06 09:17'
+updated_date: '2025-12-06 09:26'
 labels:
   - phase-1
   - api
@@ -41,12 +41,35 @@ Create the main orchestration endpoint that combines week detection, prediction 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 POST /api/refresh-all returns success with pipeline data
-- [ ] #2 Week detection works for both NFL and NCAA
-- [ ] #3 NFELO predictions are scraped and saved to database
-- [ ] #4 Warren Nolan predictions are scraped and saved to database
-- [ ] #5 Pipeline runs with fresh odds against existing picksheet games
-- [ ] #6 Timing metrics included in response (weekDetection, predictionsScrape, pipelineExecution, total)
-- [ ] #7 Graceful degradation if prediction scraping fails (continue with odds only)
-- [ ] #8 Returns 400 error with helpful message if no picksheet exists
+- [x] #1 POST /api/refresh-all returns success with pipeline data
+- [x] #2 Week detection works for both NFL and NCAA
+- [x] #3 NFELO predictions are scraped and saved to database
+- [x] #4 Warren Nolan predictions are scraped and saved to database
+- [x] #5 Pipeline runs with fresh odds against existing picksheet games
+- [x] #6 Timing metrics included in response (weekDetection, predictionsScrape, pipelineExecution, total)
+- [x] #7 Graceful degradation if prediction scraping fails (continue with odds only)
+- [x] #8 Returns 400 error with helpful message if no picksheet exists
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+## Implementation Complete
+
+Created `/api/refresh-all/route.ts` with:
+
+1. **Week Detection**: Parallel fetch of NFL and NCAA weeks using `WeekDetector`
+2. **Picksheet Loading**: Extracts games from `pipeline_current` table, supports both old and new formats
+3. **Prediction Scraping**: Parallel scraping with `Promise.allSettled()` for graceful degradation
+4. **Database Persistence**: Saves predictions to `analysis_predictions` following existing patterns
+5. **Pipeline Refresh**: Runs `pipelineOrchestrator.runPipeline()` with fresh odds
+6. **Timing Metrics**: Tracks weekDetection, predictionsScrape, pipelineExecution, and total
+7. **Comprehensive Response**: Returns pipeline, timing, predictions info, and meta data
+
+### Key Features:
+- `maxDuration = 60` for longer scraping operations
+- GET endpoint for easy browser testing
+- `skipPredictions` option for faster odds-only refresh
+- `forceWeek` option to override auto-detected week
+- Proper error handling with helpful messages
+<!-- SECTION:NOTES:END -->
