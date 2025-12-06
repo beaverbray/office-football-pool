@@ -82,7 +82,7 @@ export default function NavBar({
                 disabled={refreshing}
                 className="hidden sm:block px-3 py-1 bg-green-700 text-black font-mono text-xs font-bold rounded hover:bg-green-600 disabled:bg-zinc-800 disabled:text-zinc-600 transition-colors"
               >
-                {refreshing ? 'REFRESHING...' : '↻ REFRESH'}
+                {refreshing ? 'REFRESHING ALL...' : '↻ REFRESH ALL'}
               </button>
             )}
 
@@ -155,7 +155,7 @@ export default function NavBar({
                 disabled={refreshing}
                 className="block w-full text-left px-4 py-2 text-sm font-mono rounded transition-colors bg-green-700 text-black font-bold mt-1"
               >
-                {refreshing ? 'REFRESHING...' : '↻ REFRESH'}
+                {refreshing ? 'REFRESHING ALL...' : '↻ REFRESH ALL'}
               </button>
             )}
             {showShareButton && (

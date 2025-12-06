@@ -270,11 +270,11 @@ export default function CompactDashboard() {
     }
   }
 
-  // Refresh market data
+  // Refresh all data (odds + predictions)
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      const response = await fetch('/api/pipeline/refresh', {
+      const response = await fetch('/api/refresh-all', {
         method: 'POST'
       })
 
@@ -284,12 +284,16 @@ export default function CompactDashboard() {
         // Show specific error message if available
         if (data.message) {
           alert(`Refresh failed: ${data.message}`)
-        } else if (data.error === 'No matching games found') {
-          alert('The picksheet contains games that have already finished.\n\nPlease upload a new picksheet with upcoming games in the Control Panel.')
+        } else if (data.error === 'No picksheet data found') {
+          alert('No picksheet found.\n\nPlease upload a picksheet in the Control Panel first.')
+          router.push('/control-panel')
+          return
+        } else if (data.error === 'No picksheet games found') {
+          alert('The current pipeline has no games.\n\nPlease upload a new picksheet in the Control Panel.')
           router.push('/control-panel')
           return
         } else {
-          alert('Failed to refresh market data. Please try again or upload a new picksheet.')
+          alert('Failed to refresh data. Please try again or upload a new picksheet.')
         }
         return
       }
@@ -298,7 +302,7 @@ export default function CompactDashboard() {
         // Merge the timestamp from the API response into the pipeline object
         const pipelineWithTimestamp = {
           ...data.pipeline,
-          timestamp: data.updatedAt || data.pipeline.timestamp
+          timestamp: new Date().toISOString()
         }
         setCurrentPipeline(pipelineWithTimestamp)
 
@@ -307,11 +311,29 @@ export default function CompactDashboard() {
           OpeningLineEnricher.recordOpeningLinesFromComparisons(data.pipeline.comparison.comparisons)
         }
 
-        alert('Market data refreshed successfully!')
+        // Re-fetch predictions to get the newly scraped data
+        try {
+          const predictionsResponse = await fetch('/api/predictions/latest')
+          if (predictionsResponse.ok) {
+            const predictionsData = await predictionsResponse.json()
+            setEloPredictions(predictionsData.predictions || [])
+          }
+        } catch (predError) {
+          console.warn('Failed to refresh predictions:', predError)
+        }
+
+        // Show success message with timing info
+        const timingInfo = data.timing?.total
+          ? `Refreshed in ${(data.timing.total / 1000).toFixed(1)}s`
+          : 'Refreshed successfully'
+        const gamesInfo = data.meta?.gamesMatched
+          ? ` • ${data.meta.gamesMatched} games matched`
+          : ''
+        alert(`${timingInfo}${gamesInfo}`)
       }
     } catch (error) {
       console.error('Error refreshing:', error)
-      alert('Failed to refresh market data. Make sure a picksheet has been uploaded first.')
+      alert('Failed to refresh data. Make sure a picksheet has been uploaded first.')
     } finally {
       setRefreshing(false)
     }
