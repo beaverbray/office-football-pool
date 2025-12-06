@@ -1,10 +1,10 @@
 ---
 id: task-012
 title: Create picksheet fetch logging table
-status: In Progress
+status: Done
 assignee: []
 created_date: '2025-12-06 10:29'
-updated_date: '2025-12-06 10:32'
+updated_date: '2025-12-06 10:35'
 labels:
   - phase-2
   - database
@@ -43,8 +43,8 @@ This table allows monitoring fetch success/failure rates and debugging issues.
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Migration creates table successfully
-- [ ] #2 Table exists in afbp schema
+- [x] #1 Migration creates table successfully
+- [x] #2 Table exists in afbp schema
 - [ ] #3 fetch-picksheet.ts logs to this table
 - [ ] #4 Can query recent fetch attempts
 <!-- AC:END -->
