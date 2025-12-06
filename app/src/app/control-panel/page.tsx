@@ -38,7 +38,7 @@ export default function ControlPanel() {
 
   // Auto-detect current week on mount
   useEffect(() => {
-    fetch('/api/week/current')
+    fetch('/api/week')
       .then(res => res.json())
       .then(data => {
         if (data.success) {

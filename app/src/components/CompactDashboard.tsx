@@ -165,7 +165,7 @@ export default function CompactDashboard() {
       try {
         // Fetch current week and pipeline data in parallel
         const [weekResponse, pipelineResponse] = await Promise.all([
-          fetch('/api/week/current'),
+          fetch('/api/week'),
           fetch('/api/pipeline/current')
         ])
 
