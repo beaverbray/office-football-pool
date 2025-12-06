@@ -25,12 +25,19 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Only fetch predictions scraped within the last 3 days
+    // This filters out old games from previous weeks
+    const threeDaysAgo = new Date()
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    const cutoffDate = threeDaysAgo.toISOString()
+
     // Fetch all recent predictions from NFELO (NFL) and Warren Nolan (NCAAF)
     // We need to get more than 100 to account for duplicates, then filter
     const { data: allPredictions, error } = await (supabase as any)
       .from('analysis_predictions')
       .select('*')
       .in('source', ['nfelo', 'warren-nolan']) // Fetch both NFL and NCAAF predictions
+      .gte('scraped_at', cutoffDate) // Only predictions from the last 3 days
       .order('scraped_at', { ascending: false })
       .limit(500) as { data: PredictionRow[] | null, error: any } // Get more rows to ensure we have all unique games
 
