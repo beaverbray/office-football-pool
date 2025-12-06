@@ -1,9 +1,10 @@
 ---
 id: task-001
 title: Create /api/refresh-all endpoint
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-12-06 09:13'
+updated_date: '2025-12-06 09:17'
 labels:
   - phase-1
   - api
