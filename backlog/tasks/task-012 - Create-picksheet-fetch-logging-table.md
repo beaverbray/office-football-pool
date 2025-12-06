@@ -1,9 +1,10 @@
 ---
 id: task-012
 title: Create picksheet fetch logging table
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2025-12-06 10:29'
+updated_date: '2025-12-06 10:32'
 labels:
   - phase-2
   - database
