@@ -15,8 +15,25 @@
  *   APP_URL - (Optional) Production app URL to trigger refresh
  */
 
-import puppeteer from 'puppeteer'
+import 'dotenv/config'
+// puppeteer-extra + stealth, NOT plain puppeteer: officefootballpool.com sits
+// behind a CloudFront WAF that fingerprints headless Chrome. Plain puppeteer
+// advertises `HeadlessChrome/xxx` in its UA and `navigator.webdriver === true`,
+// and the WAF answers with a 403 "Request blocked" page. (Plain curl gets 200,
+// so this is headless detection, not UA filtering.) The stealth plugin patches
+// those tells.
+import puppeteer from 'puppeteer-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { createClient } from '@supabase/supabase-js'
+import { WeekDetector } from '@/services/week-detector'
+import { loadSession, restoreSession, describeSessionAge } from './lib/session'
+import {
+  assertLooksLikePicksheet,
+  PicksheetAuthError,
+  PicksheetNotReadyError
+} from './lib/picksheet-content'
+
+puppeteer.use(StealthPlugin())
 
 // Week ID calculation reference point
 // Week 14, 2024 season = weekId 648
@@ -30,6 +47,13 @@ interface WeekInfo {
 
 interface FetchResult {
   success: boolean
+  /**
+   * True when the run deliberately did nothing (e.g. it is not the regular
+   * season). A skip is not a failure: it must not fail the scheduled job,
+   * otherwise the weekly cron reports red for the whole off-season and real
+   * failures get lost in the noise.
+   */
+  skipped?: boolean
   weekId: number
   nflWeek: number
   season: number
@@ -38,27 +62,39 @@ interface FetchResult {
   durationMs: number
 }
 
-/**
- * Get current NFL week from ESPN API
- */
-async function getCurrentWeek(): Promise<{ week: number; season: number }> {
-  console.log('Fetching current NFL week from ESPN...')
+/** Thrown to abort the run as a deliberate no-op rather than a failure. */
+class SeasonSkip extends Error {}
 
-  const response = await fetch(
-    'http://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard'
+/** Thrown when no saved session exists; the fix is `npm run login`, not a retry. */
+class SessionMissingError extends Error {}
+
+/**
+ * Get the current NFL week via the shared WeekDetector.
+ *
+ * This deliberately reuses src/services/week-detector.ts rather than making its
+ * own ESPN call: this script previously duplicated that fetch and, like the
+ * original, ignored ESPN's `season.type`. That meant during preseason it read
+ * "week 3" and computed a weekId ~2 weeks off, silently fetching the wrong
+ * picksheet. One implementation, one place to get the season phase right.
+ */
+async function getCurrentWeek(): Promise<{ week: number; season: number; seasonType: string; isRegularSeason: boolean }> {
+  console.log('Detecting current NFL week...')
+
+  const info = await WeekDetector.getCurrentNFLWeek()
+
+  console.log(
+    `Current NFL week: ${info.week}, season: ${info.seasonYear} ` +
+    `(phase: ${info.seasonType}${info.rawWeek !== info.week ? `, ESPN raw week: ${info.rawWeek}` : ''})`
   )
 
-  if (!response.ok) {
-    throw new Error(`ESPN API returned ${response.status}`)
+  return {
+    week: info.week,
+    season: info.seasonYear,
+    seasonType: info.seasonType,
+    isRegularSeason: info.isRegularSeason
   }
-
-  const data = await response.json()
-  const week = data.week?.number ?? 1
-  const season = data.season?.year ?? new Date().getFullYear()
-
-  console.log(`Current NFL week: ${week}, season: ${season}`)
-  return { week, season }
 }
+
 
 /**
  * Calculate weekId for officefootballpool.com
@@ -70,11 +106,29 @@ function calculateWeekId(nflWeek: number, season: number): number {
 }
 
 /**
- * Fetch picksheet using Puppeteer
+ * Fetch the picksheet using a previously saved, human-established session.
+ *
+ * There is deliberately no automated login here. The Splash Sports sign-in page
+ * is reCAPTCHA-protected, and an automated login cannot complete it (verified:
+ * both synthetic and trusted clicks finish with no session cookie and no error).
+ * A human runs `npm run login` once; this reuses that session.
  */
 async function fetchPicksheet(weekId: number): Promise<string> {
-  console.log(`Launching browser to fetch weekId: ${weekId}`)
+  const session = await loadSession()
+  if (!session) {
+    throw new SessionMissingError(
+      `No saved session found. Create one with:  npm run login\n` +
+      `  (or provide PICKSHEET_SESSION_B64 for scheduled runs)`
+    )
+  }
 
+  const age = describeSessionAge(session)
+  console.log(`Using saved session (${age.text}, from ${session.savedAt})`)
+  if (age.ageDays >= 14) {
+    console.warn(`  WARNING: session is ${age.ageDays} days old and may have expired.`)
+  }
+
+  console.log(`Launching browser to fetch weekId: ${weekId}`)
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -82,40 +136,15 @@ async function fetchPicksheet(weekId: number): Promise<string> {
 
   try {
     const page = await browser.newPage()
-
-    // Set a reasonable viewport
     await page.setViewport({ width: 1280, height: 800 })
 
-    // Login to splashsports.com
-    console.log('Navigating to login page...')
-    await page.goto('https://app.splashsports.com/sign-in', {
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    })
+    console.log('Restoring session...')
+    await restoreSession(browser, page, session)
 
-    // Wait for login form
-    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 10000 })
-
-    console.log('Entering credentials...')
-    await page.type('input[type="email"], input[name="email"]', process.env.OFFICE_POOL_EMAIL!)
-    await page.type('input[type="password"], input[name="password"]', process.env.OFFICE_POOL_PASSWORD!)
-
-    // Click login button
-    await page.click('button[type="submit"]')
-
-    // Wait for navigation after login
-    console.log('Waiting for login to complete...')
-    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 })
-
-    // Navigate to picksheet
     const picksheetUrl = `https://www.officefootballpool.com/picksheet_print.cfm?weekid=${weekId}`
     console.log(`Navigating to picksheet: ${picksheetUrl}`)
-    await page.goto(picksheetUrl, {
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    })
+    await page.goto(picksheetUrl, { waitUntil: 'networkidle2', timeout: 45000 })
 
-    // Wait for content to load
     await page.waitForSelector('body', { timeout: 10000 })
 
     // Extract picksheet text
@@ -124,9 +153,7 @@ async function fetchPicksheet(weekId: number): Promise<string> {
       return document.body.innerText
     })
 
-    if (!picksheetText || picksheetText.length < 100) {
-      throw new Error('Picksheet text appears empty or too short')
-    }
+    assertLooksLikePicksheet(picksheetText, weekId)
 
     console.log(`Extracted ${picksheetText.length} characters`)
     return picksheetText
@@ -145,9 +172,13 @@ async function saveToSupabase(
 ): Promise<void> {
   console.log('Saving picksheet to Supabase...')
 
+  // Both target tables live in the `afbp` schema (moved out of `public` by
+  // migration 009_afbp_schema_migration.sql). Without this the client defaults
+  // to `public` and every write fails with PGRST205 "table not found".
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { db: { schema: 'afbp' } }
   )
 
   // Update pipeline_current with new picksheet
@@ -176,7 +207,8 @@ async function logFetchResult(result: FetchResult, source: string): Promise<void
 
   const supabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { db: { schema: 'afbp' } }
   )
 
   const { error } = await supabase
@@ -233,6 +265,8 @@ async function main(): Promise<void> {
 
   // Check for --week=N override
   const weekOverride = args.find(a => a.startsWith('--week='))
+  // --force bypasses the regular-season guard below.
+  const force = args.includes('--force')
 
   console.log('='.repeat(60))
   console.log('Picksheet Fetch Script')
@@ -241,10 +275,18 @@ async function main(): Promise<void> {
   console.log(`Source: ${source}`)
   console.log('')
 
+  // Normalize env vars (support both SUPABASE_URL and NEXT_PUBLIC_SUPABASE_URL)
+  if (!process.env.SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    process.env.SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  }
+
   // Validate environment
+  // NOTE: OFFICE_POOL_EMAIL / OFFICE_POOL_PASSWORD are deliberately NOT required
+  // here. This script no longer logs in — it replays a session created by
+  // `npm run login`. Those credentials are only used by that interactive script.
+  // Requiring them here would hard-fail CI, which supplies PICKSHEET_SESSION_B64
+  // and no credentials.
   const requiredEnvVars = [
-    'OFFICE_POOL_EMAIL',
-    'OFFICE_POOL_PASSWORD',
     'SUPABASE_URL',
     'SUPABASE_SERVICE_ROLE_KEY'
   ]
@@ -270,6 +312,19 @@ async function main(): Promise<void> {
       const weekData = await getCurrentWeek()
       week = weekData.week
       season = weekData.season
+
+      // Refuse to fetch outside the regular season. Off-season/preseason/postseason
+      // week numbers do not map onto the pool's weekIds, so proceeding would
+      // silently store the wrong week's picksheet. An explicit --week=N override
+      // (or --force) is the way to run deliberately outside the regular season.
+      if (!weekData.isRegularSeason && !force) {
+        throw new SeasonSkip(
+          `Not in the NFL regular season (phase: ${weekData.seasonType}). ` +
+          `Skipping picksheet fetch, since off-season week numbers would ` +
+          `resolve to the wrong weekId. Re-run with --week=N to target a ` +
+          `specific week, or --force to override this check.`
+        )
+      }
     }
 
     const weekId = calculateWeekId(week, season)
@@ -299,8 +354,20 @@ async function main(): Promise<void> {
     }
 
   } catch (error) {
+    // Two distinct "nothing to do" conditions, neither of which is a failure:
+    //   SeasonSkip             -> not the regular season
+    //   PicksheetNotReadyError -> in season and authenticated, but the pool
+    //                             manager has not posted this week's schedule
+    const skipped =
+      error instanceof SeasonSkip || error instanceof PicksheetNotReadyError
+    // A missing or expired session is a "needs a human" condition, not a bug.
+    // Call it out separately so the log says what to actually do about it.
+    const needsLogin =
+      error instanceof SessionMissingError || error instanceof PicksheetAuthError
+
     result = {
       success: false,
+      skipped,
       weekId: 0,
       nflWeek: 0,
       season: 0,
@@ -308,7 +375,16 @@ async function main(): Promise<void> {
       durationMs: Date.now() - startTime
     }
 
-    console.error('\nFetch failed:', result.error)
+    if (skipped) {
+      console.log('\nSkipped:', result.error)
+    } else if (needsLogin) {
+      console.error('\nAuthentication required:', result.error)
+      console.error('\n  Fix: run `npm run login` to create/refresh the saved session.')
+      console.error('  For scheduled runs, update the PICKSHEET_SESSION_B64 secret')
+      console.error('  using: npm run login -- --print-b64')
+    } else {
+      console.error('\nFetch failed:', result.error)
+    }
   }
 
   // Log result (unless dry run)
@@ -320,18 +396,18 @@ async function main(): Promise<void> {
   console.log('\n' + '='.repeat(60))
   console.log('Summary')
   console.log('='.repeat(60))
-  console.log(`Success: ${result.success}`)
+  console.log(`Result: ${result.success ? 'SUCCESS' : result.skipped ? 'SKIPPED' : 'FAILED'}`)
   console.log(`Duration: ${(result.durationMs / 1000).toFixed(1)}s`)
   if (result.success) {
     console.log(`Week ID: ${result.weekId}`)
     console.log(`NFL Week: ${result.nflWeek}`)
     console.log(`Picksheet Length: ${result.picksheetLength} chars`)
   } else {
-    console.log(`Error: ${result.error}`)
+    console.log(`${result.skipped ? 'Reason' : 'Error'}: ${result.error}`)
   }
 
-  // Exit with appropriate code
-  process.exit(result.success ? 0 : 1)
+  // Exit code: a deliberate skip is not a failure, so it must not fail the cron.
+  process.exit(result.success || result.skipped ? 0 : 1)
 }
 
 main().catch(error => {

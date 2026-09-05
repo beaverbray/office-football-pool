@@ -12,6 +12,16 @@ node_modules/
 # Environment variables
 .env
 
+# Persisted browser session for the picksheet fetch (contains live auth cookies
+# — treat as a credential). Created by `npm run login`.
+.picksheet-session.json
+**/.picksheet-session.json
+
+# Persistent Chrome profile used by `npm run login` (contains the logged-in
+# session). Same sensitivity as the session file above.
+.picksheet-browser-profile/
+**/.picksheet-browser-profile/
+
 # Editor directories and files
 .idea
 .vscode

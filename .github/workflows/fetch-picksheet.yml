@@ -11,10 +11,14 @@ on:
         required: false
         type: number
 
+concurrency:
+  group: fetch-picksheet
+  cancel-in-progress: false
+
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -31,11 +35,16 @@ jobs:
         working-directory: app
         run: npm ci
 
+      # Auth note: this job does NOT log in. The Splash Sports sign-in page is
+      # reCAPTCHA-protected, so an automated login cannot complete it. A human
+      # runs `npm run login` locally, then stores the output of
+      # `npm run login -- --print-b64` as the PICKSHEET_SESSION_B64 secret.
+      # When that session expires the job fails with "Authentication required" —
+      # refresh the secret the same way.
       - name: Fetch picksheet
         working-directory: app
         env:
-          OFFICE_POOL_EMAIL: ${{ secrets.OFFICE_POOL_EMAIL }}
-          OFFICE_POOL_PASSWORD: ${{ secrets.OFFICE_POOL_PASSWORD }}
+          PICKSHEET_SESSION_B64: ${{ secrets.PICKSHEET_SESSION_B64 }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           APP_URL: ${{ secrets.APP_URL }}
