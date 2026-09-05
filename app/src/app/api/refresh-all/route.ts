@@ -34,6 +34,11 @@ interface TimingMetrics {
 
 interface RefreshAllResponse {
   success: boolean
+  // false when the refreshed pipeline could not be written back to the DB
+  // (e.g. missing service-role key, or a transient DB error). The refreshed
+  // data is still returned, but it was NOT persisted.
+  // Same top-level shape as /api/pipeline/refresh so callers can read one field.
+  persisted: boolean
   pipeline?: any
   timing: TimingMetrics
   predictions: {
@@ -322,6 +327,7 @@ export async function POST(request: NextRequest) {
       if (loadError.code === 'PGRST116') {
         return NextResponse.json({
           success: false,
+          persisted: false,
           error: 'No picksheet data found',
           message: 'Please upload a picksheet in the Control Panel first',
           timing: { ...timing, total: Date.now() - startTime },
@@ -336,6 +342,7 @@ export async function POST(request: NextRequest) {
     if (picksheetGames.length === 0) {
       return NextResponse.json({
         success: false,
+        persisted: false,
         error: 'No picksheet games found',
         message: 'The current pipeline has no games. Please upload a new picksheet in the Control Panel.',
         timing: { ...timing, total: Date.now() - startTime },
@@ -427,14 +434,34 @@ export async function POST(request: NextRequest) {
     // Stage 5: Save refreshed pipeline to database
     // =========================================================================
     console.log('Stage 5: Saving refreshed pipeline...')
-    const { error: saveError } = await supabase
-      .from('pipeline_current')
-      .upsert({
-        id: 'current',
-        pipeline_data: refreshedPipeline,
-        picksheet_text: currentPipelineRow.picksheet_text,
-        updated_at: new Date().toISOString()
-      } as any)
+    // Writes require the service-role client: anon writes are blocked by RLS
+    // (see supabase/migrations/20260813120000_restrict_pipeline_current_anon_writes.sql)
+    // afbp.pipeline_current isn't in the generated Database type yet (tracked separately);
+    // narrow local cast instead of `any` since we control the row shape here.
+    let saveError: { message: string } | null = null
+    if (!supabaseAdmin) {
+      saveError = { message: 'Service role key not configured' }
+    } else {
+      const admin = supabaseAdmin as unknown as {
+        from(table: 'pipeline_current'): {
+          upsert(row: {
+            id: string
+            pipeline_data: unknown
+            picksheet_text: string | null
+            updated_at: string
+          }): Promise<{ error: { message: string } | null }>
+        }
+      }
+      const result = await admin
+        .from('pipeline_current')
+        .upsert({
+          id: 'current',
+          pipeline_data: refreshedPipeline,
+          picksheet_text: currentPipelineRow.picksheet_text,
+          updated_at: new Date().toISOString()
+        })
+      saveError = result.error
+    }
 
     if (saveError) {
       console.error('Failed to save refreshed pipeline:', saveError)
@@ -451,6 +478,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      persisted: !saveError,
       pipeline: refreshedPipeline,
       timing,
       predictions: {
@@ -463,7 +491,9 @@ export async function POST(request: NextRequest) {
         gamesMatched,
         picksheetSource: 'cached' as const
       },
-      message: `Refreshed successfully in ${(timing.total / 1000).toFixed(1)}s. ${gamesMatched} games matched.`
+      message: saveError
+        ? `Refreshed in ${(timing.total / 1000).toFixed(1)}s (${gamesMatched} games matched), but the result could NOT be saved: ${saveError.message}`
+        : `Refreshed successfully in ${(timing.total / 1000).toFixed(1)}s. ${gamesMatched} games matched.`
     } as RefreshAllResponse)
 
   } catch (error) {
@@ -472,6 +502,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: false,
+      persisted: false,
       error: 'Refresh failed',
       message: error instanceof Error ? error.message : 'Unknown error',
       timing,

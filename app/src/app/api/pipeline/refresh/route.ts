@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { WeekDetector } from '@/services/week-detector'
 
 export const dynamic = 'force-dynamic'
@@ -119,27 +120,54 @@ export async function POST() {
     }
 
     // Save refreshed pipeline back to database
-    const { error: updateError } = await supabase
-      .from('pipeline_current')
-      .upsert({
-        id: 'current',
-        pipeline_data: refreshedPipeline,
-        picksheet_text: picksheetText, // Preserve picksheet text
-        updated_at: new Date().toISOString()
-      } as any)
+    // Writes require the service-role client: anon writes are blocked by RLS
+    // (see supabase/migrations/20260813120000_restrict_pipeline_current_anon_writes.sql)
+    // afbp.pipeline_current isn't in the generated Database type yet (tracked separately);
+    // narrow local cast instead of `any` since we control the row shape here.
+    let updateError: { message: string } | null = null
+    if (!supabaseAdmin) {
+      updateError = { message: 'Service role key not configured' }
+    } else {
+      const admin = supabaseAdmin as unknown as {
+        from(table: 'pipeline_current'): {
+          upsert(row: {
+            id: string
+            pipeline_data: unknown
+            picksheet_text: string | null
+            updated_at: string
+          }): Promise<{ error: { message: string } | null }>
+        }
+      }
+      const result = await admin
+        .from('pipeline_current')
+        .upsert({
+          id: 'current',
+          pipeline_data: refreshedPipeline,
+          picksheet_text: picksheetText, // Preserve picksheet text
+          updated_at: new Date().toISOString()
+        })
+      updateError = result.error
+    }
 
     if (updateError) {
       console.error('Failed to save refreshed pipeline:', updateError)
       // Still return the refreshed data even if save fails
     }
 
-    const message = needsFullPipeline
+    const baseMessage = needsFullPipeline
       ? `Full pipeline completed successfully! ${refreshedPipeline.matching?.matches || 0} games matched.`
       : `Market data refreshed successfully! ${refreshedPipeline.matching?.matches || 0} games matched.`
+
+    // Report persistence honestly: the refreshed data is still returned even if
+    // the write-back failed, but the caller must be able to tell the difference.
+    const message = updateError
+      ? `${baseMessage} WARNING: the result could NOT be saved (${updateError.message}).`
+      : baseMessage
 
     return NextResponse.json({
       success: true,
       pipeline: refreshedPipeline,
+      persisted: !updateError,
       message
     })
   } catch (error) {
