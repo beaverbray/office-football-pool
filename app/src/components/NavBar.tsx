@@ -35,7 +35,7 @@ export default function NavBar({
               <h1 className="text-sm sm:text-xl font-mono font-bold text-orange-700">
                 SPREAD_ANALYSIS_SYSTEM
               </h1>
-              <p className="hidden sm:block text-xs font-mono text-gray-500">
+              <p className="hidden sm:block text-xs font-mono text-gray-400">
                 PICKSHEET_MARKET_COMPARISON_ENGINE | V1.0
               </p>
             </div>
@@ -100,6 +100,8 @@ export default function NavBar({
             {/* Mobile Menu Button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
+              aria-label="Toggle menu"
+              aria-expanded={showMobileMenu}
               className="sm:hidden p-2 text-gray-400 hover:text-orange-700 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
