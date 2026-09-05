@@ -8,16 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "load-historical-data": "tsx scripts/load-historical-data.ts",
-    "load-historical-data:dry-run": "tsx scripts/load-historical-data.ts --dry-run",
-    "load-picksheets": "tsx scripts/load-picksheets.ts",
-    "load-picksheets:dry-run": "tsx scripts/load-picksheets.ts --dry-run",
-    "fetch-odds": "tsx scripts/fetch-odds-cron.ts",
-    "fetch-odds:nfl": "tsx scripts/fetch-odds-cron.ts nfl",
-    "fetch-odds:ncaaf": "tsx scripts/fetch-odds-cron.ts ncaaf",
-    "analyze-patterns": "tsx scripts/analyze-patterns.ts",
-    "analyze-patterns:nfl": "tsx scripts/analyze-patterns.ts --league=NFL",
-    "analyze-patterns:ncaaf": "tsx scripts/analyze-patterns.ts --league=NCAAF"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "login": "tsx scripts/login-session.ts",
+    "fetch-picksheet": "tsx scripts/fetch-picksheet.ts"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -44,8 +38,11 @@
     "eslint-config-next": "14.2.3",
     "postcss": "^8.5.6",
     "puppeteer": "^24.32.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.20.6",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.7"
   }
 }
