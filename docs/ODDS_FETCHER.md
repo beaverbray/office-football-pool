@@ -8,7 +8,7 @@ The service consists of three main components:
 
 1. **OddsAPIService** (`src/services/odds-api.ts`) - Low-level API client
 2. **OddsFetcherService** (`src/services/odds-fetcher.ts`) - Database persistence layer
-3. **Cron Script** (`scripts/fetch-odds-cron.ts`) - Periodic polling script
+3. **Cron Script** (`scripts/fetch-odds-cron.ts`) - Periodic polling script — ⚠️ **not currently present under `app/scripts/`**; see note in [Scheduled Polling with Cron](#scheduled-polling-with-cron) below. Use [Manual Fetching via API](#manual-fetching-via-api) instead.
 
 ## Features
 
@@ -81,6 +81,8 @@ const history = await oddsFetcher.getOddsHistory(
 ```
 
 ### Scheduled Polling with Cron
+
+> **⚠️ Not currently implemented.** `app/scripts/fetch-odds-cron.ts` does not exist in this repo (`app/package.json` has no `fetch-odds` script), so the commands below will fail today. An older copy of this script lives at `analysis/scripts/fetch-odds-cron.ts`, but that directory was split out from the app on purpose ("ready to be moved to a separate repository") and its imports no longer resolve as-is. Until a working cron entry point is restored, trigger odds fetches via the HTTP API documented in [Manual Fetching via API](#manual-fetching-via-api) — e.g. from an external scheduler hitting `POST /api/odds/fetch`.
 
 Run the cron script periodically using a task scheduler:
 
