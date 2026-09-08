@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "login": "tsx scripts/login-session.ts",
-    "fetch-picksheet": "tsx scripts/fetch-picksheet.ts"
+    "fetch-picksheet": "tsx scripts/fetch-picksheet.ts",
+    "fetch-picksheet:api": "tsx scripts/fetch-picksheet-api.ts"
   },
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.10.0",
