@@ -1,9 +1,23 @@
 name: Fetch Picksheet
 
 on:
-  schedule:
-    # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
-    - cron: '0 2 * * 5'
+  # SCHEDULE DISABLED.
+  #
+  # This job runs scripts/fetch-picksheet.ts against officefootballpool.com,
+  # which cannot currently authenticate: OFP and app.splashsports.com maintain
+  # separate sessions, so the saved Splash session does not grant OFP access
+  # (reproduced headful; see the known-gap note on the picksheet session commit).
+  # Left enabled it would fail every Friday against code that is being replaced.
+  #
+  # Setting PICKSHEET_SESSION_B64 does NOT fix this -- it only moves the failure
+  # from "no saved session" to "authentication required".
+  #
+  # Re-enable once this points at `npm run fetch-picksheet:api` (Splash tokens
+  # as the secret, plus SPLASH_CONTEST_ID / SPLASH_ENTRY_ID). Tracked in #29.
+  #
+  # schedule:
+  #   # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
+  #   - cron: '0 2 * * 5'
   workflow_dispatch:
     inputs:
       week:

@@ -38,4 +38,6 @@ jobs:
         working-directory: app
         run: npm run typecheck
 
-      # TODO: add a test step once a test runner is added to app/package.json
+      - name: Test
+        working-directory: app
+        run: npm test
