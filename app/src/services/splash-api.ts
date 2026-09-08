@@ -275,6 +275,19 @@ export function normalizeGames(picksheet: SplashPicksheet): NormalizedPoolGame[]
 }
 
 /**
+ * The `SourceGame` shape consumed by game-matching-service and the comparison
+ * engine, and written to `pipeline_data.parsing.games`.
+ */
+export interface PipelineSourceGame {
+  homeTeam: string
+  awayTeam: string
+  spread?: number
+  league?: 'NFL' | 'NCAAF'
+  gameTime?: string
+  gameId?: string
+}
+
+/**
  * Adapt to the `SourceGame` shape the matcher and comparison engine consume.
  *
  * Entity resolution is still required: Splash ids are canonical only within
@@ -282,9 +295,7 @@ export function normalizeGames(picksheet: SplashPicksheet): NormalizedPoolGame[]
  * are nickname-only ("Seahawks") whereas the market side is city-qualified
  * ("Seattle Seahawks"). CFB uses unambiguous school names.
  */
-export function toSourceGames(
-  picksheet: SplashPicksheet
-): Array<{ homeTeam: string; awayTeam: string; spread?: number; league?: 'NFL' | 'NCAAF'; gameTime?: string; gameId?: string }> {
+export function toSourceGames(picksheet: SplashPicksheet): PipelineSourceGame[] {
   return normalizeGames(picksheet).map(g => ({
     homeTeam: g.homeTeam,
     awayTeam: g.awayTeam,

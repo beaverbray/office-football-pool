@@ -1,29 +1,25 @@
 name: Fetch Picksheet
 
 on:
-  # SCHEDULE DISABLED.
+  # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football).
   #
-  # This job runs scripts/fetch-picksheet.ts against officefootballpool.com,
-  # which cannot currently authenticate: OFP and app.splashsports.com maintain
-  # separate sessions, so the saved Splash session does not grant OFP access
-  # (reproduced headful; see the known-gap note on the picksheet session commit).
-  # Left enabled it would fail every Friday against code that is being replaced.
-  #
-  # Setting PICKSHEET_SESSION_B64 does NOT fix this -- it only moves the failure
-  # from "no saved session" to "authentication required".
-  #
-  # Re-enable once this points at `npm run fetch-picksheet:api` (Splash tokens
-  # as the secret, plus SPLASH_CONTEST_ID / SPLASH_ENTRY_ID). Tracked in #29.
-  #
-  # schedule:
-  #   # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
-  #   - cron: '0 2 * * 5'
+  # Re-enabled now that the job uses the Splash API rather than scraping
+  # officefootballpool.com. The OFP path could not authenticate (OFP and
+  # app.splashsports.com keep separate sessions), which is why this was
+  # previously disabled.
+  schedule:
+    - cron: '0 2 * * 5'
   workflow_dispatch:
     inputs:
-      week:
-        description: 'Override NFL week number (optional)'
+      slate:
+        description: 'Slate abbreviation, e.g. week_3 (default: the current slate)'
         required: false
-        type: number
+        type: string
+      dry_run:
+        description: 'Fetch and report without writing to the database'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: fetch-picksheet
@@ -49,22 +45,31 @@ jobs:
         working-directory: app
         run: npm ci
 
-      # Auth note: this job does NOT log in. The Splash Sports sign-in page is
+      # Auth note: this job does NOT log in. The Splash sign-in is
       # reCAPTCHA-protected, so an automated login cannot complete it. A human
-      # runs `npm run login` locally, then stores the output of
-      # `npm run login -- --print-b64` as the PICKSHEET_SESSION_B64 secret.
-      # When that session expires the job fails with "Authentication required" —
-      # refresh the secret the same way.
+      # runs `npm run login` locally and stores the output of
+      # `npm run login -- --print-b64` as PICKSHEET_SESSION_B64.
+      #
+      # A workflow cannot write back to its own secret, so the stored token pair
+      # stays at its login-time value. Refresh needs both tokens; an 8-day-stale
+      # access token was observed to still refresh, but the outer bound is
+      # unknown. If the job reports "Authentication required", re-run login and
+      # update the secret. Expect roughly monthly.
       - name: Fetch picksheet
         working-directory: app
         env:
           PICKSHEET_SESSION_B64: ${{ secrets.PICKSHEET_SESSION_B64 }}
+          SPLASH_CONTEST_ID: ${{ secrets.SPLASH_CONTEST_ID }}
+          SPLASH_ENTRY_ID: ${{ secrets.SPLASH_ENTRY_ID }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           APP_URL: ${{ secrets.APP_URL }}
         run: |
-          if [ -n "${{ inputs.week }}" ]; then
-            npx tsx scripts/fetch-picksheet.ts --week=${{ inputs.week }}
-          else
-            npx tsx scripts/fetch-picksheet.ts
+          ARGS=""
+          if [ -n "${{ inputs.slate }}" ]; then
+            ARGS="$ARGS --slate=${{ inputs.slate }}"
           fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          npx tsx scripts/fetch-picksheet-api.ts $ARGS
