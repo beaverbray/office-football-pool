@@ -6,11 +6,17 @@ import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
 import { OpeningLineEnricher, type EnrichedGameComparison } from '@/utils/opening-line-enricher'
 
+// NOTE: this is a local, narrower copy of the orchestrator's PipelineResult
+// (src/services/pipeline-orchestrator.ts). The two have drifted — this one was
+// missing `config` entirely. Declaring only the fields this component reads.
 interface PipelineResult {
   id: string
   timestamp: string
   status: 'success' | 'partial' | 'failed'
   stage: string
+  config?: {
+    week?: number
+  }
   comparison?: {
     kpis?: {
       totalGames: number
@@ -70,6 +76,8 @@ export default function CompactDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [currentWeek, setCurrentWeek] = useState<number | null>(null)
+  // Set when a refresh succeeded but could not be written back to the DB.
+  const [persistWarning, setPersistWarning] = useState<string | null>(null)
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -270,11 +278,11 @@ export default function CompactDashboard() {
     }
   }
 
-  // Refresh market data
+  // Refresh all data (odds + predictions)
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      const response = await fetch('/api/pipeline/refresh', {
+      const response = await fetch('/api/refresh-all', {
         method: 'POST'
       })
 
@@ -284,12 +292,16 @@ export default function CompactDashboard() {
         // Show specific error message if available
         if (data.message) {
           alert(`Refresh failed: ${data.message}`)
-        } else if (data.error === 'No matching games found') {
-          alert('The picksheet contains games that have already finished.\n\nPlease upload a new picksheet with upcoming games in the Control Panel.')
+        } else if (data.error === 'No picksheet data found') {
+          alert('No picksheet found.\n\nPlease upload a picksheet in the Control Panel first.')
+          router.push('/control-panel')
+          return
+        } else if (data.error === 'No picksheet games found') {
+          alert('The current pipeline has no games.\n\nPlease upload a new picksheet in the Control Panel.')
           router.push('/control-panel')
           return
         } else {
-          alert('Failed to refresh market data. Please try again or upload a new picksheet.')
+          alert('Failed to refresh data. Please try again or upload a new picksheet.')
         }
         return
       }
@@ -298,7 +310,7 @@ export default function CompactDashboard() {
         // Merge the timestamp from the API response into the pipeline object
         const pipelineWithTimestamp = {
           ...data.pipeline,
-          timestamp: data.updatedAt || data.pipeline.timestamp
+          timestamp: new Date().toISOString()
         }
         setCurrentPipeline(pipelineWithTimestamp)
 
@@ -307,11 +319,45 @@ export default function CompactDashboard() {
           OpeningLineEnricher.recordOpeningLinesFromComparisons(data.pipeline.comparison.comparisons)
         }
 
-        alert('Market data refreshed successfully!')
+        // Re-fetch predictions to get the newly scraped data
+        try {
+          const predictionsResponse = await fetch('/api/predictions/latest')
+          if (predictionsResponse.ok) {
+            const predictionsData = await predictionsResponse.json()
+            setEloPredictions(predictionsData.predictions || [])
+          }
+        } catch (predError) {
+          console.warn('Failed to refresh predictions:', predError)
+        }
+
+        // Show success message with timing info.
+        // `persisted: false` means the refresh computed fine but could NOT be
+        // written back to the DB (e.g. missing service-role key) — the numbers
+        // on screen are real but will vanish on reload, so say so explicitly
+        // rather than showing a bare success.
+        const timingInfo = data.timing?.total
+          ? `Refreshed in ${(data.timing.total / 1000).toFixed(1)}s`
+          : 'Refreshed successfully'
+        const gamesInfo = data.meta?.gamesMatched
+          ? ` • ${data.meta.gamesMatched} games matched`
+          : ''
+
+        if (data.persisted === false) {
+          setPersistWarning(data.message || 'Results were not saved to the database.')
+          alert(
+            `${timingInfo}${gamesInfo}\n\n` +
+            `WARNING: these results were NOT saved.\n` +
+            `${data.message || ''}\n\n` +
+            `What you see is current, but it will be lost on reload.`
+          )
+        } else {
+          setPersistWarning(null)
+          alert(`${timingInfo}${gamesInfo}`)
+        }
       }
     } catch (error) {
       console.error('Error refreshing:', error)
-      alert('Failed to refresh market data. Make sure a picksheet has been uploaded first.')
+      alert('Failed to refresh data. Make sure a picksheet has been uploaded first.')
     } finally {
       setRefreshing(false)
     }
@@ -449,7 +495,9 @@ export default function CompactDashboard() {
   }
 
   const getRiskColor = (delta: number | null) => {
-    if (delta === null) return 'text-gray-500'
+    // gray-400 (not gray-500) for the neutral tier: gray-500 is 4.34:1 on black,
+    // which fails WCAG AA for this small mono text. gray-400 is 8.27:1.
+    if (delta === null) return 'text-gray-400'
     const absDelta = Math.abs(delta)
     if (absDelta <= 1) return 'text-green-500'
     if (absDelta <= 3) return 'text-orange-700'
@@ -459,12 +507,12 @@ export default function CompactDashboard() {
 
   const getImportanceColor = (importance: string | undefined) => {
     switch (importance) {
-      case 'minimal': return 'text-gray-500'        // <1%
+      case 'minimal': return 'text-gray-400'        // <1%
       case 'low': return 'text-green-500'           // 1-2%
       case 'moderate': return 'text-orange-400'     // 2-4%
       case 'high': return 'text-orange-700'         // 4-8%
       case 'very-high': return 'text-red-600'       // >8%
-      default: return 'text-gray-500'
+      default: return 'text-gray-400'
     }
   }
 
@@ -521,12 +569,41 @@ export default function CompactDashboard() {
     return ''
   }
 
+  // Detect stale data. The WEEK label in the header is fetched live, but the table
+  // below renders whatever is stored in the DB — without this check, months-old data
+  // renders under the current week's heading and looks current.
+  const dataStaleness = (() => {
+    const ts = currentPipeline?.timestamp
+    if (!ts) return null
+    const ageMs = Date.now() - new Date(ts).getTime()
+    if (Number.isNaN(ageMs)) return null
+    const ageDays = Math.floor(ageMs / (24 * 60 * 60 * 1000))
+    const dataWeek: number | undefined = currentPipeline?.config?.week
+    const weekMismatch =
+      typeof dataWeek === 'number' && currentWeek !== null && dataWeek !== currentWeek
+
+    // A pool picksheet is refreshed weekly, so anything past a week is stale.
+    if (ageDays < 7 && !weekMismatch) return null
+
+    const age =
+      ageDays >= 60 ? `${Math.floor(ageDays / 30)} months old`
+      : ageDays >= 14 ? `${Math.floor(ageDays / 7)} weeks old`
+      : `${ageDays} days old`
+
+    return {
+      ageDays,
+      text: weekMismatch
+        ? `Showing Week ${dataWeek} data (${age}) while the current detected week is ${currentWeek}.`
+        : `Showing data that is ${age}.`
+    }
+  })()
+
   // Show loading state during hydration
   if (!mounted) {
     return (
       <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-sm font-mono text-gray-500">Loading...</div>
+        <div className="text-center" role="status" aria-live="polite">
+          <div className="text-sm font-mono text-gray-400">Loading...</div>
         </div>
       </div>
     )
@@ -538,7 +615,7 @@ export default function CompactDashboard() {
       <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-mono text-orange-700 mb-4">NO_DATA_LOADED</h2>
-          <p className="text-sm font-mono text-gray-500 mb-6">Please upload picksheet data first</p>
+          <p className="text-sm font-mono text-gray-400 mb-6">Please upload picksheet data first</p>
           <button
             onClick={() => router.push('/control-panel')}
             className="px-6 py-3 bg-orange-700 text-black font-mono text-sm font-bold rounded hover:bg-orange-600 transition-colors"
@@ -560,13 +637,43 @@ export default function CompactDashboard() {
         sharing={sharing}
         showShareButton={!!currentPipeline?.comparison?.comparisons}
       />
-      <div className="max-w-6xl mx-auto px-2 sm:px-4 py-1 sm:py-6">
+      <main className="max-w-6xl mx-auto px-2 sm:px-4 py-1 sm:py-6">
+        {/* Refresh succeeded but the result was not written back to the DB */}
+        {persistWarning && (
+          <div
+            role="alert"
+            className="mb-2 sm:mb-4 rounded border border-red-700 bg-red-950/60 px-3 py-2"
+          >
+            <div className="text-[10px] sm:text-xs font-mono text-red-300 font-bold">
+              NOT_SAVED
+            </div>
+            <div className="text-[10px] sm:text-xs font-mono text-red-200 mt-0.5">
+              {persistWarning} These numbers are current but will be lost on reload.
+            </div>
+          </div>
+        )}
+
+        {/* Stored data is older than a week, or is for a different week than detected */}
+        {!persistWarning && dataStaleness && (
+          <div
+            role="status"
+            className="mb-2 sm:mb-4 rounded border border-orange-700 bg-orange-950/50 px-3 py-2"
+          >
+            <div className="text-[10px] sm:text-xs font-mono text-orange-300 font-bold">
+              STALE_DATA
+            </div>
+            <div className="text-[10px] sm:text-xs font-mono text-orange-200 mt-0.5">
+              {dataStaleness.text} Use REFRESH ALL, or upload a new picksheet in the Control Panel.
+            </div>
+          </div>
+        )}
+
         {/* KPI Metrics */}
         {currentPipeline?.comparison?.kpis && (
-          <div className="grid grid-cols-4 gap-1.5 sm:gap-4 mb-2 sm:mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-4 mb-2 sm:mb-6">
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
               <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">REM:</span>
+                <span className="text-[10px] font-mono text-gray-400 leading-tight">REM:</span>
                 <span className="text-[13px] sm:text-xs font-mono font-bold text-orange-700">
                   {(() => {
                     const now = new Date()
@@ -578,7 +685,7 @@ export default function CompactDashboard() {
                   })()}
                 </span>
               </div>
-              <div className="text-[8px] sm:text-xs font-mono text-gray-600 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
+              <div className="text-[8px] sm:text-xs font-mono text-gray-400 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
                 {(() => {
                   const now = new Date()
                   const futureGames = currentPipeline.comparison.comparisons?.filter(comp => {
@@ -594,36 +701,36 @@ export default function CompactDashboard() {
 
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
               <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">AVG Δ:</span>
+                <span className="text-[10px] font-mono text-gray-400 leading-tight">AVG Δ:</span>
                 <span className={`text-[13px] sm:text-xs font-mono font-bold ${getRiskColor(currentPipeline.comparison.kpis.avgSpreadDelta)}`}>
                   {currentPipeline.comparison.kpis.avgSpreadDelta != null ? currentPipeline.comparison.kpis.avgSpreadDelta.toFixed(2) : '-'}
                 </span>
               </div>
-              <div className="text-[8px] sm:text-xs font-mono text-gray-600 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
+              <div className="text-[8px] sm:text-xs font-mono text-gray-400 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
                 MEDIAN: {currentPipeline.comparison.kpis.medianSpreadDelta != null ? currentPipeline.comparison.kpis.medianSpreadDelta.toFixed(2) : '-'}
               </div>
             </div>
 
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
               <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">KEY #:</span>
+                <span className="text-[10px] font-mono text-gray-400 leading-tight">KEY #:</span>
                 <span className="text-[13px] sm:text-xs font-mono font-bold text-orange-700">
                   {currentPipeline.comparison.kpis.keyNumberCrossings}
                 </span>
               </div>
-              <div className="text-[8px] sm:text-xs font-mono text-gray-600 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
+              <div className="text-[8px] sm:text-xs font-mono text-gray-400 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
                 THRESHOLDS: [3,7,10,14]
               </div>
             </div>
 
             <div className="bg-zinc-900 rounded border border-zinc-800 p-1.5 sm:p-4">
               <div className="flex flex-col items-center sm:flex-row sm:items-baseline sm:gap-2">
-                <span className="text-[8px] sm:text-[10px] font-mono text-gray-500 leading-tight">FLIPS:</span>
+                <span className="text-[10px] font-mono text-gray-400 leading-tight">FLIPS:</span>
                 <span className="text-[13px] sm:text-xs font-mono font-bold text-purple-400">
                   {currentPipeline.comparison.kpis.favoriteFlips}
                 </span>
               </div>
-              <div className="text-[8px] sm:text-xs font-mono text-gray-600 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
+              <div className="text-[8px] sm:text-xs font-mono text-gray-400 mt-0.5 sm:mt-1 leading-tight hidden sm:block">
                 INVERSIONS_DETECTED
               </div>
             </div>
@@ -648,7 +755,7 @@ export default function CompactDashboard() {
                   <button
                     onClick={() => setSearchTerm('')}
                     aria-label="Clear search"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] sm:text-xs font-mono text-gray-500 hover:text-orange-600 transition-colors"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] sm:text-xs font-mono text-gray-400 hover:text-orange-600 transition-colors"
                   >
                     CLEAR
                   </button>
@@ -660,21 +767,21 @@ export default function CompactDashboard() {
             <div className="sm:hidden flex items-center justify-between gap-2 mb-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex-1 flex items-center justify-between px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-[9px] font-mono text-gray-300 hover:bg-zinc-800 transition-colors"
+                className="flex-1 flex items-center justify-between px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-[10px] font-mono text-gray-300 hover:bg-zinc-800 transition-colors"
               >
                 <span>FILTERS {showFilters ? '▼' : '►'}</span>
-                <span className="text-gray-500">
+                <span className="text-gray-400">
                   {showOnlyIssues || filters.league !== 'all' || filters.dateFilter !== 'all' ||
                    filters.eloFilter !== 'all' || filters.deltaMin || filters.deltaMax || searchTerm ? 'ACTIVE' : 'OFF'}
                 </span>
               </button>
               <button
                 onClick={() => setShowGuide(!showGuide)}
-                className="px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-[9px] font-mono text-orange-600 hover:bg-zinc-800 transition-colors"
+                className="px-2 py-1.5 bg-zinc-950 border border-zinc-700 rounded text-[10px] font-mono text-orange-600 hover:bg-zinc-800 transition-colors"
               >
                 ℹ
               </button>
-              <div className="text-[9px] font-mono text-gray-500 whitespace-nowrap">
+              <div className="text-[10px] font-mono text-gray-400 whitespace-nowrap">
                 {getFilteredComparisons().length}/{enrichedComparisons.length}
               </div>
             </div>
@@ -693,7 +800,7 @@ export default function CompactDashboard() {
                     </svg>
                   </button>
                 </div>
-                <div className="space-y-1.5 text-[9px] font-mono">
+                <div className="space-y-1.5 text-[10px] font-mono">
                   <div><span className="text-orange-700">OPEN:</span> <span className="text-gray-400">Opening line spread</span></div>
                   <div><span className="text-orange-700">MKT:</span> <span className="text-gray-400">Current market spread</span></div>
                   <div><span className="text-orange-700">POOL:</span> <span className="text-gray-400">Office pool spread</span></div>
@@ -701,7 +808,7 @@ export default function CompactDashboard() {
                   <div><span className="text-orange-700">Δp%:</span> <span className="text-gray-400">Market delta probability = |p_pool - p_market| + key_number_weights, calibrated</span></div>
                   <div className="pt-1 border-t border-zinc-700 mt-1">
                     <div className="text-orange-700 mb-1">COLOR CODING:</div>
-                    <div><span className="text-gray-500">Gray Δp%:</span> <span className="text-gray-400">Minimal (&lt;1%)</span></div>
+                    <div><span className="text-gray-400">Gray Δp%:</span> <span className="text-gray-400">Minimal (&lt;1%)</span></div>
                     <div><span className="text-green-500">Green Δp%:</span> <span className="text-gray-400">Low (1-2%)</span></div>
                     <div><span className="text-orange-400">Orange Δp%:</span> <span className="text-gray-400">Moderate (2-4%)</span></div>
                     <div><span className="text-orange-700">Dark Orange Δp%:</span> <span className="text-gray-400">High (4-8%)</span></div>
@@ -739,7 +846,7 @@ export default function CompactDashboard() {
 
               {/* League Filter */}
               <div>
-                <label className="block text-xs font-mono text-gray-500 mb-1">LEAGUE</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">LEAGUE</label>
                 <select
                   value={filters.league}
                   onChange={(e) => setFilters({...filters, league: e.target.value as 'all' | 'NFL' | 'NCAA'})}
@@ -753,7 +860,7 @@ export default function CompactDashboard() {
 
               {/* Date Filter */}
               <div>
-                <label className="block text-xs font-mono text-gray-500 mb-1">DATE</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">DATE</label>
                 <select
                   value={filters.dateFilter}
                   onChange={(e) => setFilters({...filters, dateFilter: e.target.value as 'all' | 'today' | 'tomorrow' | 'week'})}
@@ -768,7 +875,7 @@ export default function CompactDashboard() {
 
               {/* Model Filter */}
               <div>
-                <label className="block text-xs font-mono text-gray-500 mb-1">MODEL</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">MODEL</label>
                 <select
                   value={filters.eloFilter}
                   onChange={(e) => setFilters({...filters, eloFilter: e.target.value as 'all' | 'with' | 'without'})}
@@ -782,7 +889,7 @@ export default function CompactDashboard() {
 
               {/* Delta Range */}
               <div className="w-full sm:w-36 sm:ml-4">
-                <label className="block text-xs font-mono text-gray-500 mb-1">DELTA_ABS</label>
+                <label className="block text-xs font-mono text-gray-400 mb-1">DELTA_ABS</label>
                 <div className="flex gap-1">
                   <input
                     type="number"
@@ -807,7 +914,7 @@ export default function CompactDashboard() {
               {/* Flagged Checkbox */}
               <div className="flex items-center gap-2 sm:ml-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs font-mono text-gray-500">FLAGGED_GAMES</span>
+                  <span className="text-xs font-mono text-gray-400">FLAGGED_GAMES</span>
                   <input
                     type="checkbox"
                     checked={showOnlyIssues}
@@ -820,7 +927,7 @@ export default function CompactDashboard() {
 
             {/* Count Display */}
             {currentPipeline?.comparison?.comparisons && (
-              <div className="ml-auto text-xs font-mono text-gray-500 hidden sm:block">
+              <div className="ml-auto text-xs font-mono text-gray-400 hidden sm:block">
                 SHOWING: {getFilteredComparisons().length} / {enrichedComparisons.length}
               </div>
             )}
@@ -831,7 +938,7 @@ export default function CompactDashboard() {
         {/* Week Display and Guide Button Row */}
         {currentPipeline?.comparison?.comparisons && (
           <div className="hidden sm:flex justify-between items-center mb-2 relative">
-            <div className="text-xs font-mono text-gray-500">
+            <div className="text-xs font-mono text-gray-400">
               {currentWeek ? `WEEK ${currentWeek}` : 'LOADING...'}
             </div>
 
@@ -864,7 +971,7 @@ export default function CompactDashboard() {
                   <div><span className="text-orange-700">Δp%:</span> <span className="text-gray-400">Market delta probability - calibrated measure of spread importance (shown in home team row)</span></div>
                   <div className="pt-2 border-t border-zinc-700 mt-2">
                     <div className="text-orange-700 font-bold mb-2">COLOR CODING:</div>
-                    <div><span className="text-gray-500 font-bold">Gray Δp%:</span> <span className="text-gray-400">Minimal importance (&lt;1%)</span></div>
+                    <div><span className="text-gray-400 font-bold">Gray Δp%:</span> <span className="text-gray-400">Minimal importance (&lt;1%)</span></div>
                     <div><span className="text-green-500 font-bold">Green Δp%:</span> <span className="text-gray-400">Low importance (1-2%)</span></div>
                     <div><span className="text-orange-400 font-bold">Orange Δp%:</span> <span className="text-gray-400">Moderate importance (2-4%)</span></div>
                     <div><span className="text-orange-700 font-bold">Dark Orange Δp%:</span> <span className="text-gray-400">High importance (4-8%)</span></div>
@@ -897,20 +1004,30 @@ export default function CompactDashboard() {
           <div className="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
             <div className="overflow-x-auto max-h-[70vh] sm:max-h-[calc(100vh-280px)] overflow-y-auto">
               <table className="w-full">
+                <caption className="sr-only">Comparison of pool, market, and model spreads by game</caption>
                 <thead className="bg-zinc-950 border-b border-zinc-800 sticky top-0 z-10">
                   <tr>
                     <th
+                      scope="col"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleSort('date')}
-                      className="px-1 sm:px-2 py-1.5 sm:py-2 text-left text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950 cursor-pointer hover:text-orange-500 transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleSort('date')
+                        }
+                      }}
+                      className="px-1 sm:px-2 py-1.5 sm:py-2 text-left text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950 cursor-pointer hover:text-orange-500 transition-colors"
                     >
                       MATCHUP {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">OPEN</th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MKT</th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">POOL</th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">MOD</th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950">Δp%</th>
-                    <th className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-500 bg-zinc-950 hidden sm:table-cell">🚩</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">OPEN</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MKT</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">POOL</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MOD</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">Δp%</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950 hidden sm:table-cell">🚩</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
@@ -923,13 +1040,13 @@ export default function CompactDashboard() {
                         <tr className="bg-zinc-950 border-b-2 border-zinc-700">
                           <td colSpan={8} className="px-1 sm:px-2 py-1.5 sm:py-2">
                             <div className="flex items-center gap-1.5 sm:gap-2">
-                              <span className={`text-[8px] sm:text-[10px] font-mono px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-bold ${league === 'NFL' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>
+                              <span className={`text-[10px] font-mono px-1.5 py-0.5 sm:px-2 sm:py-1 rounded font-bold ${league === 'NFL' ? 'bg-blue-900/50 text-blue-300' : 'bg-green-900/50 text-green-300'}`}>
                                 {league}
                               </span>
-                              <span className="text-[9px] sm:text-xs font-mono text-gray-400 font-bold">
+                              <span className="text-[10px] sm:text-xs font-mono text-gray-400 font-bold">
                                 {dateStr}
                               </span>
-                              <span className="text-[8px] sm:text-[10px] font-mono text-gray-500">
+                              <span className="text-[10px] font-mono text-gray-400">
                                 {hour !== 'N/A' ? `@ ${hour}` : ''}
                               </span>
                             </div>
@@ -979,12 +1096,12 @@ export default function CompactDashboard() {
                                   <div className="text-[10px] sm:text-xs font-mono text-gray-300">
                                     {comp.awayTeam}
                                   </div>
-                                  <div className="text-[8px] font-mono text-gray-500 mt-0.5">
+                                  <div className="text-[10px] font-mono text-gray-400 mt-0.5">
                                     {timeStr}
                                   </div>
                                 </td>
                                 <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
-                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${(comp.openingSpread !== undefined && comp.openingSpread !== null) ? 'text-gray-500' : 'text-gray-600'}`}>
+                            <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-400">
                               {(comp.openingSpread !== undefined && comp.openingSpread !== null)
                                 ? `${comp.openingSpread > 0 ? '+' : ''}${comp.openingSpread.toFixed(1)}`
                                 : '-'}
@@ -1001,7 +1118,7 @@ export default function CompactDashboard() {
                             </div>
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
-                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-400'}`}>
                               {eloSpread !== null ? `${eloSpread > 0 ? '+' : ''}${eloSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
@@ -1013,17 +1130,17 @@ export default function CompactDashboard() {
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center hidden sm:table-cell" rowSpan={2}>
                             <div className="flex flex-col gap-0.5 sm:gap-1 items-center">
                               {comp.crossesKeyNumber && comp.keyNumbersCrossed && comp.keyNumbersCrossed.length > 0 && comp.keyNumbersCrossed.some(n => n !== 0) && (
-                                <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
+                                <span className="px-1 sm:px-1 py-1 text-[10px] font-mono bg-orange-950 text-orange-700 rounded whitespace-nowrap">
                                   K{comp.keyNumbersCrossed.filter(n => n !== 0).join(',')}
                                 </span>
                               )}
                               {comp.favoriteFlipped === true && (
-                                <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-purple-950 text-purple-400 rounded">
+                                <span className="px-1 sm:px-1 py-1 text-[10px] font-mono bg-purple-950 text-purple-400 rounded">
                                   FLP
                                 </span>
                               )}
                               {comp.outlierScore != null && comp.outlierScore > 2.0 && (
-                                <span className="px-1 sm:px-1 py-1 text-[8px] sm:text-[9px] font-mono bg-red-950 text-red-400 rounded">
+                                <span className="px-1 sm:px-1 py-1 text-[10px] font-mono bg-red-950 text-red-400 rounded">
                                   OUT
                                 </span>
                               )}
@@ -1041,7 +1158,7 @@ export default function CompactDashboard() {
                             </div>
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
-                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${homeOpeningSpread !== undefined ? 'text-gray-500' : 'text-gray-600'}`}>
+                            <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-400">
                               {homeOpeningSpread !== undefined
                                 ? `${homeOpeningSpread > 0 ? '+' : ''}${homeOpeningSpread.toFixed(1)}`
                                 : '-'}
@@ -1058,7 +1175,7 @@ export default function CompactDashboard() {
                             </div>
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
-                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${homeEloSpread !== null ? 'text-purple-400' : 'text-gray-600'}`}>
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${homeEloSpread !== null ? 'text-purple-400' : 'text-gray-400'}`}>
                               {homeEloSpread !== null ? `${homeEloSpread > 0 ? '+' : ''}${homeEloSpread.toFixed(1)}` : '-'}
                               </div>
                             </td>
@@ -1068,7 +1185,7 @@ export default function CompactDashboard() {
                                 {(marketDeltaProb * 100).toFixed(1)}%
                               </div>
                             ) : (
-                              <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-600">-</div>
+                              <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-400">-</div>
                             )}
                           </td>
                           </tr>
@@ -1086,17 +1203,17 @@ export default function CompactDashboard() {
 
         {/* System Status */}
         <div className="mt-6 text-center">
-          <p className="text-xs font-mono text-gray-600">
+          <p className="text-xs font-mono text-gray-400">
             LAST_UPDATE: {currentPipeline ? new Date(currentPipeline.timestamp).toISOString() : 'N/A'} |
             STATUS: {currentPipeline?.status?.toUpperCase() || 'N/A'}
           </p>
         </div>
-      </div>
+      </main>
 
       {/* Footer */}
       <footer className="bg-zinc-900 border-t border-zinc-800 mt-8">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <p className="text-center text-xs font-mono text-gray-500">
+          <p className="text-center text-xs font-mono text-gray-400">
             BEAVERBRAY | © 2025
           </p>
         </div>

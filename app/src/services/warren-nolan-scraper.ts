@@ -23,19 +23,27 @@ export interface WarrenNolanScraperResult {
 }
 
 export class WarrenNolanScraper {
-  private static readonly BASE_URL = 'https://www.warrennolan.com/fbs/2025/predict-winners'
+  /**
+   * Build the base predict-winners URL for a given season
+   * @param season - Season year (e.g., 2025)
+   */
+  private static buildBaseUrl(season: number): string {
+    return `https://www.warrennolan.com/fbs/${season}/predict-winners`
+  }
 
   /**
    * Scrape predictions for a specific date
    * @param date - Date in YYYY-MM-DD format (e.g., '2025-10-04')
+   * @param season - Season year for the URL path; defaults to the year of `date`
    * @returns Scraper result with predictions
    */
-  static async scrapePredictions(date: string): Promise<WarrenNolanScraperResult> {
+  static async scrapePredictions(date: string, season?: number): Promise<WarrenNolanScraperResult> {
     const scrapedAt = new Date().toISOString()
+    const resolvedSeason = season ?? new Date(date + 'T12:00:00Z').getUTCFullYear()
 
     try {
       // Build URL with date parameter
-      const url = `${this.BASE_URL}?type1=Today,%20${this.formatDateForUrl(date)}&type2=All%20Games&date=${date}`
+      const url = `${this.buildBaseUrl(resolvedSeason)}?type1=Today,%20${this.formatDateForUrl(date)}&type2=All%20Games&date=${date}`
 
       console.log(`Fetching Warren Nolan predictions from: ${url}`)
 
@@ -176,7 +184,7 @@ export class WarrenNolanScraper {
 
         try {
           console.log(`  Fetching games for ${dateString}...`)
-          const dayResult = await this.scrapePredictions(dateString)
+          const dayResult = await this.scrapePredictions(dateString, season)
 
           if (dayResult.success && dayResult.predictions.length > 0) {
             allPredictions.push(...dayResult.predictions)

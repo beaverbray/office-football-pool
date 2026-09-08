@@ -1,0 +1,56 @@
+name: Fetch Picksheet
+
+on:
+  schedule:
+    # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
+    - cron: '0 2 * * 5'
+  workflow_dispatch:
+    inputs:
+      week:
+        description: 'Override NFL week number (optional)'
+        required: false
+        type: number
+
+concurrency:
+  group: fetch-picksheet
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      # Auth note: this job does NOT log in. The Splash Sports sign-in page is
+      # reCAPTCHA-protected, so an automated login cannot complete it. A human
+      # runs `npm run login` locally, then stores the output of
+      # `npm run login -- --print-b64` as the PICKSHEET_SESSION_B64 secret.
+      # When that session expires the job fails with "Authentication required" —
+      # refresh the secret the same way.
+      - name: Fetch picksheet
+        working-directory: app
+        env:
+          PICKSHEET_SESSION_B64: ${{ secrets.PICKSHEET_SESSION_B64 }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          if [ -n "${{ inputs.week }}" ]; then
+            npx tsx scripts/fetch-picksheet.ts --week=${{ inputs.week }}
+          else
+            npx tsx scripts/fetch-picksheet.ts
+          fi

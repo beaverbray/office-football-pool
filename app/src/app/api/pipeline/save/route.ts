@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 interface CurrentPipelineRow {
   id: string
-  pipeline_data: any
+  pipeline_data: unknown
   picksheet_text: string | null
   updated_at: string
-  metadata: any
+  metadata: unknown
+}
+
+// afbp.pipeline_current isn't in the generated Database type yet (tracked separately).
+// Narrow, local cast instead of `any`: we control the row shape via CurrentPipelineRow.
+interface PipelineCurrentClient {
+  from(table: 'pipeline_current'): {
+    upsert(row: CurrentPipelineRow): {
+      select(): {
+        single(): Promise<{ data: CurrentPipelineRow | null; error: { message: string; code?: string } | null }>
+      }
+    }
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -21,8 +33,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Save to current_pipeline table using upsert (insert or update)
-    const { data, error } = await (supabase as any)
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Service role key not configured' },
+        { status: 500 }
+      )
+    }
+
+    // Save to pipeline_current table using upsert (insert or update)
+    // Writes require the service-role client: anon writes are blocked by RLS
+    // (see supabase/migrations/20260813120000_restrict_pipeline_current_anon_writes.sql)
+    const { data, error } = await (supabaseAdmin as unknown as PipelineCurrentClient)
       .from('pipeline_current')
       .upsert({
         id: 'current',
@@ -33,7 +54,7 @@ export async function POST(request: NextRequest) {
           source: 'control-panel',
           version: '1.0'
         }
-      } as any)
+      })
       .select()
       .single()
 

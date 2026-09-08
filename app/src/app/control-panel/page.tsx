@@ -259,6 +259,7 @@ export default function ControlPanel() {
 
   // Clear saved data
   const clearData = () => {
+    if (!confirm('Clear all picksheet and pipeline data?')) return
     localStorage.removeItem('pipelineData')
     localStorage.removeItem('picksheetText')
     setPicksheetText('')
@@ -364,15 +365,15 @@ export default function ControlPanel() {
               <h3 className="text-xs font-mono text-green-600 mb-3">📅 AUTO-DETECTED WEEK</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
                 <div>
-                  <span className="text-gray-500">NFL:</span>
+                  <span className="text-gray-400">NFL:</span>
                   <span className="ml-2 text-green-400">Week {weekInfo.nfl.week} ({weekInfo.nfl.seasonYear})</span>
                 </div>
                 <div>
-                  <span className="text-gray-500">NCAAF:</span>
+                  <span className="text-gray-400">NCAAF:</span>
                   <span className="ml-2 text-green-400">Week {weekInfo.ncaaf.week} ({weekInfo.ncaaf.seasonYear})</span>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-gray-500">
+              <p className="mt-2 text-xs text-gray-400">
                 ⚡ Predictions will be automatically fetched based on detected leagues
               </p>
             </div>
@@ -413,13 +414,14 @@ export default function ControlPanel() {
 
           {/* Picksheet input */}
           <div className="mb-6">
-            <label className="block text-xs font-mono text-gray-400 mb-2">
+            <label htmlFor="picksheet-input" className="block text-xs font-mono text-gray-400 mb-2">
               INPUT: PICKSHEET_DATA
             </label>
-            <div className="mb-2 text-xs font-mono text-gray-500">
+            <div className="mb-2 text-xs font-mono text-gray-400">
               FORMAT: [AWAY_TEAM] @ [HOME_TEAM] [SPREAD]
             </div>
             <textarea
+              id="picksheet-input"
               value={picksheetText}
               onChange={(e) => setPicksheetText(e.target.value)}
               className="w-full h-64 p-4 bg-zinc-950 border border-zinc-700 rounded text-sm font-mono text-gray-300 focus:border-orange-700 focus:outline-none placeholder-zinc-600"
@@ -428,14 +430,14 @@ export default function ControlPanel() {
 ..."
               disabled={dataLoaded}
             />
-            <div className="mt-2 text-xs font-mono text-gray-600">
+            <div className="mt-2 text-xs font-mono text-gray-400">
               LINES_DETECTED: {picksheetText.split('\n').filter(line => line.trim()).length}
             </div>
           </div>
 
           {/* Execute button */}
           <div className="flex items-center justify-between mb-6">
-            <div className="text-xs font-mono text-gray-500">
+            <div className="text-xs font-mono text-gray-400">
               STATUS: {dataLoaded ? 'DATA_LOCKED' : 'READY_FOR_INPUT'}
             </div>
 
@@ -458,7 +460,7 @@ export default function ControlPanel() {
             <div className="mb-6 p-4 bg-zinc-950 border border-zinc-800 rounded">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-xs font-mono text-orange-600">{currentStep}</span>
-                <span className="text-xs font-mono text-gray-500">{Math.round(progressPercent)}%</span>
+                <span className="text-xs font-mono text-gray-400">{Math.round(progressPercent)}%</span>
               </div>
               <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
                 <div
@@ -473,7 +475,7 @@ export default function ControlPanel() {
           {!dataLoaded && (
             <div className="mb-6 p-4 bg-zinc-950 border border-zinc-800 rounded">
               <h3 className="text-xs font-mono text-orange-700 mb-2">AUTOMATIC_PROCESSING_PIPELINE:</h3>
-              <ol className="space-y-1 text-xs font-mono text-gray-500">
+              <ol className="space-y-1 text-xs font-mono text-gray-400">
                 <li>1. PARSE_PICKSHEET_DATA → DETECT_LEAGUES</li>
                 <li>2. AUTO_FETCH_PREDICTIONS (NFL: NFELO, NCAAF: Warren Nolan)</li>
                 <li>3. FETCH_MARKET_ODDS_API</li>
@@ -489,7 +491,7 @@ export default function ControlPanel() {
           <div className="mt-6 border-t border-zinc-800 pt-6">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between text-xs font-mono text-gray-500 hover:text-gray-300 transition-colors"
+              className="w-full flex items-center justify-between text-xs font-mono text-gray-400 hover:text-gray-300 transition-colors"
             >
               <span>⚙️ ADVANCED_OPTIONS (Manual Prediction Scraping)</span>
               <span>{showAdvanced ? '▼' : '▶'}</span>
@@ -502,7 +504,7 @@ export default function ControlPanel() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-mono text-gray-300">NFELO (NFL)</span>
                     <div className="flex gap-4 items-center">
-                      <div className="text-xs font-mono text-gray-500">
+                      <div className="text-xs font-mono text-gray-400">
                         Week {weekInfo.nfl.week}, {weekInfo.nfl.seasonYear}
                       </div>
                       <button
@@ -526,7 +528,7 @@ export default function ControlPanel() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-mono text-gray-300">Warren Nolan (NCAAF)</span>
                     <div className="flex gap-4 items-center">
-                      <div className="text-xs font-mono text-gray-500">
+                      <div className="text-xs font-mono text-gray-400">
                         Week {weekInfo.ncaaf.week}, All week games
                       </div>
                       <button
@@ -550,7 +552,7 @@ export default function ControlPanel() {
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-xs font-mono text-gray-600">
+          <p className="text-xs font-mono text-gray-400">
             SYSTEM_MODE: {dataLoaded ? 'VIEW_ONLY' : 'AUTO_DETECT'} |
             CACHE: {dataLoaded ? 'ACTIVE' : 'EMPTY'} |
             WEEK_DETECTION: AUTOMATIC

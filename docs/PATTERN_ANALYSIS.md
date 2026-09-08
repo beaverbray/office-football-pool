@@ -14,6 +14,8 @@ The pattern analysis system analyzes:
 
 ### 1. Analysis Script (`scripts/analyze-patterns.ts`)
 
+> **⚠️ Not currently implemented.** `app/scripts/analyze-patterns.ts` does not exist in this repo (`app/package.json` has no `analyze-patterns` script), so the `npm run analyze-patterns*` commands below will fail today. An older copy of this script lives at `analysis/scripts/analyze-patterns.ts`, but that directory was split out from the app on purpose ("ready to be moved to a separate repository"). Use the [API Endpoint](#2-api-endpoint-apianalysispatterns) below for working programmatic access; the CLI examples in this doc (including "Sample Script Output" and "Insights & Use Cases" further down) describe the pre-split tool and are not currently runnable.
+
 Command-line tool for running comprehensive pattern analysis.
 
 ```bash

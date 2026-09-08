@@ -35,7 +35,7 @@ export default function NavBar({
               <h1 className="text-sm sm:text-xl font-mono font-bold text-orange-700">
                 SPREAD_ANALYSIS_SYSTEM
               </h1>
-              <p className="hidden sm:block text-xs font-mono text-gray-500">
+              <p className="hidden sm:block text-xs font-mono text-gray-400">
                 PICKSHEET_MARKET_COMPARISON_ENGINE | V1.0
               </p>
             </div>
@@ -82,7 +82,7 @@ export default function NavBar({
                 disabled={refreshing}
                 className="hidden sm:block px-3 py-1 bg-green-700 text-black font-mono text-xs font-bold rounded hover:bg-green-600 disabled:bg-zinc-800 disabled:text-zinc-600 transition-colors"
               >
-                {refreshing ? 'REFRESHING...' : '↻ REFRESH'}
+                {refreshing ? 'REFRESHING ALL...' : '↻ REFRESH ALL'}
               </button>
             )}
 
@@ -100,6 +100,8 @@ export default function NavBar({
             {/* Mobile Menu Button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
+              aria-label="Toggle menu"
+              aria-expanded={showMobileMenu}
               className="sm:hidden p-2 text-gray-400 hover:text-orange-700 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,7 +157,7 @@ export default function NavBar({
                 disabled={refreshing}
                 className="block w-full text-left px-4 py-2 text-sm font-mono rounded transition-colors bg-green-700 text-black font-bold mt-1"
               >
-                {refreshing ? 'REFRESHING...' : '↻ REFRESH'}
+                {refreshing ? 'REFRESHING ALL...' : '↻ REFRESH ALL'}
               </button>
             )}
             {showShareButton && (
