@@ -1026,7 +1026,11 @@ export default function CompactDashboard() {
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MKT</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">POOL</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MOD</th>
-                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">Δp%</th>
+                    {/* Two units share this column by design: the away row carries the
+                        spread delta in points, the home row the calibrated probability
+                        delta. Labelling it "Δp%" alone made the away row's -0.5 read as
+                        a percentage. */}
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950" title="Away row: spread delta in points. Home row: calibrated market delta probability.">Δpts<span className="text-gray-600">/</span>Δp%</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950 hidden sm:table-cell">🚩</th>
                   </tr>
                 </thead>
@@ -1081,7 +1085,9 @@ export default function CompactDashboard() {
 
                           const homePoolSpread = comp.picksheetSpread
                           const homeMarketSpread = comp.marketSpread
-                          const homeOpeningSpread = (comp.openingSpread !== undefined && comp.openingSpread !== null) ? -comp.openingSpread : undefined
+                          // openingSpread is home-perspective, like marketSpread and
+                          // picksheetSpread — the away row negates it, the home row does not.
+                          const awayOpeningSpread = (comp.openingSpread !== undefined && comp.openingSpread !== null) ? -comp.openingSpread : undefined
                           const homeEloSpread = eloSpread !== null ? -eloSpread : null
 
                           // Get market delta probability and importance level
@@ -1102,8 +1108,8 @@ export default function CompactDashboard() {
                                 </td>
                                 <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
                             <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-400">
-                              {(comp.openingSpread !== undefined && comp.openingSpread !== null)
-                                ? `${comp.openingSpread > 0 ? '+' : ''}${comp.openingSpread.toFixed(1)}`
+                              {awayOpeningSpread !== undefined
+                                ? `${awayOpeningSpread > 0 ? '+' : ''}${awayOpeningSpread.toFixed(1)}`
                                 : '-'}
                             </div>
                           </td>
@@ -1159,8 +1165,8 @@ export default function CompactDashboard() {
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
                             <div className="text-[11px] sm:text-sm font-mono font-bold text-gray-400">
-                              {homeOpeningSpread !== undefined
-                                ? `${homeOpeningSpread > 0 ? '+' : ''}${homeOpeningSpread.toFixed(1)}`
+                              {(comp.openingSpread !== undefined && comp.openingSpread !== null)
+                                ? `${comp.openingSpread > 0 ? '+' : ''}${comp.openingSpread.toFixed(1)}`
                                 : '-'}
                             </div>
                           </td>

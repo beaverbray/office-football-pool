@@ -31,13 +31,25 @@ export interface EnrichedGameComparison {
 
 export class OpeningLineEnricher {
   /**
-   * Enrich game comparisons with opening line data
+   * Enrich game comparisons with opening line data.
+   *
+   * No opening-line source exists yet, so `openingSpread` stays null and the
+   * OPEN column renders "-". It previously defaulted to `comp.marketSpread`
+   * as a "placeholder", which put a fabricated number in front of users: OPEN
+   * showed the current market line relabelled as the opening one, so a game
+   * whose line had never moved appeared to have moved.
+   *
+   * Worse, it was rendered against the opposite sign convention — the away row
+   * prints `openingSpread` raw, while `marketSpread` is home-perspective — so
+   * Patriots @ Seahawks displayed OPEN NE -3.0 beside MKT NE +3.0, reading as
+   * a six-point swing on a line that had not moved at all.
+   *
+   * Wire a real opening-line source before reinstating this column.
    */
   static enrichGames(comparisons: any[]): EnrichedGameComparison[] {
-    // Return comparisons as-is for now (stub implementation)
     return comparisons.map(comp => ({
       ...comp,
-      openingSpread: comp.marketSpread, // Use market spread as placeholder
+      openingSpread: null,
       lineMovement: undefined
     }))
   }
