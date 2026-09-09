@@ -153,6 +153,10 @@ export async function restoreSession(browser: Browser, page: Page, state: Sessio
 
   for (const entry of state.origins) {
     if (entry.localStorage.length === 0) continue
+    // Sessions captured before the move to Splash also stored
+    // officefootballpool.com. Restoring those means navigating to a site
+    // nothing reads, so ignore origins no longer in SESSION_ORIGINS.
+    if (!SESSION_ORIGINS.some(o => o === entry.origin)) continue
     try {
       await page.goto(entry.origin, { waitUntil: 'domcontentloaded', timeout: 45000 })
       await page.evaluate(items => {
