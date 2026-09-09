@@ -1052,11 +1052,12 @@ export default function CompactDashboard() {
                     >
                       MATCHUP {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
-                    {/* "First line this system observed", not the book's true open:
-                        The Odds API's historical endpoint is a paid tier, so the
-                        series starts whenever recording started. Named FIRST so it
-                        does not claim more than it is. */}
-                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950" title="First spread this system observed for this game. Not the book's opening line.">FIRST</th>
+                    {/* The Tuesday-morning line, captured by the snapshot-odds agent.
+                        Not the book's literal first post (The Odds API's historical
+                        endpoint is a paid tier) — but by Tuesday the prior week's
+                        results and the injury picture are in and books have repriced,
+                        so this is the number the pool is actually playing against. */}
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950" title="Line as of Tuesday morning, after the previous week's results and injury news.">OPEN</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MKT</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">POOL</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MOD</th>

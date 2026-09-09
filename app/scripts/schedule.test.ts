@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
-import { missingConfig, buildPlist, resolveNode, WEEKDAY, HOUR } from './schedule'
+import { missingConfig, buildPlist, resolveNode, AGENTS, type AgentSpec } from './schedule'
 
 /**
  * These lock two failures that were live in an installed agent, both of which
@@ -48,11 +48,21 @@ describe('missingConfig', () => {
 })
 
 describe('buildPlist', () => {
-  const plist = buildPlist('/opt/node/bin/node', '/app/tsx.mjs', '/app/fetch.ts', '/logs')
+  const agent: AgentSpec = {
+    label: 'com.example.job', script: 'job.ts', weekday: 4, hour: 18, minute: 0,
+    requires: [], why: 'test'
+  }
+  const plist = buildPlist(agent, '/opt/node/bin/node', '/app/tsx.mjs', '/app/fetch.ts', '/logs')
 
-  it('runs the fetch on the schedule the old cron used', () => {
-    expect(plist).toContain(`<key>Weekday</key><integer>${WEEKDAY}</integer>`)
-    expect(plist).toContain(`<key>Hour</key><integer>${HOUR}</integer>`)
+  it('schedules at the agent declared time', () => {
+    expect(plist).toContain('<key>Weekday</key><integer>4</integer>')
+    expect(plist).toContain('<key>Hour</key><integer>18</integer>')
+  })
+
+  it('gives each agent its own label and log files', () => {
+    expect(plist).toContain('<string>com.example.job</string>')
+    expect(plist).toContain('/logs/job.log')
+    expect(plist).toContain('/logs/job.error.log')
   })
 
   it('invokes node by absolute path, since launchd supplies almost no PATH', () => {
@@ -72,5 +82,30 @@ describe('resolveNode', () => {
     const resolved = await resolveNode()
     expect(path.isAbsolute(resolved)).toBe(true)
     await expect(fs.access(resolved)).resolves.toBeUndefined()
+  })
+})
+
+describe('agent table', () => {
+  it('schedules the odds snapshot before the picksheet fetch in the week', () => {
+    // OPEN means the Tuesday-morning line. If the snapshot ran after the fetch
+    // there would be no earlier observation than Thursday evening, and the
+    // column would be showing a near-closing line labelled as an opening one.
+    const snapshot = AGENTS.find(a => a.script === 'snapshot-odds.ts')!
+    const fetch = AGENTS.find(a => a.script === 'fetch-picksheet-api.ts')!
+    expect(snapshot.weekday).toBeLessThan(fetch.weekday)
+  })
+
+  it('gives every agent a distinct label, so one cannot overwrite another plist', () => {
+    const labels = AGENTS.map(a => a.label)
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+
+  it('does not require picksheet credentials for the odds snapshot', () => {
+    // The snapshot only needs Supabase; demanding SPLASH_*/APP_URL would block
+    // installing it on a machine that only records lines.
+    const snapshot = AGENTS.find(a => a.script === 'snapshot-odds.ts')!
+    expect(snapshot.requires).not.toContain('SPLASH_CONTEST_ID')
+    expect(snapshot.requires).not.toContain('APP_URL')
+    expect(missingConfig({ SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'u' }, snapshot.requires)).toEqual([])
   })
 })

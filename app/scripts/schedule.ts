@@ -24,46 +24,87 @@ import { promisify } from 'node:util'
 
 const run = promisify(execFile)
 
-export const LABEL = 'com.officefootballpool.fetch-picksheet'
 const APP_DIR = path.resolve(__dirname, '..')
-const PLIST_PATH = path.join(os.homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`)
 const LOG_DIR = path.join(os.homedir(), 'Library', 'Logs', 'office-football-pool')
+const plistPath = (label: string) => path.join(os.homedir(), 'Library', 'LaunchAgents', `${label}.plist`)
 
-// Thursday 18:00 local — matches the old cron (Fri 02:00 UTC), before TNF.
-export const WEEKDAY = 4
-export const HOUR = 18
-export const MINUTE = 0
+export interface AgentSpec {
+  label: string
+  script: string
+  /** launchd weekday: 0/7 Sunday .. 4 Thursday */
+  weekday: number
+  hour: number
+  minute: number
+  /** Env keys this agent cannot run without. */
+  requires: string[]
+  why: string
+}
+
+export const AGENTS: AgentSpec[] = [
+  {
+    label: 'com.officefootballpool.snapshot-odds',
+    script: 'snapshot-odds.ts',
+    // Tuesday 09:00. By Tuesday morning the previous week's results are in and
+    // the injury picture has settled, so books have repriced — that repriced
+    // number is what the pool is playing against, and what the dashboard's OPEN
+    // column means. Without this the earliest line on record is whenever the
+    // Thursday fetch ran, measured at 8.5h before kickoff: a closing line.
+    weekday: 2,
+    hour: 9,
+    minute: 0,
+    requires: ['SUPABASE_SERVICE_ROLE_KEY'],
+    why: 'records the week opening lines'
+  },
+  {
+    label: 'com.officefootballpool.fetch-picksheet',
+    script: 'fetch-picksheet-api.ts',
+    // Thursday 18:00 local — matches the cron this replaced (Fri 02:00 UTC),
+    // before Thursday Night Football.
+    weekday: 4,
+    hour: 18,
+    minute: 0,
+    requires: ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'APP_URL'],
+    why: 'fetches the picksheet and refreshes the pipeline'
+  }
+]
 
 /**
- * Config the agent cannot run without. Pure so it can be tested against a
- * synthetic environment; the installer refuses rather than discovering a gap
- * at 18:00 on a Thursday.
+ * Config an agent cannot run without. Pure so it can be tested against a
+ * synthetic environment; the installer refuses rather than discovering a gap at
+ * 18:00 on a Thursday.
  */
-export function missingConfig(env: Record<string, string | undefined>): string[] {
-  const missing = ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY']
-    .filter(k => !env[k])
+export function missingConfig(
+  env: Record<string, string | undefined>,
+  requires: string[] = AGENTS.flatMap(a => a.requires)
+): string[] {
+  const missing = [...new Set(requires)]
+    .filter(k => k !== 'SUPABASE_URL' && !env[k])
+  // .env carries the NEXT_PUBLIC_ name; the service-role client wants the bare one.
   if (!env.SUPABASE_URL && !env.NEXT_PUBLIC_SUPABASE_URL) missing.push('SUPABASE_URL')
-  // Without APP_URL a live run writes `parsing`, never triggers
-  // /api/refresh-all, and leaves the dashboard blank. A half-completed
-  // pipeline on a timer is worse than a loud failure.
-  if (!env.APP_URL) missing.push('APP_URL')
   return missing
 }
 
-export function buildPlist(nodePath: string, tsxCli: string, script: string, logDir = LOG_DIR): string {
+export function buildPlist(
+  agent: AgentSpec,
+  nodePath: string,
+  tsxCli: string,
+  scriptPath: string,
+  logDir = LOG_DIR
+): string {
+  const logBase = agent.script.replace(/\.ts$/, '')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>${LABEL}</string>
+  <string>${agent.label}</string>
 
   <!-- Absolute paths: launchd provides almost no PATH. -->
   <key>ProgramArguments</key>
   <array>
     <string>${nodePath}</string>
     <string>${tsxCli}</string>
-    <string>${script}</string>
+    <string>${scriptPath}</string>
   </array>
 
   <!-- dotenv reads .env relative to cwd. -->
@@ -72,15 +113,15 @@ export function buildPlist(nodePath: string, tsxCli: string, script: string, log
 
   <key>StartCalendarInterval</key>
   <dict>
-    <key>Weekday</key><integer>${WEEKDAY}</integer>
-    <key>Hour</key><integer>${HOUR}</integer>
-    <key>Minute</key><integer>${MINUTE}</integer>
+    <key>Weekday</key><integer>${agent.weekday}</integer>
+    <key>Hour</key><integer>${agent.hour}</integer>
+    <key>Minute</key><integer>${agent.minute}</integer>
   </dict>
 
   <key>StandardOutPath</key>
-  <string>${path.join(logDir, 'fetch.log')}</string>
+  <string>${path.join(logDir, `${logBase}.log`)}</string>
   <key>StandardErrorPath</key>
-  <string>${path.join(logDir, 'fetch.error.log')}</string>
+  <string>${path.join(logDir, `${logBase}.error.log`)}</string>
 
   <key>RunAtLoad</key>
   <false/>
@@ -113,71 +154,83 @@ export async function resolveNode(): Promise<string> {
   return resolved
 }
 
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const hhmm = (a: AgentSpec) => `${String(a.hour).padStart(2, '0')}:${String(a.minute).padStart(2, '0')}`
+
 async function install(): Promise<void> {
   const nodePath = await resolveNode()
   const tsxCli = path.join(APP_DIR, 'node_modules', 'tsx', 'dist', 'cli.mjs')
-  const script = path.join(APP_DIR, 'scripts', 'fetch-picksheet-api.ts')
+  try { await fs.access(tsxCli) } catch { throw new Error(`Cannot find tsx at ${tsxCli}`) }
 
-  for (const [label, p] of [['tsx', tsxCli], ['script', script]] as const) {
-    try { await fs.access(p) } catch { throw new Error(`Cannot find ${label} at ${p}`) }
-  }
-  // Fail before installing rather than every Thursday at 18:00.
-  const missing = missingConfig(process.env)
-  if (missing.length) {
-    throw new Error(
-      `Missing from app/.env: ${missing.join(', ')}\n` +
-      `  The agent runs with .env as its only configuration, so add them there first.`
-    )
+  // Check every agent's config before installing any, so a partial install
+  // cannot leave one job scheduled and another silently missing.
+  for (const agent of AGENTS) {
+    const missing = missingConfig(process.env, agent.requires)
+    if (missing.length) {
+      throw new Error(
+        `Missing from app/.env for ${agent.label}: ${missing.join(', ')}\n` +
+        `  Agents run with .env as their only configuration, so add them there first.`
+      )
+    }
   }
 
   await fs.mkdir(LOG_DIR, { recursive: true })
-  await fs.mkdir(path.dirname(PLIST_PATH), { recursive: true })
-  await fs.writeFile(PLIST_PATH, buildPlist(nodePath, tsxCli, script))
-
   const uid = process.getuid?.() ?? 0
-  // bootout first so re-installing picks up changes.
-  await run('launchctl', ['bootout', `gui/${uid}/${LABEL}`]).catch(() => { /* not loaded */ })
-  await run('launchctl', ['bootstrap', `gui/${uid}`, PLIST_PATH])
 
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-  console.log('Installed launchd agent')
-  console.log(`  label   : ${LABEL}`)
-  console.log(`  plist   : ${PLIST_PATH}`)
-  console.log(`  runs    : ${days[WEEKDAY]}s at ${String(HOUR).padStart(2, '0')}:${String(MINUTE).padStart(2, '0')} local`)
-  console.log(`  logs    : ${path.join(LOG_DIR, 'fetch.log')}`)
-  console.log('')
-  console.log('Run it now without waiting:')
-  console.log(`  launchctl kickstart -p gui/${uid}/${LABEL}`)
+  for (const agent of AGENTS) {
+    const scriptPath = path.join(APP_DIR, 'scripts', agent.script)
+    try { await fs.access(scriptPath) } catch { throw new Error(`Cannot find script at ${scriptPath}`) }
+
+    const plist = plistPath(agent.label)
+    await fs.mkdir(path.dirname(plist), { recursive: true })
+    await fs.writeFile(plist, buildPlist(agent, nodePath, tsxCli, scriptPath))
+
+    // bootout first so re-installing picks up changes.
+    await run('launchctl', ['bootout', `gui/${uid}/${agent.label}`]).catch(() => { /* not loaded */ })
+    await run('launchctl', ['bootstrap', `gui/${uid}`, plist])
+
+    console.log(`Installed ${agent.label}`)
+    console.log(`  runs : ${DAYS[agent.weekday]}s at ${hhmm(agent)} local — ${agent.why}`)
+    console.log(`  logs : ${path.join(LOG_DIR, agent.script.replace(/\.ts$/, '.log'))}`)
+    console.log(`  now  : launchctl kickstart -p gui/${uid}/${agent.label}`)
+    console.log('')
+  }
 }
 
 async function uninstall(): Promise<void> {
   const uid = process.getuid?.() ?? 0
-  await run('launchctl', ['bootout', `gui/${uid}/${LABEL}`]).catch(() => { /* not loaded */ })
-  await fs.rm(PLIST_PATH, { force: true })
-  console.log(`Removed ${LABEL} and ${PLIST_PATH}`)
+  for (const agent of AGENTS) {
+    await run('launchctl', ['bootout', `gui/${uid}/${agent.label}`]).catch(() => { /* not loaded */ })
+    await fs.rm(plistPath(agent.label), { force: true })
+    console.log(`Removed ${agent.label}`)
+  }
 }
 
 async function status(): Promise<void> {
   const uid = process.getuid?.() ?? 0
-  let installed = true
-  try { await fs.access(PLIST_PATH) } catch { installed = false }
-  console.log(`plist    : ${installed ? PLIST_PATH : '(not installed)'}`)
+  for (const agent of AGENTS) {
+    const plist = plistPath(agent.label)
+    const installed = await fs.access(plist).then(() => true, () => false)
+    console.log(`${agent.label}  (${DAYS[agent.weekday]}s ${hhmm(agent)})`)
+    console.log(`  plist   : ${installed ? plist : '(not installed)'}`)
 
-  const { stdout } = await run('launchctl', ['print', `gui/${uid}/${LABEL}`]).catch(() => ({ stdout: '' }))
-  if (!stdout) {
-    console.log('launchd  : not loaded')
-  } else {
-    // launchd prints "state = not running" / "last exit code = (never)" —
-    // capture to end of line, not the first token.
-    const state = stdout.match(/state = (.+)/)?.[1]?.trim() ?? 'unknown'
-    const last = stdout.match(/last exit code = (.+)/)?.[1]?.trim() ?? 'n/a'
-    console.log(`launchd  : loaded (state: ${state}, last exit code: ${last})`)
+    const { stdout } = await run('launchctl', ['print', `gui/${uid}/${agent.label}`]).catch(() => ({ stdout: '' }))
+    if (!stdout) {
+      console.log('  launchd : not loaded')
+    } else {
+      // launchd prints "state = not running" / "last exit code = (never)" —
+      // capture to end of line, not the first token.
+      const state = stdout.match(/state = (.+)/)?.[1]?.trim() ?? 'unknown'
+      const last = stdout.match(/last exit code = (.+)/)?.[1]?.trim() ?? 'n/a'
+      console.log(`  launchd : loaded (state: ${state}, last exit code: ${last})`)
+    }
+
+    const logFile = path.join(LOG_DIR, agent.script.replace(/\.ts$/, '.log'))
+    const log = await fs.readFile(logFile, 'utf8').catch(() => '')
+    console.log(`  log     : ${log ? logFile : '(no runs yet)'}`)
+    if (log) console.log(log.trimEnd().split('\n').slice(-4).map(l => `    ${l}`).join('\n'))
+    console.log('')
   }
-
-  const logFile = path.join(LOG_DIR, 'fetch.log')
-  const log = await fs.readFile(logFile, 'utf8').catch(() => '')
-  console.log(`log      : ${log ? logFile : '(no runs yet)'}`)
-  if (log) console.log(log.trimEnd().split('\n').slice(-6).map(l => `  ${l}`).join('\n'))
 }
 
 // Only dispatch when run directly. Importing this module (e.g. from tests)
