@@ -6,6 +6,7 @@ import { WarrenNolanScraper } from './warren-nolan-scraper'
 import { ScheduleService } from './schedule-service'
 import { GameMatchingService } from './game-matching-service'
 import { RobustSpreadMetric } from './robust-spread-metric'
+import { scheduleCoversPicksheet } from './schedule-coverage'
 
 export interface PipelineConfig {
   useOddsAPI?: boolean
@@ -81,6 +82,7 @@ export interface PipelineResult {
   logs?: string[]
   totalDuration?: number
 }
+
 
 export class PipelineOrchestrator {
   private logs: string[] = []
@@ -531,6 +533,29 @@ export class PipelineOrchestrator {
     try {
       if (!scheduleGames || scheduleGames.length === 0) {
         this.log('No schedule games, falling back to legacy entity resolution matching')
+        return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+      }
+
+      // Decide relevance by DATE, before doing any matching work.
+      //
+      // `core_schedule` has no season column — only (league, week) — and no
+      // ingest exists anywhere in the repo, so it is a one-off manual load that
+      // silently ages out. Week 1 currently returns 99 rows dated 9/5/25 while
+      // the live contest is Week 1 of 2026: populated, and entirely irrelevant.
+      //
+      // This check must come first because the matching pass is not cheap when
+      // it fails. GameMatchingService resolves through EntityResolver, whose
+      // LLM verification fires on every name it cannot place — 176s of OpenAI
+      // calls against a wrong-season schedule, observed live. A warm entity
+      // cache hid that behind 181ms on a long-running dev server; a cold
+      // process (launchd run, serverless invocation) pays it in full.
+      if (!scheduleCoversPicksheet(scheduleGames, picksheetGames)) {
+        this.log(
+          `Schedule has ${scheduleGames.length} rows but none fall near the picksheet's ` +
+          `game dates — it is for another season. Skipping the schedule bridge and ` +
+          `matching picksheet to market directly.`
+        )
+        ;(this as any)._scheduleMatches = null
         return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
       }
 
