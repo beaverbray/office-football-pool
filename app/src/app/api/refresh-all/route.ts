@@ -8,7 +8,13 @@ import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60 // Allow up to 60 seconds for this endpoint
+// The full pipeline measured 42s cold locally but exceeded 60s on Vercel
+// (504 FUNCTION_INVOCATION_TIMEOUT at 62.5s, from the scheduled job), since the
+// deployed function additionally pays cold start, region latency to Supabase
+// and The Odds API, and the nfelo/Warren Nolan scrapes. 300s is the Fluid
+// Compute ceiling and leaves real headroom; this route runs a handful of times
+// a week, so a generous limit costs nothing.
+export const maxDuration = 300
 
 interface RefreshAllRequest {
   skipPredictions?: boolean

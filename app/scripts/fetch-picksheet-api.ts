@@ -124,7 +124,23 @@ async function triggerRefresh(): Promise<void> {
   const appUrl = process.env.APP_URL
   if (!appUrl) throw new Error('triggerRefresh called without APP_URL')
 
-  const res = await fetch(`${appUrl}/api/refresh-all`, { method: 'POST' })
+  // Bound the wait. The route's own ceiling is 300s; without a client deadline
+  // a hung connection would leave the scheduled job running until something
+  // else kills it, with no log line saying why.
+  const REFRESH_TIMEOUT_MS = 330_000
+  let res: Response
+  try {
+    res = await fetch(`${appUrl}/api/refresh-all`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS)
+    })
+  } catch (error) {
+    throw new Error(
+      `Refresh trigger did not complete within ${REFRESH_TIMEOUT_MS / 1000}s. ` +
+      `The picksheet was saved but the comparison was not rebuilt. ` +
+      `Cause: ${error instanceof Error ? error.message : String(error)}`
+    )
+  }
   if (!res.ok) {
     const detail = await res.text().catch(() => '')
     throw new Error(
