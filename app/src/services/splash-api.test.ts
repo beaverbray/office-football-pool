@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeGames, type SplashPicksheet } from './splash-api'
+import { normalizeGames, toSourceGames, type SplashPicksheet } from './splash-api'
 
 /** Shaped from a real /team-pickem/picksheets response. */
 function picksheet(games: SplashPicksheet['games']): SplashPicksheet {
@@ -85,5 +85,38 @@ describe('normalizeGames', () => {
       game({ home: team('SEA', 22.5, 0), away: team('ORE', -22.5, 100) })
     ]))
     expect(g.homeWinProbability).toBe(0)
+  })
+
+  it('keeps a null-spread game, which toSourceGames then drops', () => {
+    // The two functions intentionally disagree: normalizeGames preserves
+    // "no line yet"; toSourceGames feeds PipelineInput.picksheetGames, whose
+    // `spread` is a non-optional number the matcher does arithmetic on.
+    const sheet = picksheet([
+      game({ gameId: 'priced' }),
+      game({ gameId: 'unpriced', home: team('KC', null, null), away: team('BUF', null, null) })
+    ])
+
+    expect(normalizeGames(sheet).map(g => g.gameId)).toEqual(['priced', 'unpriced'])
+    expect(toSourceGames(sheet).map(g => g.gameId)).toEqual(['priced'])
+  })
+
+  it('never emits an undefined spread to the pipeline', () => {
+    const sheet = picksheet([
+      game({ gameId: 'a', home: team('KC', null, null), away: team('BUF', null, null) }),
+      game({ gameId: 'b' })
+    ])
+    for (const g of toSourceGames(sheet)) {
+      expect(typeof g.spread).toBe('number')
+      expect(Number.isNaN(g.spread)).toBe(false)
+    }
+  })
+
+  it('drops every game when no line is posted yet', () => {
+    // A slate before spreads go up must yield an empty set, not NaN-bearing rows.
+    const sheet = picksheet([
+      game({ gameId: 'a', home: team('KC', null, null), away: team('BUF', null, null) })
+    ])
+    expect(toSourceGames(sheet)).toEqual([])
+    expect(normalizeGames(sheet)).toHaveLength(1)
   })
 })

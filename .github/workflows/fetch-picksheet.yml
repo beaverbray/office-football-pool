@@ -1,21 +1,15 @@
 name: Fetch Picksheet
 
 on:
-  # SCHEDULE STILL DISABLED — pending secrets, not pending code.
+  # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football).
   #
-  # The job now uses the Splash API (the officefootballpool.com path could not
-  # authenticate), but it needs three secrets that are not set yet:
-  #   PICKSHEET_SESSION_B64  <- npm --prefix app run login -- --print-b64
-  #   SPLASH_CONTEST_ID
-  #   SPLASH_ENTRY_ID
-  #
-  # Enabling before they exist would ship a job whose first run is known to
-  # fail. Verify with a workflow_dispatch run (dry_run: true), then uncomment.
-  # Tracked in #29.
-  #
-  # schedule:
-  #   # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
-  #   - cron: '0 2 * * 5'
+  # Safe to leave enabled even before the secrets exist: the first step below
+  # checks them and exits cleanly with a notice if any are missing, so an
+  # unconfigured repo produces a green "skipped" run rather than a weekly
+  # failure. The day the secrets are set, the cron starts working with no
+  # code change. Tracked in #29.
+  schedule:
+    - cron: '0 2 * * 5'
   workflow_dispatch:
     inputs:
       slate:
@@ -38,10 +32,32 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # Runs before checkout/install so an unconfigured repo costs nothing.
+      # `secrets.*` cannot be used in a job-level `if:`, hence a step.
+      - name: Check configuration
+        id: preflight
+        env:
+          PICKSHEET_SESSION_B64: ${{ secrets.PICKSHEET_SESSION_B64 }}
+          SPLASH_CONTEST_ID: ${{ secrets.SPLASH_CONTEST_ID }}
+          SPLASH_ENTRY_ID: ${{ secrets.SPLASH_ENTRY_ID }}
+        run: |
+          missing=""
+          [ -z "$PICKSHEET_SESSION_B64" ] && missing="$missing PICKSHEET_SESSION_B64"
+          [ -z "$SPLASH_CONTEST_ID" ] && missing="$missing SPLASH_CONTEST_ID"
+          [ -z "$SPLASH_ENTRY_ID" ] && missing="$missing SPLASH_ENTRY_ID"
+          if [ -n "$missing" ]; then
+            echo "::notice::Picksheet fetch not configured — missing secrets:$missing. Generate the session with 'npm --prefix app run login -- --print-b64'. Skipping."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout code
+        if: steps.preflight.outputs.configured == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: steps.preflight.outputs.configured == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -49,6 +65,7 @@ jobs:
           cache-dependency-path: app/package-lock.json
 
       - name: Install dependencies
+        if: steps.preflight.outputs.configured == 'true'
         working-directory: app
         run: npm ci
 
@@ -63,6 +80,7 @@ jobs:
       # unknown. If the job reports "Authentication required", re-run login and
       # update the secret. Expect roughly monthly.
       - name: Fetch picksheet
+        if: steps.preflight.outputs.configured == 'true'
         working-directory: app
         env:
           PICKSHEET_SESSION_B64: ${{ secrets.PICKSHEET_SESSION_B64 }}
