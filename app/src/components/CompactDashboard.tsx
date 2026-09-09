@@ -541,8 +541,8 @@ export default function CompactDashboard() {
 
       const eloPred = findEloPrediction(homeTeam, awayTeam)
       if (eloPred && eloPred.spread != null) {
-        const eloSpread = eloPred.predictedWinner === 'home' ? -eloPred.spread : eloPred.spread
-        eloGivesValue = eloSpread < poolSpread
+        const homeEloSpread = eloPred.predictedWinner === 'home' ? -eloPred.spread : eloPred.spread
+        eloGivesValue = homeEloSpread < poolSpread
       }
     } else {
       // Away team has value if market favors away MORE than pool does
@@ -551,8 +551,8 @@ export default function CompactDashboard() {
 
       const eloPred = findEloPrediction(homeTeam, awayTeam)
       if (eloPred && eloPred.spread != null) {
-        const eloSpread = eloPred.predictedWinner === 'home' ? -eloPred.spread : eloPred.spread
-        eloGivesValue = eloSpread > poolSpread
+        const homeEloSpread = eloPred.predictedWinner === 'home' ? -eloPred.spread : eloPred.spread
+        eloGivesValue = homeEloSpread > poolSpread
       }
     }
 
@@ -1075,7 +1075,12 @@ export default function CompactDashboard() {
                             }).toLowerCase() : ''
 
                           const eloPred = findEloPrediction(comp.homeTeam, comp.awayTeam)
-                          const eloSpread = eloPred && eloPred.spread != null
+                          // AWAY-perspective. `analysis_predictions.spread` is a magnitude
+                          // (nfelo-scraper stores Math.abs), with predictedWinner naming the
+                          // favourite — so home-favoured means the away side is +spread.
+                          // Note getTeamSpreadStyle derives the HOME-perspective value with
+                          // the opposite formula; both are correct, hence the explicit names.
+                          const awayEloSpread = eloPred && eloPred.spread != null
                             ? (eloPred.predictedWinner === 'home' ? eloPred.spread : -eloPred.spread)
                             : null
 
@@ -1088,7 +1093,7 @@ export default function CompactDashboard() {
                           // openingSpread is home-perspective, like marketSpread and
                           // picksheetSpread — the away row negates it, the home row does not.
                           const awayOpeningSpread = (comp.openingSpread !== undefined && comp.openingSpread !== null) ? -comp.openingSpread : undefined
-                          const homeEloSpread = eloSpread !== null ? -eloSpread : null
+                          const homeEloSpread = awayEloSpread !== null ? -awayEloSpread : null
 
                           // Get market delta probability and importance level
                           const marketDeltaProb = comp.marketDeltaProb ?? 0
@@ -1124,8 +1129,8 @@ export default function CompactDashboard() {
                             </div>
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">
-                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${eloSpread !== null ? 'text-purple-400' : 'text-gray-400'}`}>
-                              {eloSpread !== null ? `${eloSpread > 0 ? '+' : ''}${eloSpread.toFixed(1)}` : '-'}
+                            <div className={`text-[11px] sm:text-sm font-mono font-bold ${awayEloSpread !== null ? 'text-purple-400' : 'text-gray-400'}`}>
+                              {awayEloSpread !== null ? `${awayEloSpread > 0 ? '+' : ''}${awayEloSpread.toFixed(1)}` : '-'}
                             </div>
                           </td>
                           <td className="px-0.5 sm:px-1 py-2 sm:py-2.5 text-center">

@@ -23,7 +23,11 @@ export interface GameComparison {
   confidence: number
   matched: boolean
   // Opening line data (optional)
-  openingSpread?: number // Away team spread from opening line
+  // Home-perspective, matching picksheetSpread/marketSpread above. This was
+  // previously documented as "Away team spread", which is what led the
+  // dashboard to render it against the opposite convention to every sibling
+  // field and display an unmoved line as a six-point swing.
+  openingSpread?: number
   openingLineTimestamp?: string // When opening line was recorded
   lineMovement?: number // Current spread - opening spread
   lineMovementPercent?: number // Percentage movement from opening
