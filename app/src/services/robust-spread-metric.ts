@@ -151,16 +151,23 @@ export class RobustSpreadMetric {
     // Identical lines move no probability mass.
     if (lo === hi) return []
 
-    // Closed interval on BOTH ends. The previous `lo < k && k <= hi` was
-    // half-open, so a line resting exactly on a key counted as crossing it
-    // only when the key was the upper bound. That made two equivalent
-    // half-point moves differ by ~4x: 3 -> 2.5 registered key 3 (5.45%) while
-    // 3 -> 3.5 registered nothing (1.44%), though both change the outcome for
-    // the ~10% of games landing exactly on 3 — push becomes cover in one
-    // direction, push becomes loss in the other.
+    // Closed interval on BOTH ends. This DEVIATES from the Python reference
+    // (analysis/gap_analysis/robust_production_metric.py:190, `lo < k <= hi`),
+    // which has the same flaw: half-open means a line resting exactly on a key
+    // counts only when the key is the upper bound. Live, that made two
+    // equivalent half-point moves differ ~4x — 3 -> 2.5 scored 5.45% while
+    // 3 -> 3.5 scored 1.44% — though both change the outcome for the 15.4% of
+    // margins that land on exactly 3 (landing_rates["3"] in the model file):
+    // push becomes cover going down, push becomes loss going up.
     //
-    // Each key is returned ONCE. It was previously pushed twice, by two `if`
-    // blocks with identical conditions, the second labelled "also check
+    // Caveat if robust-metric-model.json is ever actually loaded: its
+    // calibrator was fitted against raw values produced by the half-open rule,
+    // so it would need refitting. Moot today — getInstance builds a hardcoded
+    // default and calibrate() is the identity.
+    //
+    // Each key is returned ONCE, matching the reference (which appends once).
+    // The double push was a porting error: two `if` blocks with identical
+    // conditions, the second labelled "also check
     // negative key" though it computed no negative and operated on absolute
     // values where sign is meaningless. Every key adjustment in
     // computeRawMetric was therefore applied double.

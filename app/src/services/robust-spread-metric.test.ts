@@ -39,14 +39,14 @@ describe('RobustSpreadMetric', () => {
     })
 
     it('counts each key number once, not twice', () => {
-      // Asserted on the key list itself. An earlier version of this test tried
-      // to isolate the adjustment by subtracting a keyless pair's score, but
-      // the normal-approximation base differs between spread pairs, so the
-      // subtraction measured nothing.
-      const keys = metric.explain(2, 4).key_adjustments.keys_crossed
-      expect([...keys].sort((a, b) => a - b)).toEqual([3, 4])
-      expect(new Set(keys).size).toBe(keys.length)
-      expect(keys.every(k => k > 0)).toBe(true)
+      // explain() de-duplicates keys_crossed before reporting, so the key list
+      // alone would not have caught the double push. total_adjustment is summed
+      // from the raw list, so it does: spanning 3 (0.02) and 4 (other, 0.005)
+      // is 0.025, where the doubled version produced 0.05.
+      const { key_adjustments } = metric.explain(2, 4)
+      expect(key_adjustments.total_adjustment).toBeCloseTo(0.025, 10)
+      expect([...key_adjustments.keys_crossed].sort((a, b) => a - b)).toEqual([3, 4])
+      expect(key_adjustments.keys_crossed.every(k => k > 0)).toBe(true)
     })
 
     it('is bounded within [0, 1]', () => {
@@ -70,7 +70,13 @@ describe('RobustSpreadMetric', () => {
       // (2.156) baked in the doubled key adjustment and had to be edited when
       // the double-count was fixed, which is exactly what a pinned constant
       // cannot tell you.
-      expect(metric.outlierScore(2, 4)).toBeCloseTo(metric.marketDeltaProb(2, 4) / 0.05, 6)
+      // Against raw_metric, not marketDeltaProb. outlierScore divides the RAW
+      // value while marketDeltaProb returns calibrate(raw) clipped; the two
+      // coincide only while the calibrator is identity, which it is today
+      // because robust-metric-model.json is never loaded. Asserting the
+      // coincidence would break the day calibration is wired in, for the
+      // wrong reason.
+      expect(metric.outlierScore(2, 4)).toBeCloseTo(metric.explain(2, 4).final_metrics.raw_metric / 0.05, 10)
     })
   })
 
