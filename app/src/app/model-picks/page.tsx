@@ -339,19 +339,34 @@ export default function ModelPicksPage() {
     )
   }
 
-  // If no data, redirect to control panel
+  // No comparison data yet. Render the normal shell rather than a full-screen
+  // dead end, so the nav stays reachable. The old copy ("upload picksheet
+  // data") also stopped being true once the picksheet started arriving
+  // automatically from the scheduled fetch.
   if (!dataLoaded) {
     return (
-      <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-mono text-orange-700 mb-4">NO_DATA_LOADED</h2>
-          <p className="text-sm font-mono text-gray-500 mb-6">Please upload picksheet data first</p>
-          <button
-            onClick={() => router.push('/control-panel')}
-            className="px-6 py-3 bg-orange-700 text-black font-mono text-sm font-bold rounded hover:bg-orange-600 transition-colors"
+      <div className="min-h-screen bg-black text-gray-100">
+        <NavBar />
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-1 sm:py-6">
+          <div
+            role="status"
+            className="rounded border border-orange-800 bg-orange-950/40 px-3 py-2"
           >
-            GO_TO_CONTROL_PANEL
-          </button>
+            <div className="text-[10px] sm:text-xs font-mono text-orange-400 font-bold">
+              NO_COMPARISON_DATA
+            </div>
+            <div className="text-[10px] sm:text-xs font-mono text-orange-200/80 mt-0.5">
+              No picks to rank yet. The picksheet is fetched automatically each week;
+              if this persists, run a refresh from the{' '}
+              <button
+                onClick={() => router.push('/control-panel')}
+                className="underline hover:text-orange-100"
+              >
+                Control Panel
+              </button>
+              .
+            </div>
+          </div>
         </div>
       </div>
     )
