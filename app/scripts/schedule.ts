@@ -75,8 +75,30 @@ function buildPlist(nodePath: string, tsxCli: string, script: string): string {
 `
 }
 
+/**
+ * The node the *user's* shell resolves — not `process.execPath`.
+ *
+ * The installer may itself be run by some tool-managed interpreter living in a
+ * directory that gets replaced on update (this bit once, baking in a path under
+ * ~/.hermes). launchd would then fail silently every Thursday. A login shell
+ * reproduces the PATH the user actually maintains.
+ */
+async function resolveNode(): Promise<string> {
+  const shell = process.env.SHELL || '/bin/zsh'
+  const { stdout } = await run(shell, ['-lc', 'command -v node']).catch(() => ({ stdout: '' }))
+  const resolved = stdout.trim().split('\n').pop()?.trim()
+  if (!resolved) {
+    throw new Error(
+      `Could not resolve node from a login shell (${shell} -lc 'command -v node').\n` +
+      `  launchd needs an absolute path; ensure node is on your login PATH.`
+    )
+  }
+  try { await fs.access(resolved) } catch { throw new Error(`Resolved node does not exist: ${resolved}`) }
+  return resolved
+}
+
 async function install(): Promise<void> {
-  const nodePath = process.execPath
+  const nodePath = await resolveNode()
   const tsxCli = path.join(APP_DIR, 'node_modules', 'tsx', 'dist', 'cli.mjs')
   const script = path.join(APP_DIR, 'scripts', 'fetch-picksheet-api.ts')
 
@@ -88,6 +110,12 @@ async function install(): Promise<void> {
   const missing = ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY']
     .filter(k => !process.env[k])
   if (!process.env.SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL) missing.push('SUPABASE_URL')
+  // APP_URL is required for a scheduled run specifically. Without it the fetch
+  // writes `parsing` and returns without triggering /api/refresh-all, leaving
+  // `pipeline_data` with no `comparison` — the dashboard renders blank until
+  // somebody POSTs the refresh by hand. A half-completed pipeline on a timer
+  // is worse than a loud failure.
+  if (!process.env.APP_URL) missing.push('APP_URL')
   if (missing.length) {
     throw new Error(
       `Missing from app/.env: ${missing.join(', ')}\n` +

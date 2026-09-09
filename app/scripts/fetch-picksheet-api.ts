@@ -112,14 +112,28 @@ async function logResult(outcome: Outcome, source: string): Promise<void> {
   if (error) console.warn('Failed to log fetch result:', error.message)
 }
 
+/**
+ * Trigger the comparison stage. Callers guarantee APP_URL (checked up front for
+ * live runs), so a missing value here is a programming error, not a skip.
+ *
+ * A non-OK response is fatal: the picksheet is already written, so reporting
+ * SUCCESS would leave `pipeline_data` with `parsing` and no `comparison` while
+ * claiming the run completed.
+ */
 async function triggerRefresh(): Promise<void> {
   const appUrl = process.env.APP_URL
-  if (!appUrl) {
-    console.log('APP_URL not set, skipping refresh trigger')
-    return
-  }
+  if (!appUrl) throw new Error('triggerRefresh called without APP_URL')
+
   const res = await fetch(`${appUrl}/api/refresh-all`, { method: 'POST' })
-  console.log(res.ok ? 'Refresh triggered' : `Refresh trigger returned ${res.status}`)
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '')
+    throw new Error(
+      `Refresh trigger failed (${res.status} ${res.statusText}). ` +
+      `The picksheet was saved but the comparison was not rebuilt. ` +
+      `Response: ${detail.slice(0, 200) || '(empty body)'}`
+    )
+  }
+  console.log('Refresh triggered')
 }
 
 async function main(): Promise<void> {
@@ -149,6 +163,17 @@ async function main(): Promise<void> {
     }
     if (!dryRun && (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY)) {
       throw new Error('Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY')
+    }
+    // A live run that writes `parsing` but never triggers /api/refresh-all
+    // leaves `pipeline_data` without `comparison`, and the dashboard renders
+    // blank until someone POSTs the refresh by hand. Half-finishing on a timer
+    // is worse than not running, so this is fatal rather than a skip notice.
+    if (!dryRun && !process.env.APP_URL) {
+      throw new Error(
+        'Missing APP_URL. A live run must trigger /api/refresh-all to produce the ' +
+        'comparison; writing the picksheet alone leaves the dashboard blank. ' +
+        'Set APP_URL to the deployed app origin, or pass --dry-run.'
+      )
     }
 
     const session = await loadSession()
