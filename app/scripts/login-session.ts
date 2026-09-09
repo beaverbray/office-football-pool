@@ -29,21 +29,12 @@ import path from 'node:path'
 // to get past the CloudFront WAF. Different problems, opposite treatments.
 import puppeteer from 'puppeteer'
 import type { Page } from 'puppeteer'
-import {
-  captureSession,
-  saveSession,
-  DEFAULT_SESSION_PATH
-} from './lib/session'
-import {
-  assertLooksLikePicksheet,
-  PicksheetAuthError,
-  PicksheetNotReadyError
-} from './lib/picksheet-content'
+import { captureSession, saveSession, DEFAULT_SESSION_PATH } from './lib/session'
+import { refreshAccessToken, getSlates } from '@/services/splash-api'
 
-// officefootballpool.com links to this branded sign-in URL.
+// The `brand=ofp` variant of the Splash sign-in, which the pool links to.
 const SIGN_IN_URL = 'https://app.splashsports.com/sign-in?brand=ofp'
 const LOGIN_TIMEOUT_MS = 5 * 60 * 1000
-const VERIFY_WEEK_ID = 671
 
 // Persistent profile: makes this look like a normal, returning browser rather
 // than a fresh automated instance, and lets a still-valid login be reused on
@@ -136,50 +127,40 @@ async function main(): Promise<void> {
     await waitForSignIn(page)
     console.log('Signed in.')
 
-    // Visit OFP so it establishes its own session cookies via the SSO handoff,
-    // then prove the session actually works by fetching a real picksheet.
-    const picksheetUrl = `https://www.officefootballpool.com/picksheet_print.cfm?weekid=${VERIFY_WEEK_ID}`
-    console.log(`Verifying access: ${picksheetUrl}`)
-    await page.goto(picksheetUrl, { waitUntil: 'networkidle2', timeout: 60000 })
-
-    const text = await page.evaluate(() => document.body.innerText)
-    let authConfirmed = false
-    try {
-      assertLooksLikePicksheet(text, VERIFY_WEEK_ID)
-      authConfirmed = true
-      console.log(`Verified — received a real picksheet (${text.length} chars).`)
-    } catch (error) {
-      if (error instanceof PicksheetNotReadyError) {
-        // Only a logged-in user is shown "no games this week", so this proves
-        // authentication even though there is no picksheet to read yet.
-        authConfirmed = true
-        console.log('Verified — authenticated. This week has no schedule posted yet:')
-        console.log(`  ${error.message}`)
-      } else if (error instanceof PicksheetAuthError) {
-        // Saving here would produce a session that opens nothing, and the
-        // scheduled job would fail every week. Fail loudly instead.
-        throw new Error(
-          `Signed in to Splash Sports, but officefootballpool.com does not ` +
-          `recognise the session: ${error.message}\n\n` +
-          `  Splash and OFP keep separate sessions. Sign in to ` +
-          `officefootballpool.com directly in the browser window, then re-run.\n` +
-          `  Nothing was saved.`
-        )
-      } else {
-        console.warn('')
-        console.warn('WARNING: signed in, but verification was inconclusive:')
-        console.warn(`  ${error instanceof Error ? error.message : String(error)}`)
-        console.warn('Saving the session anyway; a different week may still work.')
-        console.warn('')
-      }
-    }
-
-    if (authConfirmed) {
-      console.log('OFP access confirmed.')
-    }
-
-    console.log('Capturing session...')
+    // Verify against the Splash API — the thing the scheduled job actually
+    // uses. This previously checked officefootballpool.com, which the pool has
+    // migrated away from; that check failed even for a perfectly good Splash
+    // session and discarded it.
     const state = await captureSession(browser, page)
+    const accessToken = state.cookies.find(c => c.name === 'accessToken')?.value
+    const refreshToken = state.cookies.find(c => c.name === 'refreshToken')?.value
+
+    if (!accessToken || !refreshToken) {
+      throw new Error(
+        'Signed in, but no Splash tokens were found in the session.\n' +
+        '  Expected `accessToken` and `refreshToken` cookies. Nothing was saved.'
+      )
+    }
+    console.log('Captured Splash tokens (accessToken + refreshToken).')
+
+    // Exercise the real code path: refresh, then read the contest if it is
+    // configured. A token that cannot refresh is useless to the cron.
+    const token = await refreshAccessToken({ accessToken, refreshToken })
+    console.log('Verified — token refresh works.')
+
+    const contestId = process.env.SPLASH_CONTEST_ID
+    if (contestId) {
+      const slates = await getSlates(token, contestId)
+      const current = slates.find(s => s.isCurrentSlate)
+      console.log(
+        `Verified — contest reachable: ${slates.length} slates` +
+        (current ? `, current is ${current.name} (${current.abbreviation})` : ', no current slate')
+      )
+    } else {
+      console.log('SPLASH_CONTEST_ID not set — skipping the contest check.')
+      console.log('  (Set it in .env to have this verify end-to-end.)')
+    }
+
     await saveSession(state)
 
     const domainSeen: Record<string, true> = {}
@@ -194,7 +175,7 @@ async function main(): Promise<void> {
     }
     console.log('')
     console.log('This file contains live auth cookies. It is gitignored — keep it that way.')
-    console.log('Scheduled/local fetches will now reuse it:  npm run fetch-picksheet')
+    console.log('Scheduled/local fetches will now reuse it:  npm run fetch-picksheet:api')
     console.log('='.repeat(64))
 
     if (printB64) {

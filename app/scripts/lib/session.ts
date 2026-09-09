@@ -1,5 +1,5 @@
 /**
- * Persisted browser session for officefootballpool.com / Splash Sports.
+ * Persisted browser session for Splash Sports.
  *
  * Why this exists: the Splash Sports sign-in page is protected by reCAPTCHA, so
  * an automated headless login cannot complete it (verified: both synthetic and
@@ -18,8 +18,7 @@ import type { Browser, Page, CookieData } from 'puppeteer'
 
 /** Origins whose cookies + localStorage are worth persisting. */
 export const SESSION_ORIGINS = [
-  'https://app.splashsports.com',
-  'https://www.officefootballpool.com'
+  'https://app.splashsports.com'
 ] as const
 
 export const DEFAULT_SESSION_PATH = path.resolve(process.cwd(), '.picksheet-session.json')
