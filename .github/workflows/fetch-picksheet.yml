@@ -46,7 +46,7 @@ jobs:
           [ -z "$SPLASH_CONTEST_ID" ] && missing="$missing SPLASH_CONTEST_ID"
           [ -z "$SPLASH_ENTRY_ID" ] && missing="$missing SPLASH_ENTRY_ID"
           if [ -n "$missing" ]; then
-            echo "::notice::Picksheet fetch not configured — missing secrets:$missing. Generate the session with 'npm --prefix app run login -- --print-b64'. Skipping."
+            echo "::notice::Picksheet fetch not configured — missing secrets:$missing. Set it with: npm -s --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64 (no browser needed if a session already exists; otherwise run 'npm run login' first). Skipping."
             echo "configured=false" >> "$GITHUB_OUTPUT"
           else
             echo "configured=true" >> "$GITHUB_OUTPUT"
