@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Spread Analysis System">
+  <!-- Delta: the app's own symbol for pool-vs-market disagreement, as used in
+       the dashboard's Δpts/Δp% column. Colours match the UI - near-black panel,
+       orange-700 accent.
+
+       Deliberately solid and unadorned. A version with a horizontal cut through
+       the triangle was tried and rejected: rendered at 16px, the size a browser
+       tab actually uses, the cut disappears entirely, so it added complexity
+       that only existed in the artwork. -->
+  <rect width="64" height="64" rx="12" fill="#0a0a0a"/>
+  <path d="M32 12 L53 50 H11 Z" fill="#c2410c"/>
+</svg>

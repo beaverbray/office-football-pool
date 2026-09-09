@@ -24,6 +24,7 @@ const BASE = {
   SUPABASE_SERVICE_ROLE_KEY: 'k',
   SUPABASE_URL: 'https://db.example',
   APP_URL: 'https://app.example',
+  ODDS_API_KEY: 'odds_x',
 }
 
 describe('missingConfig', () => {
@@ -42,7 +43,7 @@ describe('missingConfig', () => {
 
   it('names every gap at once rather than one per attempt', () => {
     expect(missingConfig({}).sort()).toEqual(
-      ['APP_URL', 'SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL'].sort()
+      ['APP_URL', 'ODDS_API_KEY', 'SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL'].sort()
     )
   })
 })
@@ -106,6 +107,21 @@ describe('agent table', () => {
     const snapshot = AGENTS.find(a => a.script === 'snapshot-odds.ts')!
     expect(snapshot.requires).not.toContain('SPLASH_CONTEST_ID')
     expect(snapshot.requires).not.toContain('APP_URL')
-    expect(missingConfig({ SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'u' }, snapshot.requires)).toEqual([])
+    expect(missingConfig({ SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'u', ODDS_API_KEY: 'x' }, snapshot.requires)).toEqual([])
+  })
+})
+
+describe('config aliases', () => {
+  it('accepts either name for the Odds API key', () => {
+    // getOddsAPI() throws unless one of these is set. The snapshot agent's
+    // preflight previously omitted the key entirely, so it reported "all clear"
+    // while the Tuesday job would have died at 09:00 — the exact failure the
+    // preflight exists to prevent.
+    const snapshot = AGENTS.find(a => a.script === 'snapshot-odds.ts')!
+    expect(snapshot.requires).toContain('ODDS_API_KEY')
+    const base = { SUPABASE_SERVICE_ROLE_KEY: 'k', SUPABASE_URL: 'u' }
+    expect(missingConfig(base, snapshot.requires)).toEqual(['ODDS_API_KEY'])
+    expect(missingConfig({ ...base, ODDS_API_KEY: 'x' }, snapshot.requires)).toEqual([])
+    expect(missingConfig({ ...base, THE_ODDS_API_KEY: 'x' }, snapshot.requires)).toEqual([])
   })
 })

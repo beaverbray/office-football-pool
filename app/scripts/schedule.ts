@@ -52,7 +52,7 @@ export const AGENTS: AgentSpec[] = [
     weekday: 2,
     hour: 9,
     minute: 0,
-    requires: ['SUPABASE_SERVICE_ROLE_KEY'],
+    requires: ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'ODDS_API_KEY'],
     why: 'records the week opening lines'
   },
   {
@@ -63,7 +63,7 @@ export const AGENTS: AgentSpec[] = [
     weekday: 4,
     hour: 18,
     minute: 0,
-    requires: ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'APP_URL'],
+    requires: ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'APP_URL'],
     why: 'fetches the picksheet and refreshes the pipeline'
   }
 ]
@@ -77,11 +77,19 @@ export function missingConfig(
   env: Record<string, string | undefined>,
   requires: string[] = AGENTS.flatMap(a => a.requires)
 ): string[] {
-  const missing = [...new Set(requires)]
-    .filter(k => k !== 'SUPABASE_URL' && !env[k])
-  // .env carries the NEXT_PUBLIC_ name; the service-role client wants the bare one.
-  if (!env.SUPABASE_URL && !env.NEXT_PUBLIC_SUPABASE_URL) missing.push('SUPABASE_URL')
-  return missing
+  // Keys that are satisfied by any one of several names. Listing them by their
+  // canonical name in `requires` and resolving here keeps the agent table
+  // readable while still failing when none of the aliases is present.
+  const ALIASES: Record<string, string[]> = {
+    // .env carries the NEXT_PUBLIC_ name; the service-role client wants the bare one.
+    SUPABASE_URL: ['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL'],
+    // getOddsAPI() accepts either and throws when neither is set.
+    ODDS_API_KEY: ['ODDS_API_KEY', 'THE_ODDS_API_KEY']
+  }
+  return [...new Set(requires)].filter(key => {
+    const names = ALIASES[key] ?? [key]
+    return !names.some(n => env[n])
+  })
 }
 
 export function buildPlist(
