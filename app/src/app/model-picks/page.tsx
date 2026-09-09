@@ -55,7 +55,9 @@ export default function ModelPicksPage() {
   const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [currentPipeline, setCurrentPipeline] = useState<PipelineResult | null>(null)
-  const [dataLoaded, setDataLoaded] = useState(false)
+  // null = the initial fetch has not settled. With a plain boolean starting
+  // false, the empty state rendered on every page load for the fetch's duration.
+  const [dataLoaded, setDataLoaded] = useState<boolean | null>(null)
   const [eloPredictions, setEloPredictions] = useState<ELOPrediction[]>([])
 
   // Memoize EntityResolver instance
@@ -180,10 +182,14 @@ export default function ModelPicksPage() {
           const parsed = JSON.parse(savedData)
           setCurrentPipeline(parsed)
           setDataLoaded(true)
+          return
         } catch (e) {
           console.error('Failed to load saved data:', e)
         }
       }
+
+      // Settled with nothing — distinct from still fetching.
+      setDataLoaded(false)
     }
 
     loadData()
@@ -328,12 +334,17 @@ export default function ModelPicksPage() {
     return { nflPicks, ncaaPicks }
   }
 
-  // Show loading state during hydration
-  if (!mounted) {
+  // Loading covers hydration AND the in-flight initial fetch: dataLoaded ===
+  // null means not settled, and treating that as "no data" made the empty
+  // state flash on every page load.
+  if (!mounted || dataLoaded === null) {
     return (
-      <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-sm font-mono text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-black text-gray-100">
+        <NavBar />
+        <div className="max-w-6xl mx-auto px-2 sm:px-4 py-6">
+          <div className="text-sm font-mono text-gray-500" role="status" aria-live="polite">
+            Loading...
+          </div>
         </div>
       </div>
     )
@@ -343,7 +354,7 @@ export default function ModelPicksPage() {
   // dead end, so the nav stays reachable. The old copy ("upload picksheet
   // data") also stopped being true once the picksheet started arriving
   // automatically from the scheduled fetch.
-  if (!dataLoaded) {
+  if (dataLoaded === false) {
     return (
       <div className="min-h-screen bg-black text-gray-100">
         <NavBar />

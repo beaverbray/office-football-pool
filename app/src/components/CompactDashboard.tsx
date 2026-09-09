@@ -67,7 +67,10 @@ export default function CompactDashboard() {
   const [sortColumn, setSortColumn] = useState<'league' | 'date' | 'team' | 'delta' | 'opening'>('date')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [showOnlyIssues, setShowOnlyIssues] = useState(false)
-  const [dataLoaded, setDataLoaded] = useState(false)
+  // null = the initial fetch has not settled yet. Distinguishing that from
+  // "settled with no data" matters: with a plain boolean starting false, the
+  // empty state rendered on every page load for the duration of the fetch.
+  const [dataLoaded, setDataLoaded] = useState<boolean | null>(null)
   const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
@@ -212,10 +215,15 @@ export default function CompactDashboard() {
           setCurrentPipeline(parsed)
           setDataLoaded(true)
           console.log('Loaded pipeline from localStorage')
+          return
         } catch (e) {
           console.error('Failed to load saved data:', e)
         }
       }
+
+      // Settled with nothing. Distinct from "still fetching" — see the
+      // tri-state on dataLoaded.
+      setDataLoaded(false)
     }
 
     loadData()
@@ -598,13 +606,18 @@ export default function CompactDashboard() {
     }
   })()
 
-  // Show loading state during hydration
-  if (!mounted) {
+  // Show loading during hydration, and while the initial fetch is in flight.
+  // dataLoaded === null means "not settled"; treating that as "no data" is
+  // what made the empty state flash on every page load.
+  if (!mounted || dataLoaded === null) {
     return (
-      <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center">
-        <div className="text-center" role="status" aria-live="polite">
-          <div className="text-sm font-mono text-gray-400">Loading...</div>
-        </div>
+      <div className="min-h-screen bg-black text-gray-100">
+        <NavBar showRefreshButton={false} showShareButton={false} />
+        <main className="max-w-6xl mx-auto px-2 sm:px-4 py-6">
+          <div className="text-sm font-mono text-gray-400" role="status" aria-live="polite">
+            Loading...
+          </div>
+        </main>
       </div>
     )
   }
@@ -613,7 +626,7 @@ export default function CompactDashboard() {
   // dead end: the nav stays reachable, and the copy no longer says "upload
   // picksheet data", which stopped being true once the picksheet started
   // arriving automatically from the scheduled fetch.
-  if (!dataLoaded) {
+  if (dataLoaded === false) {
     return (
       <div className="min-h-screen bg-black text-gray-100">
         <NavBar showRefreshButton={false} showShareButton={false} />
