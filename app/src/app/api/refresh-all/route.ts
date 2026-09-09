@@ -458,7 +458,13 @@ export async function POST(request: NextRequest) {
         // comparison.gameId is the Odds API event id, so it joins directly to
         // event_provider_key (verified: 62/62 on the live board).
         const keys = comparisons.map(c => String(c.gameId)).filter(Boolean)
-        const opening = await getOpeningSpreads(keys)
+        // Kickoffs let the lookup pick each game's own Tuesday capture rather
+        // than the first time the season-long NFL feed ever mentioned it.
+        const kickoffs = new Map<string, string>()
+        for (const c of comparisons) {
+          if (c.gameId && c.gameTime) kickoffs.set(String(c.gameId), String(c.gameTime))
+        }
+        const opening = await getOpeningSpreads(keys, kickoffs)
         for (const c of comparisons) {
           const hit = opening.get(String(c.gameId))
           // Home-perspective, matching marketSpread/picksheetSpread.

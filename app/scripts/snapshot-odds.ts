@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   const priced = games.filter(g => g.homeSpread != null)
   console.log(`Fetched ${games.length} games (${priced.length} with a spread) — NFL ${nfl.length}, NCAAF ${ncaaf.length}`)
 
-  const result = await recordOddsSnapshots(priced)
+  const result = await recordOddsSnapshots(priced, { capture: 'weekly-open' })
   if (result.error) {
     throw new Error(`Snapshot write failed: ${result.error}`)
   }
