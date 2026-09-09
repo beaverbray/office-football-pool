@@ -589,12 +589,29 @@ export class PipelineOrchestrator {
         }
       })
 
+      const matchRate = matchedCount / picksheetGames.length
+
+      // A non-empty schedule is not a *relevant* schedule. `core_schedule` has
+      // no season column — only (league, week) — so a table loaded with last
+      // season's fixtures looks populated while covering none of this slate.
+      // Observed live: 1/65 matched in 176s (the one hit was a fixture that
+      // recurs in both seasons), while a direct picksheet<->market join scored
+      // 62/65 in about a second. Presence was never the right test; coverage is.
+      const MIN_SCHEDULE_COVERAGE = 0.5
+      if (matchRate < MIN_SCHEDULE_COVERAGE) {
+        this.log(
+          `Schedule covered only ${(matchRate * 100).toFixed(1)}% of the picksheet ` +
+          `(${matchedCount}/${picksheetGames.length}); it is likely stale or for another ` +
+          `season. Falling back to direct entity-resolution matching.`
+        )
+        // The comparison stage branches on this being empty.
+        ;(this as any)._scheduleMatches = null
+        return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+      }
+
       // Store matches for comparison stage
       ;(this as any)._scheduleMatches = matches
-
-      const matchRate = matchedCount / picksheetGames.length
       this.log(`Matched ${matchedCount} of ${picksheetGames.length} games (${(matchRate * 100).toFixed(1)}%)`)
-
       return {
         success: true,
         matchRate,
