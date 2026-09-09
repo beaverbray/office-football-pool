@@ -84,6 +84,18 @@ export interface PipelineResult {
 }
 
 
+/**
+ * Re-stamp a matching result with time elapsed since the stage began.
+ *
+ * `matchGamesLegacy` starts its own timer, so returning it directly from a
+ * fallback reports only the fallback's own cost and silently discards whatever
+ * the abandoned attempt spent getting there. That is how a 170s schedule scan
+ * came to be reported as 181ms, which then misled a performance investigation.
+ */
+function withElapsed<T extends { duration?: number } | undefined>(startTime: number, result: T): T {
+  return result && { ...result, duration: Date.now() - startTime }
+}
+
 export class PipelineOrchestrator {
   private logs: string[] = []
   private currentStage: string = 'idle'
@@ -533,7 +545,7 @@ export class PipelineOrchestrator {
     try {
       if (!scheduleGames || scheduleGames.length === 0) {
         this.log('No schedule games, falling back to legacy entity resolution matching')
-        return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+        return withElapsed(startTime, await this.matchGamesLegacy(picksheetGames, marketGames, threshold))
       }
 
       // Decide relevance by DATE, before doing any matching work.
@@ -560,12 +572,7 @@ export class PipelineOrchestrator {
           `matching picksheet to market directly.`
         )
         ;(this as any)._scheduleMatches = null
-        const fallback = await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
-        // matchGamesLegacy starts its own timer, so returning it unmodified
-        // reports only the fallback's cost and hides whatever the schedule
-        // attempt spent getting here. That under-reporting is exactly what
-        // disguised a 170s stage as 181ms.
-        return fallback && { ...fallback, duration: Date.now() - startTime }
+        return withElapsed(startTime, await this.matchGamesLegacy(picksheetGames, marketGames, threshold))
       }
 
       this.log(`Schedule has ${scheduleGames.length} games`)
@@ -640,7 +647,9 @@ export class PipelineOrchestrator {
         )
         // The comparison stage branches on this being empty.
         ;(this as any)._scheduleMatches = null
-        return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+        // This is the site that actually hides cost: the schedule scan above
+        // has already run in full by the time we get here.
+        return withElapsed(startTime, await this.matchGamesLegacy(picksheetGames, marketGames, threshold))
       }
 
       // Store matches for comparison stage
