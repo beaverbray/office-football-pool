@@ -213,14 +213,16 @@ export class ComparisonEngine {
     try {
       marketDeltaProb = robustMetric.marketDeltaProb(
         picksheetGame.spread,
-        marketGame.homeSpread
+        marketGame.homeSpread,
+        league
       )
 
       importanceLevel = robustMetric.getImportanceLevel(marketDeltaProb)
 
       outlierScore = robustMetric.outlierScore(
         picksheetGame.spread,
-        marketGame.homeSpread
+        marketGame.homeSpread,
+        league
       )
     } catch (error) {
       console.error(`[metric] ERROR calculating metrics:`, error)

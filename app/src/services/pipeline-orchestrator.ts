@@ -924,9 +924,12 @@ export class PipelineOrchestrator {
                                (picksheetSpread < 0 && marketSpread > 0)
 
         // Calculate robust spread metrics
-        const marketDeltaProb = robustMetric.marketDeltaProb(picksheetSpread, marketSpread)
+        // core_schedule labels college as 'NCAA'; the metric's union is 'NCAAF'.
+        // Anything not NFL is treated as college.
+        const metricLeague = match.scheduleGame?.league === 'NFL' ? 'NFL' : 'NCAAF'
+        const marketDeltaProb = robustMetric.marketDeltaProb(picksheetSpread, marketSpread, metricLeague)
         const importanceLevel = robustMetric.getImportanceLevel(marketDeltaProb)
-        const outlierScore = robustMetric.outlierScore(picksheetSpread, marketSpread)
+        const outlierScore = robustMetric.outlierScore(picksheetSpread, marketSpread, metricLeague)
 
         return {
           gameId: `${match.scheduleGame.away_team}-${match.scheduleGame.home_team}-${match.scheduleGame.week}`,
