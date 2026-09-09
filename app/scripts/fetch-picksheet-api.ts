@@ -129,6 +129,13 @@ async function main(): Promise<void> {
   const slateArg = args.find(a => a.startsWith('--slate='))?.split('=')[1]
   const source = process.env.GITHUB_ACTIONS ? 'github_actions' : 'manual'
 
+  // .env carries NEXT_PUBLIC_SUPABASE_URL; the service-role client wants
+  // SUPABASE_URL. The old scraper normalised this and the API path must too,
+  // or an otherwise-correct local/launchd run fails on a missing variable.
+  if (!process.env.SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    process.env.SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  }
+
   let outcome: Outcome = { success: false, skipped: false, games: 0, durationMs: 0 }
 
   try {
