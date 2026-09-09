@@ -11,6 +11,9 @@
  *   npm run login                 # opens browser, waits for you to sign in
  *   npm run login -- --print-b64  # also print base64 for the CI secret
  *
+ * If a working session already exists, use `npm run session:b64` instead —
+ * it emits the secret with no browser and no CAPTCHA.
+ *
  * Credentials in .env (OFFICE_POOL_EMAIL / OFFICE_POOL_PASSWORD) are only used
  * to pre-fill the form as a convenience — you still solve the CAPTCHA and click.
  */

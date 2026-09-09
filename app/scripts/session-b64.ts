@@ -12,9 +12,10 @@
  * contest is reachable.
  *
  *   npm --prefix app run session:b64
- *   npm --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64
+ *   npm -s --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64
  *
- * --quiet prints only the base64, so it can be piped.
+ * --quiet prints only the base64, so it can be piped. Note the `-s`: without
+ * it `npm run` writes its banner to stdout and the secret is stored corrupt.
  */
 
 import 'dotenv/config'
@@ -62,7 +63,7 @@ async function main(): Promise<void> {
 
   console.error('')
   console.error('Set the secret with:')
-  console.error('  npm --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64')
+  console.error('  npm -s --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64')
   console.error('')
   console.log(b64)
 }

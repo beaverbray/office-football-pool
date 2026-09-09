@@ -219,8 +219,8 @@ async function main(): Promise<void> {
     } else if (error instanceof SplashAuthError) {
       console.error('\nAuthentication required:', outcome.error)
       console.error('  Re-authenticate:  npm --prefix app run login')
-      console.error('  Then update the PICKSHEET_SESSION_B64 secret:')
-      console.error('                    npm --prefix app run login -- --print-b64')
+      console.error('  Then update the PICKSHEET_SESSION_B64 secret (no browser needed):')
+      console.error('    npm -s --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64')
     } else {
       console.error('Failed:', outcome.error)
     }
