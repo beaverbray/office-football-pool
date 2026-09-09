@@ -543,12 +543,16 @@ export class PipelineOrchestrator {
       // silently ages out. Week 1 currently returns 99 rows dated 9/5/25 while
       // the live contest is Week 1 of 2026: populated, and entirely irrelevant.
       //
-      // This check must come first because the matching pass is not cheap when
-      // it fails. GameMatchingService resolves through EntityResolver, whose
-      // LLM verification fires on every name it cannot place — 176s of OpenAI
-      // calls against a wrong-season schedule, observed live. A warm entity
-      // cache hid that behind 181ms on a long-running dev server; a cold
-      // process (launchd run, serverless invocation) pays it in full.
+      // This check must come first because the matching pass is expensive
+      // regardless of whether it succeeds. GameMatchingService is fully
+      // synchronous — no OpenAI on this path — but it runs several Fuse
+      // searches per candidate pair, so cost is O(inputs x schedule rows).
+      // Measured cold against 355 market games and 99 schedule rows:
+      //
+      //   matchPicksheetToSchedule   17,431 ms ->  0 matched
+      //   matchMarketToSchedule     167,612 ms -> 14 matched
+      //
+      // Deterministic, not a cold-cache effect: identical on a warm process.
       if (!scheduleCoversPicksheet(scheduleGames, picksheetGames)) {
         this.log(
           `Schedule has ${scheduleGames.length} rows but none fall near the picksheet's ` +
@@ -556,7 +560,12 @@ export class PipelineOrchestrator {
           `matching picksheet to market directly.`
         )
         ;(this as any)._scheduleMatches = null
-        return await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+        const fallback = await this.matchGamesLegacy(picksheetGames, marketGames, threshold)
+        // matchGamesLegacy starts its own timer, so returning it unmodified
+        // reports only the fallback's cost and hides whatever the schedule
+        // attempt spent getting here. That under-reporting is exactly what
+        // disguised a 170s stage as 181ms.
+        return fallback && { ...fallback, duration: Date.now() - startTime }
       }
 
       this.log(`Schedule has ${scheduleGames.length} games`)

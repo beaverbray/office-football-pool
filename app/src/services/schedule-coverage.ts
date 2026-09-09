@@ -7,8 +7,10 @@
  * expansion and yields UTC rather than local midnight, so the window is not
  * silently timezone-dependent. Treat it as a stated assumption, not a guard.
  *
- * Answering by date rather than by attempting the match keeps a stale schedule
- * from costing an LLM-resolution storm before it is rejected.
+ * Answering by date, rather than by attempting the match and judging the result,
+ * matters because the matching pass is expensive whether or not it succeeds:
+ * O(inputs x schedule rows) synchronous Fuse searches, measured cold at 167s for
+ * 355 market games against 99 schedule rows.
  */
 export function scheduleCoversPicksheet(scheduleGames: any[], picksheetGames: any[]): boolean {
   const parseScheduleDate = (raw: unknown): number | null => {
