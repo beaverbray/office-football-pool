@@ -43,16 +43,22 @@ interface SnapshotRow {
   fetched_at: string
 }
 
+type SnapshotQueryResult = Promise<{
+  data: Array<Pick<SnapshotRow, 'event_provider_key' | 'home_spread' | 'fetched_at' | 'market'>> | null
+  error: { message: string } | null
+}>
+
+type SnapshotQuery = {
+  eq(column: 'market', value: string): SnapshotQuery
+  order(column: 'fetched_at', opts: { ascending: boolean }): SnapshotQuery
+  limit(count: number): SnapshotQueryResult
+}
+
 type SnapshotTable = {
   from(table: 'odds_snapshots'): {
     insert(rows: SnapshotRow[]): Promise<{ error: { message: string } | null }>
     select(columns: string): {
-      in(column: 'event_provider_key', values: string[]): {
-        order(column: 'fetched_at', opts: { ascending: boolean }): Promise<{
-          data: Array<Pick<SnapshotRow, 'event_provider_key' | 'home_spread' | 'fetched_at' | 'market'>> | null
-          error: { message: string } | null
-        }>
-      }
+      in(column: 'event_provider_key', values: string[]): SnapshotQuery
     }
   }
 }
@@ -119,9 +125,20 @@ export async function recordOddsSnapshots(
  * `exec_sql` RPC (issue #15), so there is no way to express a per-key argmax
  * over PostgREST.
  *
+ * ORDERING IS A CORRECTNESS CONCERN, not a preference. PostgREST caps an
+ * unbounded select at 1000 rows and truncates the tail. Every run writes a row
+ * for all 270 NFL games, so by mid-season a 47-game board carries well over
+ * 1000 matching rows. Ordered ascending, truncation would silently discard the
+ * NEWEST rows — precisely the "latest before kickoff" ones this selects, so the
+ * column would quietly revert to September lines with nothing failing. Tagged
+ * rows are therefore read DESCENDING, where the first hit per key is the answer
+ * and truncation can only cost the oldest, least relevant rows.
+ *
  * @param kickoffByKey game start times; without one for a key, every tagged
  *   capture is eligible and the latest wins.
  */
+const ROW_LIMIT = 10000
+
 export async function getOpeningSpreads(
   eventProviderKeys: string[],
   kickoffByKey: Map<string, string> = new Map()
@@ -130,34 +147,45 @@ export async function getOpeningSpreads(
   if (!supabaseAdmin || eventProviderKeys.length === 0) return opening
 
   const db = supabaseAdmin as unknown as SnapshotTable
-  const { data, error } = await db
-    .from('odds_snapshots')
-    .select('event_provider_key, home_spread, fetched_at, market')
-    .in('event_provider_key', eventProviderKeys)
-    .order('fetched_at', { ascending: true })
+  const query = (keys: string[]) =>
+    db.from('odds_snapshots')
+      .select('event_provider_key, home_spread, fetched_at, market')
+      .in('event_provider_key', keys)
 
-  if (error || !data) return opening
-
-  const fallback = new Map<string, { spread: number; observedAt: string }>()
-
-  for (const row of data) {
-    if (row.home_spread == null) continue
-    const key = row.event_provider_key
-    const hit = { spread: row.home_spread, observedAt: row.fetched_at }
-
-    // Ascending order means the first row seen for a key is its earliest.
-    if (!fallback.has(key)) fallback.set(key, hit)
-
-    if (row.market !== OPEN_MARKET) continue
+  const eligible = (row: { fetched_at: string }, key: string) => {
     const kickoff = kickoffByKey.get(key)
-    if (kickoff && Date.parse(row.fetched_at) >= Date.parse(kickoff)) continue
-    // Ascending order again: each later eligible capture overwrites the last,
-    // leaving the newest one before kickoff.
-    opening.set(key, hit)
+    return !kickoff || Date.parse(row.fetched_at) < Date.parse(kickoff)
   }
 
-  for (const [key, hit] of fallback) {
-    if (!opening.has(key)) opening.set(key, hit)
+  // 1. Newest tagged capture before kickoff. Descending, so the first hit wins.
+  const tagged = await query(eventProviderKeys)
+    .eq('market', OPEN_MARKET)
+    .order('fetched_at', { ascending: false })
+    .limit(ROW_LIMIT)
+
+  if (!tagged.error && tagged.data) {
+    for (const row of tagged.data) {
+      if (row.home_spread == null) continue
+      const key = row.event_provider_key
+      if (opening.has(key) || !eligible(row, key)) continue
+      opening.set(key, { spread: row.home_spread, observedAt: row.fetched_at })
+    }
   }
+
+  // 2. Only for games with no usable tagged capture: earliest observation of
+  //    any kind. Scoped to the stragglers so it stays a small query.
+  const missing = eventProviderKeys.filter(k => !opening.has(k))
+  if (missing.length === 0) return opening
+
+  const any = await query(missing).order('fetched_at', { ascending: true }).limit(ROW_LIMIT)
+  if (!any.error && any.data) {
+    for (const row of any.data) {
+      if (row.home_spread == null) continue
+      const key = row.event_provider_key
+      if (opening.has(key)) continue
+      opening.set(key, { spread: row.home_spread, observedAt: row.fetched_at })
+    }
+  }
+
   return opening
 }
