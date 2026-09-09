@@ -277,11 +277,15 @@ export function normalizeGames(picksheet: SplashPicksheet): NormalizedPoolGame[]
 /**
  * The `SourceGame` shape consumed by game-matching-service and the comparison
  * engine, and written to `pipeline_data.parsing.games`.
+ *
+ * `spread` is required, matching `PipelineInput.picksheetGames` in
+ * pipeline-orchestrator.ts — the matcher and comparison math do arithmetic on
+ * it directly and would produce NaN for a missing line.
  */
 export interface PipelineSourceGame {
   homeTeam: string
   awayTeam: string
-  spread?: number
+  spread: number
   league?: 'NFL' | 'NCAAF'
   gameTime?: string
   gameId?: string
@@ -290,18 +294,27 @@ export interface PipelineSourceGame {
 /**
  * Adapt to the `SourceGame` shape the matcher and comparison engine consume.
  *
+ * Games without a posted line are EXCLUDED: `spread` is required downstream.
+ * `normalizeGames()` keeps them (as `spread: null`) if a caller needs to
+ * distinguish "no line yet" from "game missing".
+ *
  * Entity resolution is still required: Splash ids are canonical only within
  * Splash, and the pipeline's real join is pool <-> market. NFL team names here
  * are nickname-only ("Seahawks") whereas the market side is city-qualified
  * ("Seattle Seahawks"). CFB uses unambiguous school names.
  */
 export function toSourceGames(picksheet: SplashPicksheet): PipelineSourceGame[] {
-  return normalizeGames(picksheet).map(g => ({
-    homeTeam: g.homeTeam,
-    awayTeam: g.awayTeam,
-    spread: g.spread ?? undefined,
-    league: g.league,
-    gameTime: g.gameTime,
-    gameId: g.gameId
-  }))
+  const out: PipelineSourceGame[] = []
+  for (const g of normalizeGames(picksheet)) {
+    if (g.spread === null) continue
+    out.push({
+      homeTeam: g.homeTeam,
+      awayTeam: g.awayTeam,
+      spread: g.spread,
+      league: g.league,
+      gameTime: g.gameTime,
+      gameId: g.gameId
+    })
+  }
+  return out
 }

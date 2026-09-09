@@ -1,14 +1,21 @@
 name: Fetch Picksheet
 
 on:
-  # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football).
+  # SCHEDULE STILL DISABLED — pending secrets, not pending code.
   #
-  # Re-enabled now that the job uses the Splash API rather than scraping
-  # officefootballpool.com. The OFP path could not authenticate (OFP and
-  # app.splashsports.com keep separate sessions), which is why this was
-  # previously disabled.
-  schedule:
-    - cron: '0 2 * * 5'
+  # The job now uses the Splash API (the officefootballpool.com path could not
+  # authenticate), but it needs three secrets that are not set yet:
+  #   PICKSHEET_SESSION_B64  <- npm --prefix app run login -- --print-b64
+  #   SPLASH_CONTEST_ID
+  #   SPLASH_ENTRY_ID
+  #
+  # Enabling before they exist would ship a job whose first run is known to
+  # fail. Verify with a workflow_dispatch run (dry_run: true), then uncomment.
+  # Tracked in #29.
+  #
+  # schedule:
+  #   # Thursday 6PM PT = Friday 2AM UTC (before Thursday Night Football)
+  #   - cron: '0 2 * * 5'
   workflow_dispatch:
     inputs:
       slate:
@@ -64,12 +71,16 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           APP_URL: ${{ secrets.APP_URL }}
+          # Dispatch inputs go through env, never interpolated into the shell:
+          # `${{ inputs.x }}` inline is a script-injection vector.
+          SLATE: ${{ inputs.slate }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           ARGS=""
-          if [ -n "${{ inputs.slate }}" ]; then
-            ARGS="$ARGS --slate=${{ inputs.slate }}"
+          if [ -n "$SLATE" ]; then
+            ARGS="$ARGS --slate=$SLATE"
           fi
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
+          if [ "$DRY_RUN" = "true" ]; then
             ARGS="$ARGS --dry-run"
           fi
           npx tsx scripts/fetch-picksheet-api.ts $ARGS

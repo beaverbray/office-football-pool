@@ -34,7 +34,6 @@ import {
   toSourceGames,
   SplashAuthError,
   type SplashSlate,
-  type NormalizedPoolGame,
   type PipelineSourceGame
 } from '@/services/splash-api'
 import { loadSession, saveSession } from './lib/session'
@@ -46,6 +45,7 @@ interface Outcome {
   success: boolean
   skipped: boolean
   slate?: string
+  week?: number
   games: number
   durationMs: number
   error?: string
@@ -59,19 +59,14 @@ function supabase() {
   })
 }
 
-/** Human-readable rendering, retained for the Control Panel and debugging. */
-function renderText(slate: SplashSlate, games: NormalizedPoolGame[]): string {
-  const lines = [`${slate.name} (${slate.abbreviation})`, '']
-  for (const g of games) {
-    const spread = g.spread === null ? 'n/a' : g.spread > 0 ? `+${g.spread}` : `${g.spread}`
-    lines.push(`${g.league}  ${g.awayAlias} @ ${g.homeAlias}  ${spread}  ${g.gameTime}`)
-  }
-  return lines.join('\n')
+/** `week_1` -> 1, so picksheet_fetch_log stays queryable by week. */
+function weekFromAbbreviation(abbr: string): number {
+  const m = abbr.match(/(\d+)/)
+  return m ? Number(m[1]) : 0
 }
 
 async function persist(
   slate: SplashSlate,
-  games: NormalizedPoolGame[],
   sourceGames: PipelineSourceGame[],
   contestId: string
 ): Promise<void> {
@@ -79,9 +74,13 @@ async function persist(
     .from('pipeline_current')
     .upsert({
       id: 'current',
-      picksheet_text: renderText(slate, games),
-      // parsing.games is what /api/refresh-all reads; populating it here means
-      // the structured data goes straight in without a parsing stage.
+      // Deliberately null. Both /api/pipeline/refresh and /api/refresh-all read
+      // pipeline_data.parsing.games FIRST and only fall back to picksheet_text +
+      // LLM parsing when it is absent. Writing a rendering here would give that
+      // fallback a string that is not in picksheet format to re-parse.
+      picksheet_text: null,
+      // parsing.games is what both readers consume, so the structured data goes
+      // straight in and the regex/LLM parsers are bypassed entirely.
       pipeline_data: {
         parsing: { success: true, gamesFound: sourceGames.length, games: sourceGames },
         source: 'splash-api'
@@ -102,7 +101,7 @@ async function persist(
 async function logResult(outcome: Outcome, source: string): Promise<void> {
   const { error } = await supabase().from('picksheet_fetch_log').insert({
     week_id: 0,
-    nfl_week: 0,
+    nfl_week: outcome.week ?? 0,
     season: new Date().getFullYear(),
     success: outcome.success,
     error_message: outcome.error ?? null,
@@ -190,12 +189,20 @@ async function main(): Promise<void> {
       throw new NothingToDo(`Slate ${slate.abbreviation} has games but no spreads posted yet.`)
     }
 
-    outcome = { success: true, skipped: false, slate: slate.abbreviation, games: games.length, durationMs: 0 }
+    const sourceGames = toSourceGames(picksheet)
+    outcome = {
+      success: true,
+      skipped: false,
+      slate: slate.abbreviation,
+      week: weekFromAbbreviation(slate.abbreviation),
+      games: sourceGames.length,
+      durationMs: 0
+    }
 
     if (dryRun) {
       console.log('[DRY RUN] would persist to afbp.pipeline_current and trigger refresh')
     } else {
-      await persist(slate, games, toSourceGames(picksheet), contestId)
+      await persist(slate, sourceGames, contestId)
       console.log('Saved to afbp.pipeline_current')
       await triggerRefresh()
     }
