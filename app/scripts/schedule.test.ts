@@ -1,59 +1,76 @@
 import { describe, it, expect } from 'vitest'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
 import path from 'node:path'
-import os from 'node:os'
 import { promises as fs } from 'node:fs'
-
-const run = promisify(execFile)
-const APP_DIR = path.resolve(__dirname, '..')
-const CLI = path.join(APP_DIR, 'scripts', 'schedule.ts')
-const PLIST = path.join(os.homedir(), 'Library', 'LaunchAgents', 'com.officefootballpool.fetch-picksheet.plist')
+import { missingConfig, buildPlist, resolveNode, WEEKDAY, HOUR } from './schedule'
 
 /**
  * These lock two failures that were live in an installed agent, both of which
- * fail *silently* on a Thursday rather than at install time:
+ * would fail *silently* on a Thursday rather than at install time:
  *
- *  1. The plist baked in `process.execPath` — the interpreter that happened to
- *     run the installer, which was a tool-managed node under ~/.hermes rather
- *     than the user's. launchd would fail the day that directory moved.
- *  2. APP_URL was optional, so a scheduled run wrote `parsing` and skipped the
- *     refresh, leaving the dashboard blank with the run reporting SUCCESS.
+ *  1. The plist baked in `process.execPath` — whichever interpreter ran the
+ *     installer, which was a tool-managed node under ~/.hermes rather than the
+ *     user's. launchd would break the day that directory was replaced.
+ *  2. APP_URL was optional, so a scheduled run wrote `parsing`, skipped the
+ *     refresh, and left the dashboard blank while reporting SUCCESS.
+ *
+ * Deliberately pure: an earlier version of this file ran `launchctl bootstrap`
+ * for real, which deleted the user's actual agent and could not run on the
+ * ubuntu CI runner at all. Tests must not mutate machine state.
  */
-async function schedule(args: string[], env: Record<string, string> = {}) {
-  return run('npx', ['tsx', CLI, ...args], {
-    cwd: APP_DIR,
-    env: { ...process.env, ...env },
-  }).catch((e: { stdout?: string; stderr?: string }) => ({
-    stdout: e.stdout ?? '',
-    stderr: e.stderr ?? '',
-  }))
+
+const BASE = {
+  SPLASH_CONTEST_ID: 'contest_x',
+  SPLASH_ENTRY_ID: 'entry_x',
+  SUPABASE_SERVICE_ROLE_KEY: 'k',
+  SUPABASE_URL: 'https://db.example',
+  APP_URL: 'https://app.example',
 }
 
-describe('schedule install preflight', () => {
-  it('refuses to install without APP_URL, naming it', async () => {
-    const { stdout, stderr } = await schedule(['install'], { APP_URL: '' })
-    expect(`${stdout}${stderr}`).toMatch(/APP_URL/)
-    // and it must not have written a plist
-    const exists = await fs.access(PLIST).then(() => true, () => false)
-    expect(exists).toBe(false)
+describe('missingConfig', () => {
+  it('accepts a complete environment', () => {
+    expect(missingConfig(BASE)).toEqual([])
   })
 
-  it('bakes an absolute node path that exists on disk', async () => {
-    await schedule(['install'], { APP_URL: 'https://example.invalid' })
-    try {
-      const plist = await fs.readFile(PLIST, 'utf8')
-      const nodePath = plist.match(/<string>(\/[^<]*\/node)<\/string>/)?.[1]
-      expect(nodePath, 'plist should name an absolute node binary').toBeTruthy()
-      expect(path.isAbsolute(nodePath!)).toBe(true)
-      await expect(fs.access(nodePath!)).resolves.toBeUndefined()
+  it('requires APP_URL, without which a live run half-completes', () => {
+    expect(missingConfig({ ...BASE, APP_URL: undefined })).toEqual(['APP_URL'])
+  })
 
-      // The installer's own interpreter is not a safe choice: under a tool-managed
-      // runtime it points into a directory that gets replaced on update.
-      const { stdout } = await run(process.env.SHELL || '/bin/zsh', ['-lc', 'command -v node'])
-      expect(nodePath).toBe(stdout.trim().split('\n').pop()!.trim())
-    } finally {
-      await schedule(['uninstall'])
-    }
+  it('accepts NEXT_PUBLIC_SUPABASE_URL in place of SUPABASE_URL', () => {
+    const env = { ...BASE, SUPABASE_URL: undefined, NEXT_PUBLIC_SUPABASE_URL: 'https://db.example' }
+    expect(missingConfig(env)).toEqual([])
+  })
+
+  it('names every gap at once rather than one per attempt', () => {
+    expect(missingConfig({}).sort()).toEqual(
+      ['APP_URL', 'SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL'].sort()
+    )
+  })
+})
+
+describe('buildPlist', () => {
+  const plist = buildPlist('/opt/node/bin/node', '/app/tsx.mjs', '/app/fetch.ts', '/logs')
+
+  it('runs the fetch on the schedule the old cron used', () => {
+    expect(plist).toContain(`<key>Weekday</key><integer>${WEEKDAY}</integer>`)
+    expect(plist).toContain(`<key>Hour</key><integer>${HOUR}</integer>`)
+  })
+
+  it('invokes node by absolute path, since launchd supplies almost no PATH', () => {
+    const args = [...plist.matchAll(/<array>([\s\S]*?)<\/array>/g)][0][1]
+    const paths = [...args.matchAll(/<string>([^<]+)<\/string>/g)].map(m => m[1])
+    expect(paths).toEqual(['/opt/node/bin/node', '/app/tsx.mjs', '/app/fetch.ts'])
+    for (const p of paths) expect(path.isAbsolute(p)).toBe(true)
+  })
+
+  it('does not leave RunAtLoad true, which would fetch on every login', () => {
+    expect(plist).toMatch(/<key>RunAtLoad<\/key>\s*<false\/>/)
+  })
+})
+
+describe('resolveNode', () => {
+  it('returns an existing absolute path from the login shell, not the installer runtime', async () => {
+    const resolved = await resolveNode()
+    expect(path.isAbsolute(resolved)).toBe(true)
+    await expect(fs.access(resolved)).resolves.toBeUndefined()
   })
 })

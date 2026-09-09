@@ -24,17 +24,33 @@ import { promisify } from 'node:util'
 
 const run = promisify(execFile)
 
-const LABEL = 'com.officefootballpool.fetch-picksheet'
+export const LABEL = 'com.officefootballpool.fetch-picksheet'
 const APP_DIR = path.resolve(__dirname, '..')
 const PLIST_PATH = path.join(os.homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`)
 const LOG_DIR = path.join(os.homedir(), 'Library', 'Logs', 'office-football-pool')
 
 // Thursday 18:00 local — matches the old cron (Fri 02:00 UTC), before TNF.
-const WEEKDAY = 4
-const HOUR = 18
-const MINUTE = 0
+export const WEEKDAY = 4
+export const HOUR = 18
+export const MINUTE = 0
 
-function buildPlist(nodePath: string, tsxCli: string, script: string): string {
+/**
+ * Config the agent cannot run without. Pure so it can be tested against a
+ * synthetic environment; the installer refuses rather than discovering a gap
+ * at 18:00 on a Thursday.
+ */
+export function missingConfig(env: Record<string, string | undefined>): string[] {
+  const missing = ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY']
+    .filter(k => !env[k])
+  if (!env.SUPABASE_URL && !env.NEXT_PUBLIC_SUPABASE_URL) missing.push('SUPABASE_URL')
+  // Without APP_URL a live run writes `parsing`, never triggers
+  // /api/refresh-all, and leaves the dashboard blank. A half-completed
+  // pipeline on a timer is worse than a loud failure.
+  if (!env.APP_URL) missing.push('APP_URL')
+  return missing
+}
+
+export function buildPlist(nodePath: string, tsxCli: string, script: string, logDir = LOG_DIR): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -62,9 +78,9 @@ function buildPlist(nodePath: string, tsxCli: string, script: string): string {
   </dict>
 
   <key>StandardOutPath</key>
-  <string>${path.join(LOG_DIR, 'fetch.log')}</string>
+  <string>${path.join(logDir, 'fetch.log')}</string>
   <key>StandardErrorPath</key>
-  <string>${path.join(LOG_DIR, 'fetch.error.log')}</string>
+  <string>${path.join(logDir, 'fetch.error.log')}</string>
 
   <key>RunAtLoad</key>
   <false/>
@@ -83,7 +99,7 @@ function buildPlist(nodePath: string, tsxCli: string, script: string): string {
  * ~/.hermes). launchd would then fail silently every Thursday. A login shell
  * reproduces the PATH the user actually maintains.
  */
-async function resolveNode(): Promise<string> {
+export async function resolveNode(): Promise<string> {
   const shell = process.env.SHELL || '/bin/zsh'
   const { stdout } = await run(shell, ['-lc', 'command -v node']).catch(() => ({ stdout: '' }))
   const resolved = stdout.trim().split('\n').pop()?.trim()
@@ -105,17 +121,8 @@ async function install(): Promise<void> {
   for (const [label, p] of [['tsx', tsxCli], ['script', script]] as const) {
     try { await fs.access(p) } catch { throw new Error(`Cannot find ${label} at ${p}`) }
   }
-
   // Fail before installing rather than every Thursday at 18:00.
-  const missing = ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY']
-    .filter(k => !process.env[k])
-  if (!process.env.SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL) missing.push('SUPABASE_URL')
-  // APP_URL is required for a scheduled run specifically. Without it the fetch
-  // writes `parsing` and returns without triggering /api/refresh-all, leaving
-  // `pipeline_data` with no `comparison` — the dashboard renders blank until
-  // somebody POSTs the refresh by hand. A half-completed pipeline on a timer
-  // is worse than a loud failure.
-  if (!process.env.APP_URL) missing.push('APP_URL')
+  const missing = missingConfig(process.env)
   if (missing.length) {
     throw new Error(
       `Missing from app/.env: ${missing.join(', ')}\n` +
@@ -173,16 +180,20 @@ async function status(): Promise<void> {
   if (log) console.log(log.trimEnd().split('\n').slice(-6).map(l => `  ${l}`).join('\n'))
 }
 
-const action = process.argv[2]
-const actions: Record<string, () => Promise<void>> = { install, uninstall, status }
-const chosen = actions[action]
+// Only dispatch when run directly. Importing this module (e.g. from tests)
+// must not consume argv or exit the host process.
+if (require.main === module) {
+  const action = process.argv[2]
+  const actions: Record<string, () => Promise<void>> = { install, uninstall, status }
+  const chosen = actions[action]
 
-if (!chosen) {
-  console.error(`Usage: schedule.ts <install|uninstall|status>`)
-  process.exit(1)
+  if (!chosen) {
+    console.error(`Usage: schedule.ts <install|uninstall|status>`)
+    process.exit(1)
+  }
+
+  chosen().catch(error => {
+    console.error('Failed:', error instanceof Error ? error.message : String(error))
+    process.exit(1)
+  })
 }
-
-chosen().catch(error => {
-  console.error('Failed:', error instanceof Error ? error.message : String(error))
-  process.exit(1)
-})
