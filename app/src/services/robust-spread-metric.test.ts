@@ -124,15 +124,24 @@ describe('RobustSpreadMetric', () => {
 describe('per-league margin model', () => {
   const metric = RobustSpreadMetric.getInstance()
 
-  it('scores the same spread pair lower in NCAAF than NFL', () => {
-    // College margins are far more dispersed (measured SD 22.30 over 3946 games
-    // vs 13.45 for NFL), so a given half-point sits on a flatter density and
-    // moves less probability. Applying the NFL sigma to college games — which
-    // are 49 of the 65 on a typical board — overstated every one of them.
-    expect(metric.marketDeltaProb(3, 3.5, 'NCAAF'))
-      .toBeLessThan(metric.marketDeltaProb(3, 3.5, 'NFL'))
-    expect(metric.marketDeltaProb(7, 7.5, 'NCAAF'))
-      .toBeLessThan(metric.marketDeltaProb(7, 7.5, 'NFL'))
+  it('moves less probability per half-point in NCAAF, away from key numbers', () => {
+    // Isolates sigma by using pairs that cross no key: college margins are more
+    // dispersed (measured SD 22.30 over 3946 games vs 13.45), so the same
+    // half-point sits on a flatter density. Applying the NFL sigma to college —
+    // 49 of the 65 games on a typical board — overstated every one of them.
+    for (const [a, b] of [[5, 5.5], [11, 11.5], [12, 12.5]] as const) {
+      expect(metric.marketDeltaProb(a, b, 'NCAAF'))
+        .toBeLessThan(metric.marketDeltaProb(a, b, 'NFL'))
+    }
+  })
+
+  it('can score a key crossing HIGHER in NCAAF, which the base term alone would not predict', () => {
+    // Not a typo and not an inversion. College lands on 7 about as often as the
+    // NFL (7.96% vs 8.29%) while its smooth background is much thinner, so the
+    // discrete spike is a larger anomaly. An earlier version of this test
+    // asserted NCAAF was uniformly lower; that was an assumption, not a
+    // measurement, and it was wrong.
+    expect(keyWeight(7, 'NCAAF')).toBeGreaterThan(keyWeight(7, 'NFL'))
   })
 
   it('defaults to NFL when no league is given', () => {
@@ -182,14 +191,20 @@ describe('keyWeight derivation', () => {
     }
   })
 
-  it('stays within a few points of the old flat weight at sparse keys', () => {
-    // Sanity anchor on the derivation: where the measured rate is close to the
-    // normal prediction, it should reproduce roughly the original 0.005 that
-    // the ported constants used for non-3, non-7 keys. NFL key 21 and NCAAF
-    // key 1 are the two sparsest.
-    expect(keyWeight(21, 'NFL')).toBeGreaterThan(0.002)
-    expect(keyWeight(21, 'NFL')).toBeLessThan(0.010)
-    expect(keyWeight(1, 'NCAAF')).toBeGreaterThan(0.002)
-    expect(keyWeight(1, 'NCAAF')).toBeLessThan(0.010)
+  it('reproduces the ported constants where those were right', () => {
+    // The anchor that validates the derivation against prior art: NFL key 7
+    // derives to 0.0155 against a hardcoded 0.015, and keys 10 and 17 land near
+    // the flat 0.005. Only key 3 disagrees materially (0.0408 vs 0.02).
+    expect(keyWeight(7, 'NFL')).toBeCloseTo(0.015, 2)
+    expect(keyWeight(10, 'NFL')).toBeCloseTo(0.005, 2)
+    expect(keyWeight(17, 'NFL')).toBeCloseTo(0.005, 2)
+    expect(keyWeight(3, 'NFL')).toBeGreaterThan(0.03)
+  })
+
+  it('gives no bonus to keys the normal already explains', () => {
+    // NFL 1 and 4 land at or below the normal prediction, so they carry no
+    // excess. The old flat key_weight_other paid them 0.005 regardless.
+    expect(keyWeight(1, 'NFL')).toBe(0)
+    expect(keyWeight(4, 'NFL')).toBe(0)
   })
 })

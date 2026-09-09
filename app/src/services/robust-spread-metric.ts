@@ -96,15 +96,27 @@ function normalPdf(z: number): number {
  * at -3 a 3-point margin pushes, at -3.5 it loses, at -2.5 it covers. Scoring
  * a push as half a win makes the cover probability shift by half the mass.
  *
- * The derivation reproduces the old `key_weight_other` of 0.005 at NFL keys 1
- * and 21 and NCAAF key 1, which is evidence it matches the original intent.
- * It disagrees sharply at the keys that matter: NFL 3 is 0.055 against a
- * hardcoded 0.02, and NFL 7 is 0.029 against 0.015.
+ * Both quantities must be TWO-SIDED. The measured rate is P(|margin| = k),
+ * collapsed across sign, so the comparable normal mass is 2*phi(k/sigma)/sigma
+ * — the density at +k and at -k. Comparing a two-sided measurement against a
+ * one-sided prediction inflates every excess by roughly the one-sided share.
+ *
+ * With the sides matched, the derivation lands on the old constants where they
+ * were right and disagrees only where they were not:
+ *
+ *   NFL key 7    derives 0.0155   hardcoded 0.015    near-exact
+ *   NFL key 10   derives 0.0043   hardcoded 0.005
+ *   NFL key 17   derives 0.0044   hardcoded 0.005
+ *   NFL key 3    derives 0.0408   hardcoded 0.02     the real disagreement
+ *
+ * Keys 1 and 4 derive to zero in both leagues: their measured landing rate is
+ * at or below what the normal already predicts, so they carry no excess and
+ * should never have had a flat bonus.
  */
 export function keyWeight(k: number, league: MetricLeague): number {
   const model = LEAGUE_MODELS[league]
   const actual = model.landing[k] ?? 0
-  const predictedByNormal = normalPdf(k / model.sigma) / model.sigma
+  const predictedByNormal = (2 * normalPdf(k / model.sigma)) / model.sigma
   return Math.max(0, actual - predictedByNormal) / 2
 }
 
