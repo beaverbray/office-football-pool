@@ -7,11 +7,16 @@
  * secret — `npm run login -- --print-b64` does that only as part of the
  * interactive flow.
  *
+ * Emits only the accessToken/refreshToken pair by default: GitHub caps secrets
+ * at 64KB and a full session is ~139KB base64, almost all of it localStorage
+ * the browserless path never reads.
+ *
  * Verifies before printing, so a dead session can't be published as a secret:
  * both tokens present, refresh succeeds, and (if SPLASH_CONTEST_ID is set) the
  * contest is reachable.
  *
  *   npm --prefix app run session:b64
+ *   npm --prefix app run session:b64 -- --full    # whole session (local use)
  *   npm -s --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64
  *
  * --quiet prints only the base64, so it can be piped. Note the `-s`: without
@@ -19,12 +24,14 @@
  */
 
 import 'dotenv/config'
-import { promises as fs } from 'node:fs'
 import { loadSession, describeSessionAge, DEFAULT_SESSION_PATH } from './lib/session'
 import { refreshAccessToken, getSlates } from '@/services/splash-api'
 
 async function main(): Promise<void> {
-  const quiet = process.argv.slice(2).includes('--quiet')
+  const args = process.argv.slice(2)
+  const quiet = args.includes('--quiet')
+  // Default is tokens-only; --full emits everything for local backup/debugging.
+  const full = args.includes('--full')
   const log = (msg: string) => { if (!quiet) console.error(msg) }
 
   const session = await loadSession()
@@ -54,13 +61,32 @@ async function main(): Promise<void> {
     log('  contest: skipped (SPLASH_CONTEST_ID not set)')
   }
 
-  const b64 = Buffer.from(await fs.readFile(DEFAULT_SESSION_PATH, 'utf8')).toString('base64')
+  // Emit ONLY the two tokens. GitHub caps secrets at 64KB and a full session
+  // is ~139KB base64 — but 94KB of that is app.splashsports.com localStorage,
+  // which the browserless CI path never reads. It restores no origins and
+  // looks up exactly `accessToken` and `refreshToken`.
+  const minimal = {
+    savedAt: session.savedAt,
+    cookies: session.cookies.filter(c => c.name === 'accessToken' || c.name === 'refreshToken'),
+    origins: []
+  }
+
+  const payload = full ? JSON.stringify(session) : JSON.stringify(minimal)
+  const b64 = Buffer.from(payload).toString('base64')
+
+  if (b64.length > 64 * 1024) {
+    throw new Error(
+      `Encoded session is ${b64.length} bytes, over GitHub's 64KB secret limit. ` +
+      (full ? 'Drop --full to emit just the tokens.' : 'This should not happen for a token-only payload.')
+    )
+  }
 
   if (quiet) {
     process.stdout.write(b64)
     return
   }
 
+  log(`  payload: ${full ? 'full session' : 'tokens only'}, ${b64.length} bytes base64 (limit 65536)`)
   console.error('')
   console.error('Set the secret with:')
   console.error('  npm -s --prefix app run session:b64 -- --quiet | gh secret set PICKSHEET_SESSION_B64')
