@@ -160,9 +160,14 @@ export async function refreshAccessToken(tokens: SplashTokens): Promise<string> 
   })
 
   if (!res.ok) {
+    // Include the server's own message: "403" alone is undiagnosable from a CI
+    // log, and the causes differ sharply (expired refresh token vs the request
+    // being blocked outright, e.g. from a datacenter IP).
+    const detail = await res.text().catch(() => '')
     throw new SplashAuthError(
-      `Token refresh failed (${res.status}). The refresh token is likely expired ` +
-      `(Cognito refresh tokens last ~30 days). Re-authenticate with: npm run login`
+      `Token refresh failed (${res.status} ${res.statusText}). ` +
+      `Response: ${detail.slice(0, 300) || '(empty body)'} — ` +
+      `if the refresh token is expired (Cognito: ~30 days), re-authenticate with: npm run login`
     )
   }
   return RefreshSchema.parse(unwrap(await res.json())).accessToken
