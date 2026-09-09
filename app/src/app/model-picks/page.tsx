@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
-import { OpeningLineEnricher, type EnrichedGameComparison } from '@/utils/opening-line-enricher'
+import type { GameComparison } from '@/services/comparison-engine'
 
 interface PipelineResult {
   id: string
@@ -150,7 +150,7 @@ export default function ModelPicksPage() {
   // Enrich comparisons with opening line data
   const enrichedComparisons = useMemo(() => {
     if (!currentPipeline?.comparison?.comparisons) return []
-    return OpeningLineEnricher.enrichGames(currentPipeline.comparison.comparisons)
+    return currentPipeline.comparison.comparisons as GameComparison[]
   }, [currentPipeline?.comparison?.comparisons])
 
   // Set mounted state

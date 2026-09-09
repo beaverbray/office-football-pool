@@ -29,8 +29,9 @@ export interface GameComparison {
   // field and display an unmoved line as a six-point swing.
   openingSpread?: number
   openingLineTimestamp?: string // When opening line was recorded
-  lineMovement?: number // Current spread - opening spread
-  lineMovementPercent?: number // Percentage movement from opening
+  // lineMovement/lineMovementPercent removed: nothing ever wrote them, and the
+  // dashboard sort that read them was therefore a silent no-op. Movement is now
+  // derived at the point of use from openingSpread and marketSpread.
   // Robust spread metric data
   marketDeltaProb?: number // Calibrated probability change [0, 1]
   importanceLevel?: 'minimal' | 'low' | 'moderate' | 'high' | 'very-high'

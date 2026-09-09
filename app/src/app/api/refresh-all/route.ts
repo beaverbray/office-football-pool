@@ -497,7 +497,16 @@ export async function POST(request: NextRequest) {
         .from('pipeline_current')
         .upsert({
           id: 'current',
-          pipeline_data: refreshedPipeline,
+          // Carry `parsing` forward (issue #31). The orchestrator's result has
+          // no `parsing` key, so replacing pipeline_data wholesale destroyed
+          // the picksheet games written by the fetch. extractPicksheetGames
+          // then falls back to `comparison.comparisons`, meaning a refresh run
+          // without a preceding fetch consumes its own previous output —
+          // monotonically lossy, observed collapsing 65 games to 1.
+          pipeline_data: {
+            ...refreshedPipeline,
+            parsing: refreshedPipeline.parsing ?? currentPipelineRow.pipeline_data?.parsing ?? null
+          },
           picksheet_text: currentPipelineRow.picksheet_text,
           updated_at: new Date().toISOString()
         })

@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
-import { OpeningLineEnricher, type EnrichedGameComparison } from '@/utils/opening-line-enricher'
+import type { GameComparison } from '@/services/comparison-engine'
 
 // NOTE: this is a local, narrower copy of the orchestrator's PipelineResult
 // (src/services/pipeline-orchestrator.ts). The two have drifted — this one was
@@ -162,7 +162,7 @@ export default function CompactDashboard() {
   // Enrich comparisons with opening line data
   const enrichedComparisons = useMemo(() => {
     if (!currentPipeline?.comparison?.comparisons) return []
-    return OpeningLineEnricher.enrichGames(currentPipeline.comparison.comparisons)
+    return currentPipeline.comparison.comparisons as GameComparison[]
   }, [currentPipeline?.comparison?.comparisons])
 
   // Set mounted state
@@ -445,11 +445,18 @@ export default function CompactDashboard() {
         case 'delta':
           compareValue = Math.abs(a.spreadDelta ?? 0) - Math.abs(b.spreadDelta ?? 0)
           break
-        case 'opening':
-          const aMovement = Math.abs(a.lineMovement?.movement ?? 0)
-          const bMovement = Math.abs(b.lineMovement?.movement ?? 0)
-          compareValue = aMovement - bMovement
+        case 'opening': {
+          // Movement is derived here rather than read from `lineMovement`,
+          // which the enricher never populated — so this sort silently did
+          // nothing. `openingSpread` now arrives from the server, so the
+          // distance the line has travelled since first observation is real.
+          const movement = (g: typeof a) =>
+            g.openingSpread == null || g.marketSpread == null
+              ? -1 // games with no observation yet sort below any real movement
+              : Math.abs(g.marketSpread - g.openingSpread)
+          compareValue = movement(a) - movement(b)
           break
+        }
       }
 
       return sortDirection === 'asc' ? compareValue : -compareValue
