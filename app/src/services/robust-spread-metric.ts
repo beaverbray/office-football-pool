@@ -49,6 +49,12 @@ export interface ModelData {
 
 export type ImportanceLevel = 'minimal' | 'low' | 'moderate' | 'high' | 'very-high'
 
+/**
+ * NFL margin-of-victory key numbers, ascending. 3 and 7 carry by far the most
+ * mass, which is why they get their own weights in computeRawMetric.
+ */
+const KEY_NUMBERS = [1, 3, 4, 6, 7, 10, 14, 17, 21] as const
+
 // ============================================================================
 // ROBUST SPREAD METRIC CLASS
 // ============================================================================
@@ -139,26 +145,26 @@ export class RobustSpreadMetric {
    * Determine which key numbers are crossed between two spreads
    */
   private keysCrossed(s1: number, s2: number): number[] {
-    const a = Math.abs(s1)
-    const b = Math.abs(s2)
-    const lo = Math.min(a, b)
-    const hi = Math.max(a, b)
+    const lo = Math.min(Math.abs(s1), Math.abs(s2))
+    const hi = Math.max(Math.abs(s1), Math.abs(s2))
 
-    const keys: number[] = []
-    const keyNumbers = [1, 3, 4, 6, 7, 10, 14, 17, 21]
+    // Identical lines move no probability mass.
+    if (lo === hi) return []
 
-    for (const k of keyNumbers) {
-      // Check if key is crossed
-      if (lo < k && k <= hi) {
-        keys.push(k)
-      }
-      // Also check negative key
-      if (lo < k && k <= hi) {
-        keys.push(-k)
-      }
-    }
-
-    return keys
+    // Closed interval on BOTH ends. The previous `lo < k && k <= hi` was
+    // half-open, so a line resting exactly on a key counted as crossing it
+    // only when the key was the upper bound. That made two equivalent
+    // half-point moves differ by ~4x: 3 -> 2.5 registered key 3 (5.45%) while
+    // 3 -> 3.5 registered nothing (1.44%), though both change the outcome for
+    // the ~10% of games landing exactly on 3 — push becomes cover in one
+    // direction, push becomes loss in the other.
+    //
+    // Each key is returned ONCE. It was previously pushed twice, by two `if`
+    // blocks with identical conditions, the second labelled "also check
+    // negative key" though it computed no negative and operated on absolute
+    // values where sign is meaningless. Every key adjustment in
+    // computeRawMetric was therefore applied double.
+    return KEY_NUMBERS.filter(k => lo <= k && k <= hi)
   }
 
   /**

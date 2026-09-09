@@ -15,18 +15,38 @@ describe('RobustSpreadMetric', () => {
       expect(metric.marketDeltaProb(0, 0)).toBeCloseTo(0, 6)
     })
 
-    it('returns 0 for equal-magnitude opposite-sign spreads (no key strictly crossed)', () => {
-      // abs(-3) === abs(3) === 3, so lo === hi === 3 and no key number is
-      // strictly crossed (the loop requires lo < k <= hi).
+    it('returns 0 for equal-magnitude opposite-sign spreads', () => {
+      // The metric works on |spread|, so -3 and 3 describe lines of the same
+      // steepness. A favourite change is reported separately as favoriteFlipped.
       expect(metric.marketDeltaProb(-3, 3)).toBeCloseTo(0, 6)
     })
 
-    it('computes base delta plus doubled key adjustments when crossing key numbers', () => {
-      // keysCrossed(2, 4) crosses key 3 and key 4, each pushed twice (once
-      // positive, once negative) due to the duplicated condition in keysCrossed,
-      // so key 3 contributes 2*0.02=0.04 and key 4 (other) contributes 2*0.005=0.01.
-      // baseDelta = |P(cover 4) - P(cover 2)| under the normal approximation.
-      expect(metric.marketDeltaProb(2, 4)).toBeCloseTo(0.10781411106346356, 6)
+    it('scores the two half-point moves off a key number equally', () => {
+      // The half-point either side of 3 moves the same ~10% of games that land
+      // exactly on 3: push becomes cover going down, push becomes loss going up.
+      // A half-open interval used to score these 5.45% vs 1.44% — a 4x gap
+      // between equivalent moves, observed live on the Week 1 board (Bears/
+      // Panthers 3 -> 2.5 flagged "high", Patriots/Seahawks 3 -> 3.5 "low").
+      const down = metric.marketDeltaProb(3, 2.5)
+      const up = metric.marketDeltaProb(3, 3.5)
+      expect(Math.abs(down - up)).toBeLessThan(0.002)
+    })
+
+    it('scores a move fully across a key above either half of it', () => {
+      const across = metric.marketDeltaProb(2.5, 3.5)
+      expect(across).toBeGreaterThan(metric.marketDeltaProb(3, 2.5))
+      expect(across).toBeGreaterThan(metric.marketDeltaProb(3, 3.5))
+    })
+
+    it('counts each key number once, not twice', () => {
+      // Asserted on the key list itself. An earlier version of this test tried
+      // to isolate the adjustment by subtracting a keyless pair's score, but
+      // the normal-approximation base differs between spread pairs, so the
+      // subtraction measured nothing.
+      const keys = metric.explain(2, 4).key_adjustments.keys_crossed
+      expect([...keys].sort((a, b) => a - b)).toEqual([3, 4])
+      expect(new Set(keys).size).toBe(keys.length)
+      expect(keys.every(k => k > 0)).toBe(true)
     })
 
     it('is bounded within [0, 1]', () => {
@@ -46,7 +66,11 @@ describe('RobustSpreadMetric', () => {
     })
 
     it('divides the raw metric by the configured outlier threshold (0.05)', () => {
-      expect(metric.outlierScore(2, 4)).toBeCloseTo(2.156282221269271, 4)
+      // Asserted as a ratio rather than a magic constant: the previous literal
+      // (2.156) baked in the doubled key adjustment and had to be edited when
+      // the double-count was fixed, which is exactly what a pinned constant
+      // cannot tell you.
+      expect(metric.outlierScore(2, 4)).toBeCloseTo(metric.marketDeltaProb(2, 4) / 0.05, 6)
     })
   })
 
@@ -79,7 +103,9 @@ describe('RobustSpreadMetric', () => {
       expect(result.spreads).toEqual({ s1: 2, s2: 4, gap: 2 })
       expect(result.final_metrics.calibrated_delta).toBeCloseTo(metric.marketDeltaProb(2, 4), 10)
       expect(result.final_metrics.outlier_score).toBeCloseTo(metric.outlierScore(2, 4), 10)
-      expect(result.key_adjustments.keys_crossed.sort((a, b) => a - b)).toEqual([-4, -3, 3, 4])
+      // Each key once, no phantom negatives: two `if` blocks with identical
+      // conditions used to yield [-4, -3, 3, 4] and double every adjustment.
+      expect(result.key_adjustments.keys_crossed.sort((a, b) => a - b)).toEqual([3, 4])
     })
   })
 })
