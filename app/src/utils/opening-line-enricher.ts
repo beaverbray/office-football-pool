@@ -31,38 +31,15 @@ export interface EnrichedGameComparison {
 
 export class OpeningLineEnricher {
   /**
-   * Enrich game comparisons with opening line data.
+   * Pass comparisons through unchanged.
    *
-   * No opening-line source exists yet, so `openingSpread` stays null and the
-   * OPEN column renders "-". It previously defaulted to `comp.marketSpread`
-   * as a "placeholder", which put a fabricated number in front of users: OPEN
-   * showed the current market line relabelled as the opening one, so a game
-   * whose line had never moved appeared to have moved.
-   *
-   * Worse, it was rendered against the opposite sign convention — the away row
-   * prints `openingSpread` raw, while `marketSpread` is home-perspective — so
-   * Patriots @ Seahawks displayed OPEN NE -3.0 beside MKT NE +3.0, reading as
-   * a six-point swing on a line that had not moved at all.
-   *
-   * Wire a real opening-line source before reinstating this column.
+   * `openingSpread` is now attached server-side in /api/refresh-all from
+   * afbp.odds_snapshots, so there is nothing to enrich here. This previously
+   * fabricated the field from `comp.marketSpread` as a "placeholder", which put
+   * the current line on screen labelled as the opening one.
    */
   static enrichGames(comparisons: any[]): EnrichedGameComparison[] {
-    return comparisons.map(comp => ({
-      ...comp,
-      openingSpread: null,
-      lineMovement: undefined
-    }))
-  }
-
-  /**
-   * Record opening lines from comparisons
-   */
-  static recordOpeningLinesFromComparisons(comparisons: any[]): { recorded: number; skipped: number } {
-    // Stub implementation - return counts
-    return {
-      recorded: 0,
-      skipped: comparisons.length
-    }
+    return comparisons as EnrichedGameComparison[]
   }
 
   /**

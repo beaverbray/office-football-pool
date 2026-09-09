@@ -322,11 +322,6 @@ export default function CompactDashboard() {
         }
         setCurrentPipeline(pipelineWithTimestamp)
 
-        // Record new opening lines if needed
-        if (data.pipeline.comparison?.comparisons) {
-          OpeningLineEnricher.recordOpeningLinesFromComparisons(data.pipeline.comparison.comparisons)
-        }
-
         // Re-fetch predictions to get the newly scraped data
         try {
           const predictionsResponse = await fetch('/api/predictions/latest')
@@ -1050,7 +1045,11 @@ export default function CompactDashboard() {
                     >
                       MATCHUP {sortColumn === 'date' && (sortDirection === 'asc' ? '↑' : '↓')}
                     </th>
-                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">OPEN</th>
+                    {/* "First line this system observed", not the book's true open:
+                        The Odds API's historical endpoint is a paid tier, so the
+                        series starts whenever recording started. Named FIRST so it
+                        does not claim more than it is. */}
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950" title="First spread this system observed for this game. Not the book's opening line.">FIRST</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MKT</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">POOL</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MOD</th>

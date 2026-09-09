@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
+import { recordOddsSnapshots, getOpeningSpreads } from '@/services/opening-lines'
 
 export const dynamic = 'force-dynamic'
 // The full pipeline measured 42s cold locally but exceeded 60s on Vercel
@@ -435,6 +436,40 @@ export async function POST(request: NextRequest) {
 
     timing.pipelineExecution = Date.now() - pipelineStart
     console.log(`Pipeline refresh complete: ${refreshedPipeline.matching?.matches || 0} games matched (${timing.pipelineExecution}ms)`)
+
+    // =========================================================================
+    // Stage 4b: Record this observation, and attach the earliest one we have
+    // =========================================================================
+    // The odds were already fetched and paid for above; without this they are
+    // discarded every run, which is why afbp.odds_snapshots sat empty and the
+    // dashboard's OPEN column had nothing real to show.
+    //
+    // Best-effort throughout: the pipeline's own output does not depend on it,
+    // so a snapshot failure must not fail a refresh that otherwise succeeded.
+    try {
+      const marketGames = (refreshedPipeline.oddsRetrieval as { games?: Array<{ gameId: string; homeSpread?: number }> })?.games ?? []
+
+      const snap = await recordOddsSnapshots(marketGames)
+      if (snap.error) console.warn('Odds snapshot not recorded:', snap.error)
+      else console.log(`Recorded ${snap.recorded} odds snapshots`)
+
+      const comparisons = refreshedPipeline.comparison?.comparisons as Array<Record<string, unknown>> | undefined
+      if (comparisons?.length) {
+        // comparison.gameId is the Odds API event id, so it joins directly to
+        // event_provider_key (verified: 62/62 on the live board).
+        const keys = comparisons.map(c => String(c.gameId)).filter(Boolean)
+        const opening = await getOpeningSpreads(keys)
+        for (const c of comparisons) {
+          const hit = opening.get(String(c.gameId))
+          // Home-perspective, matching marketSpread/picksheetSpread.
+          c.openingSpread = hit ? hit.spread : null
+          c.openingLineTimestamp = hit ? hit.observedAt : null
+        }
+        console.log(`Attached opening lines to ${[...opening.keys()].length} of ${comparisons.length} comparisons`)
+      }
+    } catch (error) {
+      console.warn('Opening-line step failed (non-fatal):', error instanceof Error ? error.message : String(error))
+    }
 
     // =========================================================================
     // Stage 5: Save refreshed pipeline to database

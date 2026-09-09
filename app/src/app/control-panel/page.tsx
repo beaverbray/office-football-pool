@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
-import { OpeningLineEnricher } from '@/utils/opening-line-enricher'
 
 interface WeekInfo {
   week: number
@@ -207,12 +206,6 @@ export default function ControlPanel() {
       // Save to localStorage (as fallback)
       localStorage.setItem('pipelineData', JSON.stringify(parseData.pipeline))
       localStorage.setItem('picksheetText', picksheetText)
-
-      // Record opening lines from this fresh data
-      if (parseData.pipeline.comparison?.comparisons) {
-        const result = OpeningLineEnricher.recordOpeningLinesFromComparisons(parseData.pipeline.comparison.comparisons)
-        console.log(`Opening lines: ${result.recorded} recorded, ${result.skipped} skipped`)
-      }
 
       // Save to database for public access
       try {
