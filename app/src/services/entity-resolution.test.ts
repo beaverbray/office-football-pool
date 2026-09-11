@@ -161,3 +161,48 @@ describe('ambiguous aliases refuse rather than guess', () => {
     expect([...ambiguousAliases(table)]).toEqual([])
   })
 })
+
+describe('ambiguity must not swallow NFL nicknames', () => {
+  const r = new EntityResolver()
+
+  it('resolves NFL nicknames that are also shared college mascots', async () => {
+    // A blanket refusal checked BOTH tables, and these six are unambiguous in
+    // the NFL but shared mascots in college. Splash sends NFL teams by
+    // nickname with no league hint, so the first version of the ambiguity
+    // guard silently dropped six real games off the board — caught only by
+    // re-running the live source comparison, which fell from 63 to 62.
+    for (const [name, want] of [
+      ['Bears', 'Chicago Bears'],
+      ['Broncos', 'Denver Broncos'],
+      ['Cardinals', 'Arizona Cardinals'],
+      ['Eagles', 'Philadelphia Eagles'],
+      ['Falcons', 'Atlanta Falcons'],
+      ['Panthers', 'Carolina Panthers']
+    ] as const) {
+      const m = await r.matchTeam(name)
+      expect(m.matchedName, name).toBe(want)
+      expect(m.confidence, name).toBeGreaterThan(0.9)
+    }
+  })
+
+  it('still refuses an ambiguous college name with no league hint', async () => {
+    // And must not let cross-league fuzzy rescue it: before this ordering was
+    // right, "OSU" resolved to Houston Texans at 0.80 confidence — the exact
+    // failure mode the guard exists to prevent, reintroduced one layer down.
+    for (const name of ['OSU', 'MSU', 'UT', 'Bulldogs', 'Trojans']) {
+      const m = await r.matchTeam(name)
+      expect(m.confidence, name).toBe(0)
+      expect(m.matchedName, name).toBe(name)
+    }
+  })
+
+  it('still resolves real college names with no league hint', async () => {
+    for (const [name, want] of [
+      ['Ohio State', 'Ohio State Buckeyes'],
+      ['Boston College', 'Boston College Eagles'],
+      ['Sacramento State', 'Sacramento State Hornets']
+    ] as const) {
+      expect((await r.matchTeam(name)).matchedName, name).toBe(want)
+    }
+  })
+})

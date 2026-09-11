@@ -535,7 +535,14 @@ export class EntityResolver {
     // Ambiguous aliases resolve to nothing, deliberately. Letting fuzzy pick
     // among equally valid schools reintroduces exactly the silent wrong answer
     // the exact-scan guard removes.
-    if (this.isAmbiguous(teamName, league)) {
+    //
+    // Only when a league is named, though. Six NFL nicknames — Bears, Broncos,
+    // Cardinals, Eagles, Falcons, Panthers — are also mascots shared by several
+    // colleges, and Splash sends NFL teams by nickname alone with no league
+    // hint. Refusing those because they are ambiguous in the OTHER league drops
+    // real games off the board; "Panthers" is unambiguous within the NFL. The
+    // no-league path below resolves per league, each guarded on its own table.
+    if (league && this.isAmbiguous(teamName, league)) {
       return {
         originalName: teamName,
         matchedName: teamName.replace(/^#\d+\s*/, ''),
@@ -598,6 +605,25 @@ export class EntityResolver {
 
     if (nflExact) return nflExact
     if (ncaafExact) return ncaafExact
+
+    // No exact hit in either league. If the name is ambiguous in either table,
+    // stop here rather than falling through to fuzzy.
+    //
+    // This has to come AFTER the exact attempts, not before: "Panthers" is an
+    // ambiguous college mascot but an exact NFL alias, and refusing it up front
+    // dropped six real NFL teams. It has to happen at all because otherwise
+    // fuzzy rescues what the exact scan refused with something worse — "OSU"
+    // matched Houston Texans at 0.80 confidence, which is precisely the
+    // confidently-wrong answer this whole change exists to stop.
+    if (this.isAmbiguous(teamName)) {
+      return {
+        originalName: teamName,
+        matchedName: teamName.replace(/^#\d+\s*/, ''),
+        confidence: 0,
+        league: 'NCAAF',
+        method: 'fuzzy'
+      }
+    }
 
     // No exact matches - try fuzzy matching in both
     const nflFuzzy = this.findNFLTeamFuzzy(teamName)
