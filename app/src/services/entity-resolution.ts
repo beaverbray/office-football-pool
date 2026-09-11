@@ -67,7 +67,10 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'Arkansas Razorbacks': ['Arkansas', 'Hogs', 'ARK'],
   'Kentucky Wildcats': ['Kentucky', 'UK', 'Wildcats', 'KY'],
   'Missouri Tigers': ['Missouri', 'Mizzou', 'MO', 'MIZ'],
-  'South Carolina Gamecocks': ['South Carolina', 'USC', 'Gamecocks', 'SCAR'],
+  // 'USC' deliberately omitted: it collides with USC Trojans, and the
+  // alias scan returns the first hit, so listing it here silently
+  // resolved every "USC" to South Carolina. Reachable via the others.
+  'South Carolina Gamecocks': ['South Carolina', 'Gamecocks', 'SCAR'],
   'Vanderbilt Commodores': ['Vanderbilt', 'Vandy', 'Commodores', 'VAN'],
   
   // Big Ten
@@ -148,6 +151,7 @@ const NCAAF_TEAM_MAPPINGS: Record<string, string[]> = {
   'East Carolina Pirates': ['East Carolina', 'ECU', 'Pirates'],
   'Boise State Broncos': ['Boise State', 'Boise St.', 'BSU', 'Broncos', 'BOIS'],
   'Fresno State Bulldogs': ['Fresno State', 'Fresno St.', 'Bulldogs', 'FRES'],
+  'Sacramento State Hornets': ['Sacramento State', 'Sac State', 'Sacramento St.', 'Hornets', 'SAC'],
   'San Diego State Aztecs': ['San Diego State', 'San Diego St.', 'SDSU', 'Aztecs'],
   'UNLV Rebels': ['UNLV', 'Nevada Las Vegas', 'Rebels'],
   'Nevada Wolf Pack': ['Nevada', 'Wolf Pack', 'NEV'],
@@ -287,8 +291,16 @@ export class EntityResolver {
   normalizeTeamName(name: string): string {
     return name
       .trim()
-      .replace(/[^\w\s]/g, '') // Remove special characters
-      .replace(/\s+/g, ' ') // Normalize whitespace
+      // Apostrophes and periods are elisions, not separators: "Hawai'i" must
+      // normalise to "hawaii" and "Fresno St." to "fresno st".
+      .replace(/['\u2019.]/g, '')
+      // Everything else punctuation-like IS a separator. This previously
+      // deleted rather than replaced, so "Louisiana-Monroe" became
+      // "louisianamonroe" and could never equal the alias "Louisiana Monroe".
+      // The exact match failed, fuzzy took over, and it landed on Louisiana
+      // Ragin' Cajuns — a different school entirely.
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
       .toLowerCase()
   }
 
