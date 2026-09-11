@@ -245,6 +245,62 @@ export interface GameMatch {
   needsVerification: boolean
 }
 
+/**
+ * Canonical form for comparing team names. Module-level so the ambiguity scan
+ * below uses exactly the same rules the matcher does.
+ */
+function normalizeName(name: string): string {
+  return name
+    .trim()
+    // Apostrophes and periods are elisions, not separators: "Hawai'i" must
+    // normalise to "hawaii" and "Fresno St." to "fresno st".
+    .replace(/['\u2019.]/g, '')
+    // Everything else punctuation-like IS a separator. This previously deleted
+    // rather than replaced, so "Louisiana-Monroe" became "louisianamonroe" and
+    // could never equal the alias "Louisiana Monroe".
+    .replace(/[^\w\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+}
+
+/**
+ * Aliases that more than one school claims.
+ *
+ * The exact scan returns the FIRST entry whose alias matches, at confidence
+ * 0.95, so for these the loser is unreachable and the caller cannot tell a
+ * correct answer from a wrong one. That is not hypothetical: 'USC' belonged to
+ * both South Carolina and USC Trojans, so every "USC" on the picksheet became
+ * South Carolina and the game silently dropped off the board.
+ *
+ * Teams are collected in a Set deliberately. With an array, an entry listing
+ * both 'Iowa' and 'IOWA' — which normalise identically — counts as colliding
+ * with itself, which inflated an earlier survey from 23 to 35.
+ *
+ * An alias that is also some team's official name is excluded: the exact scan
+ * checks official names first, so that case is decided, not ambiguous.
+ */
+export function ambiguousAliases(mappings: Record<string, string[]>): Set<string> {
+  const claimants = new Map<string, Set<string>>()
+  for (const [team, aliases] of Object.entries(mappings)) {
+    for (const alias of aliases) {
+      const key = normalizeName(alias)
+      if (!claimants.has(key)) claimants.set(key, new Set())
+      claimants.get(key)!.add(team)
+    }
+  }
+  const officialNames = new Set(Object.keys(mappings).map(normalizeName))
+  return new Set(
+    [...claimants]
+      .filter(([alias, teams]) => teams.size > 1 && !officialNames.has(alias))
+      .map(([alias]) => alias)
+  )
+}
+
+export const AMBIGUOUS_ALIASES: Record<'NFL' | 'NCAAF', Set<string>> = {
+  NFL: ambiguousAliases(NFL_TEAM_MAPPINGS),
+  NCAAF: ambiguousAliases(NCAAF_TEAM_MAPPINGS)
+}
+
 export class EntityResolver {
   private nflFuse: Fuse<{ name: string; aliases: string[] }>
   private ncaafFuse: Fuse<{ name: string; aliases: string[] }>
@@ -289,19 +345,20 @@ export class EntityResolver {
    * Normalize team name for matching
    */
   normalizeTeamName(name: string): string {
-    return name
-      .trim()
-      // Apostrophes and periods are elisions, not separators: "Hawai'i" must
-      // normalise to "hawaii" and "Fresno St." to "fresno st".
-      .replace(/['\u2019.]/g, '')
-      // Everything else punctuation-like IS a separator. This previously
-      // deleted rather than replaced, so "Louisiana-Monroe" became
-      // "louisianamonroe" and could never equal the alias "Louisiana Monroe".
-      // The exact match failed, fuzzy took over, and it landed on Louisiana
-      // Ragin' Cajuns — a different school entirely.
-      .replace(/[^\w\s]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .toLowerCase()
+    return normalizeName(name)
+  }
+
+  /**
+   * Is this name claimed by more than one team in the league?
+   *
+   * Refusing beats guessing. An unresolved name shows up in
+   * matching.unmatched where someone can see it; a confidently wrong one is
+   * invisible until a game quietly stops appearing on the board.
+   */
+  isAmbiguous(teamName: string, league?: 'NFL' | 'NCAAF'): boolean {
+    const key = normalizeName(teamName.replace(/^#\d+\s*/, ''))
+    const leagues: Array<'NFL' | 'NCAAF'> = league ? [league] : ['NFL', 'NCAAF']
+    return leagues.some(l => AMBIGUOUS_ALIASES[l].has(key))
   }
 
   /**
@@ -324,7 +381,8 @@ export class EntityResolver {
         }
       }
       
-      // Check aliases
+      // Check aliases, unless this name is claimed by more than one team.
+      if (AMBIGUOUS_ALIASES.NFL.has(normalized)) continue
       for (const alias of aliases) {
         if (this.normalizeTeamName(alias) === normalized) {
           return {
@@ -393,7 +451,8 @@ export class EntityResolver {
         }
       }
       
-      // Check aliases
+      // Check aliases, unless this name is claimed by more than one team.
+      if (AMBIGUOUS_ALIASES.NCAAF.has(normalized) || AMBIGUOUS_ALIASES.NCAAF.has(normalizedClean)) continue
       for (const alias of aliases) {
         if (this.normalizeTeamName(alias) === normalized || this.normalizeTeamName(alias) === normalizedClean) {
           return {
@@ -473,6 +532,19 @@ export class EntityResolver {
    * Match a single team name
    */
   async matchTeam(teamName: string, league?: 'NFL' | 'NCAAF'): Promise<TeamMatch> {
+    // Ambiguous aliases resolve to nothing, deliberately. Letting fuzzy pick
+    // among equally valid schools reintroduces exactly the silent wrong answer
+    // the exact-scan guard removes.
+    if (this.isAmbiguous(teamName, league)) {
+      return {
+        originalName: teamName,
+        matchedName: teamName.replace(/^#\d+\s*/, ''),
+        confidence: 0,
+        league: league ?? 'NCAAF',
+        method: 'fuzzy'
+      }
+    }
+
     // If league is explicitly specified, only search that league
     if (league === 'NFL') {
       const nflExact = this.findNFLTeamExact(teamName)

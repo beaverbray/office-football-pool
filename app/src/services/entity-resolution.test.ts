@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { EntityResolver } from './entity-resolution'
+import { EntityResolver, AMBIGUOUS_ALIASES, ambiguousAliases } from './entity-resolution'
 
 /**
  * These lock three mis-resolutions found by comparing the live Splash picksheet
@@ -22,7 +22,12 @@ describe('EntityResolver — picksheet names that silently mis-resolved', () => 
   it('still resolves South Carolina by its own names', async () => {
     // The fix removed one alias from South Carolina; it must remain reachable.
     expect((await r.matchTeam('South Carolina', 'NCAAF')).matchedName).toBe('South Carolina Gamecocks')
-    expect((await r.matchTeam('Gamecocks', 'NCAAF')).matchedName).toBe('South Carolina Gamecocks')
+    expect((await r.matchTeam('SCAR', 'NCAAF')).matchedName).toBe('South Carolina Gamecocks')
+    // Deliberately NOT 'Gamecocks': Jacksonville State are Gamecocks too, so
+    // that alias is ambiguous and now refuses. An earlier version of this test
+    // asserted it resolved to South Carolina, which was first-match-wins —
+    // the very behaviour this change removes.
+    expect((await r.matchTeam('Gamecocks', 'NCAAF')).confidence).toBe(0)
   })
 
   it('resolves a hyphenated name to the same team as its spaced alias', async () => {
@@ -75,5 +80,84 @@ describe('EntityResolver — picksheet names that silently mis-resolved', () => 
     ] as const) {
       expect((await r.matchTeam(name)).matchedName).toBe(want)
     }
+  })
+})
+
+describe('ambiguous aliases refuse rather than guess', () => {
+  const r = new EntityResolver()
+
+  it('refuses abbreviations claimed by more than one school', async () => {
+    // The exact scan returns the first matching entry at 0.95 confidence, so
+    // for a shared alias the loser is unreachable and the caller cannot tell a
+    // right answer from a wrong one. 'USC' proved that in production.
+    for (const name of ['OSU', 'MSU', 'UT', 'KSU']) {
+      const m = await r.matchTeam(name, 'NCAAF')
+      expect(m.confidence, `${name} should not resolve`).toBe(0)
+      expect(m.matchedName).toBe(name)
+    }
+  })
+
+  it('refuses bare mascots shared across schools', async () => {
+    // Only reachable via fuzzy today, since Splash sends school names — but
+    // fuzzy is exactly what turned Sacramento State into its own opponent.
+    for (const name of ['Bulldogs', 'Trojans', 'Wildcats', 'Owls']) {
+      expect((await r.matchTeam(name, 'NCAAF')).confidence, name).toBe(0)
+    }
+  })
+
+  it('still resolves each ambiguous abbreviation\u2019s schools by their real names', async () => {
+    // Refusing the abbreviation must not make the schools unreachable.
+    for (const [name, want] of [
+      ['Ohio State', 'Ohio State Buckeyes'],
+      ['Oklahoma State', 'Oklahoma State Cowboys'],
+      ['Oregon State', 'Oregon State Beavers'],
+      ['Michigan State', 'Michigan State Spartans'],
+      ['Mississippi State', 'Mississippi State Bulldogs'],
+      ['Texas', 'Texas Longhorns'],
+      ['Tennessee', 'Tennessee Volunteers']
+    ] as const) {
+      expect((await r.matchTeam(name, 'NCAAF')).matchedName, name).toBe(want)
+    }
+  })
+
+  it('computes ambiguity per team, not per repeated alias', () => {
+    // An entry listing both 'Iowa' and 'IOWA' normalises to one key twice and
+    // is NOT a collision. Counting claimants in an array rather than a Set
+    // inflated an earlier survey of this table from 23 to 35.
+    expect(AMBIGUOUS_ALIASES.NCAAF.has('iowa')).toBe(false)
+    expect(AMBIGUOUS_ALIASES.NCAAF.has('army')).toBe(false)
+    expect(AMBIGUOUS_ALIASES.NCAAF.has('duke')).toBe(false)
+    // The NFL table has no shared aliases at all.
+    expect(AMBIGUOUS_ALIASES.NFL.size).toBe(0)
+  })
+
+  it('does not treat a team\u2019s own official name as ambiguous', () => {
+    // Tested against a synthetic table, because no real entry currently hits
+    // this case — an earlier version asserted it over names that were not
+    // aliases at all, so it passed no matter what the code did.
+    //
+    // It matters because matchTeam refuses before the official-name branch
+    // runs: if an official name landed in the ambiguous set, that team would
+    // become unreachable by its own name.
+    // Two OTHER teams must both claim it, or the size > 1 check alone would
+    // keep it out and the exclusion would go untested — which is exactly how
+    // an earlier version of this test passed while proving nothing.
+    const table = {
+      'Miami Hurricanes': ['Canes'],
+      'Miami RedHawks': ['Miami Hurricanes', 'Miami OH'],
+      'Miami Ohio': ['Miami Hurricanes']
+    }
+    const ambiguous = ambiguousAliases(table)
+    expect(ambiguous.has('miami hurricanes')).toBe(false)
+  })
+
+  it('flags an alias shared by two teams in a synthetic table', () => {
+    const table = { 'A Tigers': ['Tigers', 'A'], 'B Tigers': ['Tigers', 'B'] }
+    expect([...ambiguousAliases(table)]).toEqual(['tigers'])
+  })
+
+  it('does not flag one entry repeating an alias in different case', () => {
+    const table = { 'Iowa Hawkeyes': ['Iowa', 'IOWA', 'Hawkeyes'] }
+    expect([...ambiguousAliases(table)]).toEqual([])
   })
 })
