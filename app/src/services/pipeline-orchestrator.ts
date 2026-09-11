@@ -691,9 +691,13 @@ export class PipelineOrchestrator {
 
       // Collect all unique teams to resolve in one batch
       const teamsToResolve = new Set<string>()
+      // Key by league, matching what the resolution below asks for. Warming
+      // "<team>|any" while the lookup asks for "<team>|NFL" is a pure cache
+      // miss — harmless but pointless, and it hid the fact that the picksheet
+      // side was resolving league-blind.
       picksheetGames.forEach(game => {
-        teamsToResolve.add(`${game.homeTeam}|any`)
-        teamsToResolve.add(`${game.awayTeam}|any`)
+        teamsToResolve.add(`${game.homeTeam}|${game.league || 'any'}`)
+        teamsToResolve.add(`${game.awayTeam}|${game.league || 'any'}`)
       })
       marketGames.forEach(game => {
         teamsToResolve.add(`${game.homeTeam}|${game.league || 'any'}`)
@@ -717,8 +721,14 @@ export class PipelineOrchestrator {
       this.log('Resolving picksheet games from cache...')
       const picksheetResolved = await Promise.all(
         picksheetGames.map(async (game, idx) => {
-          const homeMatch = await this.getCachedEntity(resolver, game.homeTeam)
-          const awayMatch = await this.getCachedEntity(resolver, game.awayTeam)
+          // Pass the league, as the market side already does. Splash's
+          // PipelineSourceGame carries it, and dropping it meant an NFL
+          // nickname was evaluated against the college table too — where
+          // Bears, Broncos, Cardinals, Eagles, Falcons and Panthers are all
+          // shared mascots. Scoping the search is the structural fix; the
+          // resolver's ambiguity guard is the backstop, not the other way round.
+          const homeMatch = await this.getCachedEntity(resolver, game.homeTeam, game.league)
+          const awayMatch = await this.getCachedEntity(resolver, game.awayTeam, game.league)
 
           // Handle league mismatches
           if (homeMatch.league !== awayMatch.league) {

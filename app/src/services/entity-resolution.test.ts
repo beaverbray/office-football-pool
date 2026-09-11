@@ -193,6 +193,12 @@ describe('ambiguity must not swallow NFL nicknames', () => {
       const m = await r.matchTeam(name)
       expect(m.confidence, name).toBe(0)
       expect(m.matchedName, name).toBe(name)
+      // Below the matcher's 0.4 join threshold, which is what actually keeps
+      // the game out of a comparison. Two fallbacks further down return 0.5
+      // (the isLikelyNCAA guess) and whatever fuzzy scores — both above 0.4 —
+      // so the refusal only works if it returns before them. Nothing else
+      // pinned this.
+      expect(m.confidence, `${name} must not clear the 0.4 join threshold`).toBeLessThan(0.4)
     }
   })
 
