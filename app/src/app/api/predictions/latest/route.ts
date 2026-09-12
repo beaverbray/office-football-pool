@@ -75,38 +75,37 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Filter to current week only using metadata.week
-    // Also filter out games marked as "Final" (already played)
+    // Keep this week's rows for each league. Finished games are dropped later,
+    // deliberately after deduplication.
     const currentWeekPredictions = allPredictions.filter((pred: PredictionRow) => {
-      const predWeek = pred.metadata?.week
-      const gameTime = pred.game_time?.toLowerCase()
-
       // Compare against the week for THIS row's league, not a single global one.
       const expectedWeek = weekForSource[pred.source] ?? currentWeek
-      if (predWeek !== expectedWeek) return false
-
-      // Skip games that have already been played
-      if (gameTime === 'final') return false
-
-      return true
+      return pred.metadata?.week === expectedWeek
     })
 
-    // Deduplicate by game (home_team + away_team)
-    // Keep only the most recent prediction for each unique game
+    // Deduplicate by game, keeping the most recent row (the query is sorted by
+    // scraped_at descending).
     const gameMap = new Map<string, PredictionRow>()
 
     for (const pred of currentWeekPredictions) {
       const gameKey = `${pred.home_team}|${pred.away_team}`
-
-      // Only add if this game isn't in the map yet (since results are sorted by scraped_at desc)
       if (!gameMap.has(gameKey)) {
         gameMap.set(gameKey, pred)
       }
     }
 
+    // Drop finished games only now. Filtering them before the dedupe let an
+    // older snapshot of the same game resurface once the latest scrape marked
+    // it Final — Missouri @ Kansas came back as a stale "4th Qtr" row carrying
+    // pre-correction numbers, while the current row said Final. A finished game
+    // should disappear, not revert.
+    const latestUnfinished = Array.from(gameMap.values()).filter(
+      (pred: PredictionRow) => pred.game_time?.toLowerCase() !== 'final'
+    )
+
     // Transform to prediction format (include source to distinguish NFL vs NCAAF)
     // Note: PostgreSQL numeric types come back as strings in JSON, so we parse them
-    const transformedPredictions = Array.from(gameMap.values()).map((pred: PredictionRow) => ({
+    const transformedPredictions = latestUnfinished.map((pred: PredictionRow) => ({
       homeTeam: pred.home_team,
       awayTeam: pred.away_team,
       predictedWinner: pred.predicted_winner,
