@@ -50,6 +50,18 @@ interface ELOPrediction {
   predictedWinner: 'home' | 'away'
   winProbability: number
   spread?: number
+  /** Which upstream produced this: 'nfelo' (NFL) or 'warren-nolan' (college). */
+  source?: string
+}
+
+/**
+ * The league a prediction describes. Both upstreams are league-specific, so
+ * the source names the league without guessing from the team name.
+ */
+function predictionLeague(pred: ELOPrediction): 'NFL' | 'NCAAF' | undefined {
+  if (pred.source === 'warren-nolan') return 'NCAAF'
+  if (pred.source === 'nfelo') return 'NFL'
+  return undefined
 }
 
 export default function ModelPicksPage() {
@@ -111,10 +123,14 @@ export default function ModelPicksPage() {
       normalizeTeam(comp.awayTeam, comp.league)
     })
 
-    // ELO predictions are NFL-only
+    // Predictions are NOT NFL-only. Warren Nolan supplies the college half,
+    // and hardcoding 'NFL' here sent all 115 of its rows through the NFL
+    // matcher, so no college comparison ever joined one: college MOD rendered
+    // blank and the scorer's ELO confirmation bonus never fired for college.
     eloPredictions.forEach(pred => {
-      normalizeTeam(pred.homeTeam, 'NFL')
-      normalizeTeam(pred.awayTeam, 'NFL')
+      const league = predictionLeague(pred)
+      normalizeTeam(pred.homeTeam, league)
+      normalizeTeam(pred.awayTeam, league)
     })
 
     return cache
@@ -125,11 +141,15 @@ export default function ModelPicksPage() {
     const map = new Map<string, ELOPrediction>()
     if (!currentPipeline?.comparison?.comparisons) return map
 
-    // Build prediction index with NFL league context (ELO is NFL-only)
+    // Index each prediction under the league it actually describes, matching
+    // the cache keys written above.
     const predictionIndex = new Map<string, ELOPrediction>()
     for (const pred of eloPredictions) {
-      const normalizedHome = normalizedTeamCache.get(`NFL:${pred.homeTeam}`)
-      const normalizedAway = normalizedTeamCache.get(`NFL:${pred.awayTeam}`)
+      const league = predictionLeague(pred)
+      const keyHome = league ? `${league}:${pred.homeTeam}` : pred.homeTeam
+      const keyAway = league ? `${league}:${pred.awayTeam}` : pred.awayTeam
+      const normalizedHome = normalizedTeamCache.get(keyHome)
+      const normalizedAway = normalizedTeamCache.get(keyAway)
 
       if (normalizedHome && normalizedAway) {
         predictionIndex.set(`${normalizedHome}|${normalizedAway}`, pred)
