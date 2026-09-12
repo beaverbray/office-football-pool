@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
 import { recordOddsSnapshots, getOpeningSpreads } from '@/services/opening-lines'
+import { fetchAllMatchupLinks, matchupKey } from '@/services/oddsshark-links'
 
 export const dynamic = 'force-dynamic'
 // The full pipeline measured 42s cold locally but exceeded 60s on Vercel
@@ -475,6 +476,32 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.warn('Opening-line step failed (non-fatal):', error instanceof Error ? error.message : String(error))
+    }
+
+    // =========================================================================
+    // Stage 4c: Attach OddsShark matchup links
+    // =========================================================================
+    // Their matchup pages are addressed by opaque id with no derivable slug, so
+    // the ids are read from the league odds page, where each anchor sits beside
+    // both teams' logos and the filenames carry the same alias the pool uses.
+    // Best-effort: a scraping change must not fail a refresh.
+    try {
+      const comparisons = refreshedPipeline.comparison?.comparisons as Array<Record<string, unknown>> | undefined
+      if (comparisons?.length) {
+        const links = await fetchAllMatchupLinks()
+        let attached = 0
+        for (const c of comparisons) {
+          const home = c.homeAlias as string | undefined
+          const away = c.awayAlias as string | undefined
+          if (!home || !away) continue
+          const league = String(c.league ?? 'NFL').toUpperCase() === 'NFL' ? 'NFL' : 'NCAAF'
+          const url = links[`${league}:${matchupKey(away, home)}`]
+          if (url) { c.oddsSharkUrl = url; attached++ }
+        }
+        console.log(`Attached OddsShark links to ${attached} of ${comparisons.length} comparisons`)
+      }
+    } catch (error) {
+      console.warn('OddsShark link step failed (non-fatal):', error instanceof Error ? error.message : String(error))
     }
 
     // =========================================================================

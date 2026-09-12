@@ -309,6 +309,13 @@ export interface PipelineSourceGame {
   league?: 'NFL' | 'NCAAF'
   gameTime?: string
   gameId?: string
+  /**
+   * Short codes as the pool publishes them (SEA, MIZZ). Carried through
+   * because OddsShark keys its matchup pages by the same aliases, and the
+   * comparison rows downstream hold only resolved full names.
+   */
+  homeAlias?: string
+  awayAlias?: string
 }
 
 /**
@@ -333,7 +340,9 @@ export function toSourceGames(picksheet: SplashPicksheet): PipelineSourceGame[] 
       spread: g.spread,
       league: g.league,
       gameTime: g.gameTime,
-      gameId: g.gameId
+      gameId: g.gameId,
+      homeAlias: g.homeAlias,
+      awayAlias: g.awayAlias
     })
   }
   return out

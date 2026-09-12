@@ -29,6 +29,11 @@ export interface GameComparison {
   // field and display an unmoved line as a six-point swing.
   openingSpread?: number
   openingLineTimestamp?: string // When opening line was recorded
+  /** Pool-side short codes (SEA, MIZZ), used to key OddsShark matchup links. */
+  homeAlias?: string
+  awayAlias?: string
+  /** Deep link to this game on OddsShark, attached during refresh. */
+  oddsSharkUrl?: string
   // lineMovement/lineMovementPercent removed: nothing ever wrote them, and the
   // dashboard sort that read them was therefore a silent no-op. Movement is now
   // derived at the point of use from openingSpread and marketSpread.
@@ -247,7 +252,12 @@ export class ComparisonEngine {
       matched: true,
       marketDeltaProb,
       importanceLevel,
-      outlierScore
+      outlierScore,
+      // Pool-side short codes. The market game has no aliases and the resolved
+      // names here do not key OddsShark's matchup pages, so these ride along
+      // from the picksheet to make that join possible downstream.
+      homeAlias: (picksheetGame as { homeAlias?: string }).homeAlias,
+      awayAlias: (picksheetGame as { awayAlias?: string }).awayAlias
     }
   }
 

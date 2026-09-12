@@ -500,7 +500,19 @@ export default function ModelPicksPage() {
                               {idx + 1}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-[9px] sm:text-[10px] font-mono text-gray-300">
-                              {pick.team}
+                              {pick.oddsSharkUrl ? (
+                                <a
+                                  href={pick.oddsSharkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline decoration-dotted hover:text-orange-400 transition-colors"
+                                  title="Open this matchup on OddsShark"
+                                >
+                                  {pick.team}
+                                </a>
+                              ) : (
+                                pick.team
+                              )}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold bg-orange-900/30 text-orange-400">
                               {pick.poolSpread > 0 ? '+' : ''}{pick.poolSpread.toFixed(1)}
@@ -568,7 +580,19 @@ export default function ModelPicksPage() {
                               {idx + 1}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-[9px] sm:text-[10px] font-mono text-gray-300">
-                              {pick.team}
+                              {pick.oddsSharkUrl ? (
+                                <a
+                                  href={pick.oddsSharkUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline decoration-dotted hover:text-orange-400 transition-colors"
+                                  title="Open this matchup on OddsShark"
+                                >
+                                  {pick.team}
+                                </a>
+                              ) : (
+                                pick.team
+                              )}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold bg-orange-900/30 text-orange-400">
                               {pick.poolSpread > 0 ? '+' : ''}{pick.poolSpread.toFixed(1)}
