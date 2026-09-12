@@ -1,9 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-// Create Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Same two faults as the save route: `shared_analyses` is service_role-only
+// after the RLS hardening, and it lives in the `afbp` schema while a bare
+// createClient() defaults to `public`. Reading a share link is server-side, so
+// the service key stays off the client.
+
+/**
+ * `afbp.shared_analyses` is absent from the generated Database type, so the
+ * typed client resolves its rows to `never`. Narrowed to exactly the columns
+ * this route touches rather than cast to `any` — a wrong column name still
+ * fails to compile.
+ */
+interface SharedAnalysisRow {
+  pipeline_data: unknown
+  created_at: string
+  expires_at: string | null
+  view_count: number | null
+}
+
+type SharedAnalysesTable = {
+  from(table: 'shared_analyses'): {
+    select(columns: string): {
+      eq(column: 'share_id', value: string): {
+        single(): Promise<{ data: SharedAnalysisRow | null; error: { code?: string; message: string } | null }>
+      }
+    }
+    update(values: { view_count: number }): {
+      eq(column: 'share_id', value: string): Promise<{ error: { message: string } | null }>
+    }
+  }
+}
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +47,7 @@ export async function GET(
     }
     
     // Check if Supabase is configured
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseAdmin) {
       console.log('Supabase not configured')
       return NextResponse.json(
         { 
@@ -31,7 +58,7 @@ export async function GET(
       )
     }
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabase = supabaseAdmin as unknown as SharedAnalysesTable
     
     // Get from Supabase
     const { data: sharedAnalysis, error } = await supabase
@@ -61,6 +88,15 @@ export async function GET(
       }
       
       throw error
+    }
+
+    // No row and no error: the narrow type surfaced this, and 404 is the honest
+    // answer for an unknown share id.
+    if (!sharedAnalysis) {
+      return NextResponse.json(
+        { error: 'Analysis not found or expired' },
+        { status: 404 }
+      )
     }
     
     // Check if expired
