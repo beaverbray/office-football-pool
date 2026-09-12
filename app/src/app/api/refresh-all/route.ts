@@ -373,8 +373,14 @@ export async function POST(request: NextRequest) {
 
       // Use forceWeek if provided, otherwise use detected weeks
       const nflWeekToUse = forceWeek ?? nflWeek.week
-      // For NCAA, ESPN shows upcoming week, so subtract 1 to get current/recent week
-      const ncaaWeekToUse = forceWeek ?? Math.max(0, ncaaWeek.week - 1)
+      // No adjustment. This used to subtract 1 because ESPN appeared to report
+      // the upcoming week — but that was the season-type bug since fixed in
+      // WeekDetector, where preseason weeks read as regular-season ones. The
+      // detector now agrees with the picksheet (both say CFB week 2 for this
+      // slate), so subtracting shifted Warren Nolan a week into the past: every
+      // row came back "final" and the predictions route correctly discarded
+      // them. College MOD has been blank ever since.
+      const ncaaWeekToUse = forceWeek ?? ncaaWeek.week
 
       const [nfeloResult, wnResult] = await Promise.allSettled([
         NFELOScraper.scrapePredictions(nflWeek.seasonYear, nflWeekToUse),
