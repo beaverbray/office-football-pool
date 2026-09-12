@@ -293,6 +293,8 @@ export default function ModelPicksPage() {
             relPercent,
             marketValue,
             eloValue,
+            basis: 'market' as const,
+            modelGap: 0,
             score: awayScore,
             marketDeltaProb,
             importanceLevel: comp.importanceLevel
@@ -330,6 +332,8 @@ export default function ModelPicksPage() {
             relPercent,
             marketValue,
             eloValue,
+            basis: 'market' as const,
+            modelGap: 0,
             score: homeScore,
             marketDeltaProb,
             importanceLevel: comp.importanceLevel
@@ -337,14 +341,51 @@ export default function ModelPicksPage() {
         }
       }
 
-      // Return the better pick (or null if neither has value)
+      // Prefer a market-edge pick: the pool's line beats the market's.
       if (awayScore > homeScore && awayPick) return awayPick
       if (homePick) return homePick
-      return null
+
+      // No market edge — the pool and the market agree, so there is nothing to
+      // arbitrage on this game. The pool still demands ten picks a league, so
+      // fall back to where the MODEL disagrees with the pool line. These rank
+      // strictly below every market-edge pick and are labelled in the row:
+      // "the pool is mispriced" and "a model has a lean" are different claims
+      // and must not blend into a single ranking.
+      if (homePoolSpread === null || homeEloSpread === null) return null
+      const modelGap = Math.abs(homePoolSpread - homeEloSpread)
+      if (modelGap === 0) return null
+
+      // Value sits with whichever side the model rates above the pool line —
+      // the same comparison the market branches above use.
+      const modelLikesHome = homePoolSpread > homeEloSpread
+      return {
+        ...comp,
+        team: modelLikesHome ? comp.homeTeam : comp.awayTeam,
+        opponent: modelLikesHome ? comp.awayTeam : comp.homeTeam,
+        isHome: modelLikesHome,
+        poolSpread: modelLikesHome ? homePoolSpread : awayPoolSpread,
+        marketSpread: modelLikesHome ? homeMarketSpread : awayMarketSpread,
+        eloSpread: modelLikesHome ? homeEloSpread : eloSpread,
+        delta: 0,
+        absDelta: 0,
+        relPercent: 0,
+        marketValue: false,
+        eloValue: true,
+        basis: 'model' as const,
+        modelGap,
+        score: -Infinity,
+        marketDeltaProb,
+        importanceLevel: comp.importanceLevel
+      }
     }).filter(pick => pick !== null) as any[]
 
-    // Sort by score (highest first)
-    scoredPicks.sort((a, b) => b.score - a.score)
+    // Market-edge picks first, ranked by score; model-only picks after, ranked
+    // by how far the model sits from the pool line. Never interleaved — a slot
+    // filled on a model lean should always be the last slot filled.
+    scoredPicks.sort((a, b) => {
+      if (a.basis !== b.basis) return a.basis === 'market' ? -1 : 1
+      return a.basis === 'market' ? b.score - a.score : b.modelGap - a.modelGap
+    })
 
     // How many slots the pool still lets us decide, per league. The entry state
     // comes from the picksheet fetch: Splash publishes the requirement as
@@ -520,12 +561,20 @@ export default function ModelPicksPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="underline decoration-dotted hover:text-orange-400 transition-colors"
-                                  title="Open this matchup on OddsShark"
+                                  title="Open this matchup on Covers"
                                 >
                                   {pick.team}
                                 </a>
                               ) : (
                                 pick.team
+                              )}
+                              {pick.basis === 'model' && (
+                                <span
+                                  className="ml-1 px-1 rounded bg-zinc-800 text-gray-500 text-[9px] font-mono align-middle"
+                                  title="No market edge: the pool and the market agree on this game. Ranked on model disagreement alone, so it sits below every market-edge pick."
+                                >
+                                  MODEL ONLY
+                                </span>
                               )}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold bg-orange-900/30 text-orange-400">
@@ -600,12 +649,20 @@ export default function ModelPicksPage() {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="underline decoration-dotted hover:text-orange-400 transition-colors"
-                                  title="Open this matchup on OddsShark"
+                                  title="Open this matchup on Covers"
                                 >
                                   {pick.team}
                                 </a>
                               ) : (
                                 pick.team
+                              )}
+                              {pick.basis === 'model' && (
+                                <span
+                                  className="ml-1 px-1 rounded bg-zinc-800 text-gray-500 text-[9px] font-mono align-middle"
+                                  title="No market edge: the pool and the market agree on this game. Ranked on model disagreement alone, so it sits below every market-edge pick."
+                                >
+                                  MODEL ONLY
+                                </span>
                               )}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold bg-orange-900/30 text-orange-400">
