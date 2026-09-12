@@ -259,8 +259,17 @@ export default function ModelPicksPage() {
         const delta = awayMarketSpread - awayPoolSpread
         const absDelta = Math.abs(delta)
         const relPercent = awayPoolSpread !== 0 ? (delta / Math.abs(awayPoolSpread)) * 100 : 0
-        const marketValue = delta > 0
-        const eloValue = eloSpread !== null ? eloSpread > awayPoolSpread : false
+        // Value means the pool's line is better than the reference for the side
+        // you are taking. From the away perspective (positive = getting points)
+        // that is awayPool > awayMarket, i.e. delta < 0.
+        //
+        // This read `delta > 0`, which expands to pool > mkt — the identical
+        // condition the home branch tests. Both sides therefore qualified on the
+        // same games, and every game where the market moved the other way
+        // produced no candidate at all: 3 of 6 disagreeing NFL games and 12 of
+        // 20 college ones, against a board that must fill 10 picks per league.
+        const marketValue = delta < 0
+        const eloValue = eloSpread !== null ? eloSpread < awayPoolSpread : false
 
         if (marketValue) {
           awayScore = marketDeltaProb * 100 // Base score from probability (0-100)
