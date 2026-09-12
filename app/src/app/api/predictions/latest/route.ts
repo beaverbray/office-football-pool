@@ -13,9 +13,19 @@ export async function GET(request: NextRequest) {
   try {
     const now = Date.now()
 
-    // Get current NFL week
-    const weekInfo = await WeekDetector.getCurrentNFLWeek()
+    // Each league runs its own week number, and they differ: this slate is NFL
+    // week 1 and CFB week 2. Filtering every row against the NFL week discarded
+    // all college predictions, which is why MOD was blank for the 47 college
+    // games on a 61-game board.
+    const [weekInfo, ncaaWeekInfo] = await Promise.all([
+      WeekDetector.getCurrentNFLWeek(),
+      WeekDetector.getCurrentNCAAWeek()
+    ])
     const currentWeek = weekInfo.week
+    const weekForSource: Record<string, number> = {
+      nfelo: weekInfo.week,
+      'warren-nolan': ncaaWeekInfo.week
+    }
 
     // Return cached data if still fresh and same week
     if (predictionsCache &&
@@ -64,8 +74,9 @@ export async function GET(request: NextRequest) {
       const predWeek = pred.metadata?.week
       const gameTime = pred.game_time?.toLowerCase()
 
-      // Skip if no week in metadata or wrong week
-      if (predWeek !== currentWeek) return false
+      // Compare against the week for THIS row's league, not a single global one.
+      const expectedWeek = weekForSource[pred.source] ?? currentWeek
+      if (predWeek !== expectedWeek) return false
 
       // Skip games that have already been played
       if (gameTime === 'final') return false
