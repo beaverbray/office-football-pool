@@ -29,7 +29,7 @@ interface PipelineResult {
       homeTeam: string
       awayTeam: string
       gameTime: string
-      league?: 'NFL' | 'NCAA'
+      league?: 'NFL' | 'NCAAF'
       picksheetSpread: number
       marketSpread: number
       spreadDelta: number
@@ -72,7 +72,7 @@ export default function ModelPicksPage() {
   const normalizedTeamCache = useMemo(() => {
     const cache = new Map<string, string>()
 
-    const normalizeTeam = (teamName: string, league?: 'NFL' | 'NCAA'): string | null => {
+    const normalizeTeam = (teamName: string, league?: 'NFL' | 'NCAAF'): string | null => {
       const cacheKey = league ? `${league}:${teamName}` : teamName
       if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
@@ -83,7 +83,10 @@ export default function ModelPicksPage() {
         if (league === 'NFL') {
           match = entityResolver.findNFLTeamExact(teamName) ||
                   entityResolver.findNFLTeamFuzzy(teamName)
-        } else if (league === 'NCAA') {
+        } else if (league === 'NCAAF') {
+          // 'NCAAF', not 'NCAA' — comparisons carry the former, so this branch
+          // never fired and college names fell through to the both-leagues
+          // path below, which tries NFL first and can fuzzy-hit a pro team.
           match = entityResolver.findNCAAFTeamExact(teamName) ||
                   entityResolver.findNCAAFTeamFuzzy(teamName)
         } else {
