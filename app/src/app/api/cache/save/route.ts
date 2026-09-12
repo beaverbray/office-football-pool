@@ -16,24 +16,19 @@ import { nanoid } from 'nanoid'
 
 /**
  * `afbp.shared_analyses` is absent from the generated Database type, so the
- * typed client resolves it to `never`. Narrowed to the one insert this route
- * performs rather than cast to `any`.
+ * typed client resolves its rows to `never`. Following the house pattern
+ * (see api/pipeline/current/route.ts): cast the client at the call site and
+ * type the payload and the result, rather than hand-rolling a fake of
+ * supabase-js's fluent API — that would only drift from the real one.
  */
-type SharedAnalysesInsert = {
-  from(table: 'shared_analyses'): {
-    insert(row: {
-      share_id: string
-      pipeline_data: unknown
-      metadata: { source: string; version: string }
-    }): {
-      select(): {
-        single(): Promise<{
-          data: { expires_at: string | null } | null
-          error: { code?: string; message: string } | null
-        }>
-      }
-    }
-  }
+interface SharedAnalysisInsert {
+  share_id: string
+  pipeline_data: unknown
+  metadata: { source: string; version: string }
+}
+
+interface SavedAnalysisRow {
+  expires_at: string | null
 }
 
 export async function POST(request: NextRequest) {
@@ -43,31 +38,31 @@ export async function POST(request: NextRequest) {
     // Generate a unique ID for this analysis
     const shareId = nanoid(10)
 
+    // No service role means the insert cannot succeed. Returning success with
+    // a /share/<id> URL would hand back a link that 404s — a confidently wrong
+    // answer, which is the failure mode this codebase keeps producing.
     if (!supabaseAdmin) {
-      console.log('Service role not configured, returning share ID for local use')
-      return NextResponse.json({
-        success: true,
-        shareId,
-        shareUrl: `/share/${shareId}`,
-        warning: 'Database not configured - share link will not persist'
-      })
+      return NextResponse.json(
+        {
+          error: 'Sharing unavailable',
+          message: 'SUPABASE_SERVICE_ROLE_KEY is not configured on the server.'
+        },
+        { status: 503 }
+      )
     }
 
-    const supabase = supabaseAdmin as unknown as SharedAnalysesInsert
+    const row: SharedAnalysisInsert = {
+      share_id: shareId,
+      pipeline_data: data,
+      metadata: { source: 'web', version: '1.0' }
+    }
     
     // Store in Supabase
-    const { data: savedData, error } = await supabase
+    const { data: savedData, error } = await (supabaseAdmin as any)
       .from('shared_analyses')
-      .insert({
-        share_id: shareId,
-        pipeline_data: data,
-        metadata: {
-          source: 'web',
-          version: '1.0'
-        }
-      })
+      .insert(row)
       .select()
-      .single()
+      .single() as { data: SavedAnalysisRow | null; error: { code?: string; message: string } | null }
     
     if (error) {
       console.error('Error saving to Supabase:', error)

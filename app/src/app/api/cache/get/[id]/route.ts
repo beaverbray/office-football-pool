@@ -8,28 +8,15 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 /**
  * `afbp.shared_analyses` is absent from the generated Database type, so the
- * typed client resolves its rows to `never`. Narrowed to exactly the columns
- * this route touches rather than cast to `any` — a wrong column name still
- * fails to compile.
+ * typed client resolves its rows to `never`. House pattern (see
+ * api/pipeline/current/route.ts): cast the client at the call site and type
+ * the result, rather than hand-rolling a fake of supabase-js's fluent API.
  */
 interface SharedAnalysisRow {
   pipeline_data: unknown
   created_at: string
   expires_at: string | null
   view_count: number | null
-}
-
-type SharedAnalysesTable = {
-  from(table: 'shared_analyses'): {
-    select(columns: string): {
-      eq(column: 'share_id', value: string): {
-        single(): Promise<{ data: SharedAnalysisRow | null; error: { code?: string; message: string } | null }>
-      }
-    }
-    update(values: { view_count: number }): {
-      eq(column: 'share_id', value: string): Promise<{ error: { message: string } | null }>
-    }
-  }
 }
 
 export async function GET(
@@ -58,14 +45,12 @@ export async function GET(
       )
     }
     
-    const supabase = supabaseAdmin as unknown as SharedAnalysesTable
-    
     // Get from Supabase
-    const { data: sharedAnalysis, error } = await supabase
+    const { data: sharedAnalysis, error } = await (supabaseAdmin as any)
       .from('shared_analyses')
       .select('*')
       .eq('share_id', id)
-      .single()
+      .single() as { data: SharedAnalysisRow | null; error: { code?: string; message: string } | null }
     
     if (error) {
       console.error('Error fetching from Supabase:', error)
@@ -108,7 +93,7 @@ export async function GET(
     }
     
     // Increment view count (optional)
-    await supabase
+    await (supabaseAdmin as any)
       .from('shared_analyses')
       .update({ view_count: (sharedAnalysis.view_count || 0) + 1 })
       .eq('share_id', id)
