@@ -34,7 +34,7 @@ interface PipelineResult {
       homeTeam: string
       awayTeam: string
       gameTime: string
-      league?: 'NFL' | 'NCAA'
+      league?: 'NFL' | 'NCAAF'
       picksheetSpread: number
       marketSpread: number
       spreadDelta: number
@@ -58,6 +58,19 @@ interface ELOPrediction {
   predictedWinner: 'home' | 'away'
   winProbability: number
   spread?: number
+  /** Which upstream produced this: 'nfelo' (NFL) or 'warren-nolan' (college). */
+  source?: string
+}
+
+/**
+ * The league a prediction describes. The two upstreams are league-specific —
+ * nfelo covers the NFL, Warren Nolan covers college — so the source names the
+ * league without having to guess from the team name.
+ */
+function predictionLeague(pred: ELOPrediction): 'NFL' | 'NCAAF' | 'any' {
+  if (pred.source === 'warren-nolan') return 'NCAAF'
+  if (pred.source === 'nfelo') return 'NFL'
+  return 'any'
 }
 
 export default function CompactDashboard() {
@@ -84,7 +97,7 @@ export default function CompactDashboard() {
 
   // Filter states
   const [filters, setFilters] = useState({
-    league: 'all' as 'all' | 'NFL' | 'NCAA',
+    league: 'all' as 'all' | 'NFL' | 'NCAAF',
     dateFilter: 'all' as 'all' | 'today' | 'tomorrow' | 'week',
     eloFilter: 'all' as 'all' | 'with' | 'without',
     deltaMin: '',
@@ -94,37 +107,55 @@ export default function CompactDashboard() {
   // Memoize EntityResolver instance
   const entityResolver = useMemo(() => new EntityResolver(), [])
 
-  // Pre-normalize all team names
+  // Pre-normalize all team names, within the league the name belongs to.
+  //
+  // Searching NFL first and falling through to college let pro teams capture
+  // college names by fuzzy similarity: "Washington State Cougars" resolved to
+  // Washington Commanders, "Pittsburgh Panthers" to the Steelers, "Arizona
+  // Wildcats" to the Cardinals. Those games then joined nothing and rendered a
+  // blank MOD. Measured against the live board, league-blind matching joined
+  // 15 of 47 college games; keying the search to the league joins 47 of 47.
   const normalizedTeamCache = useMemo(() => {
-    const cache = new Map<string, string>()
+    const cache = new Map<string, string | null>()
 
-    const normalizeTeam = (teamName: string): string | null => {
-      if (cache.has(teamName)) return cache.get(teamName)!
+    const normalizeTeam = (teamName: string, league?: 'NFL' | 'NCAAF' | 'any'): string | null => {
+      const cacheKey = `${league ?? 'any'}|${teamName}`
+      if (cache.has(cacheKey)) return cache.get(cacheKey)!
 
+      let normalized: string | null = null
       try {
         const match =
-          entityResolver.findNFLTeamExact(teamName) ||
-          entityResolver.findNFLTeamFuzzy(teamName) ||
-          entityResolver.findNCAAFTeamExact(teamName) ||
-          entityResolver.findNCAAFTeamFuzzy(teamName)
+          league === 'NCAAF'
+            ? entityResolver.findNCAAFTeamExact(teamName) ||
+              entityResolver.findNCAAFTeamFuzzy(teamName)
+            : league === 'NFL'
+            ? entityResolver.findNFLTeamExact(teamName) ||
+              entityResolver.findNFLTeamFuzzy(teamName)
+            : // League unknown: exhaust exact matches in both tables before
+              // letting either league's fuzzy matcher guess.
+              entityResolver.findNFLTeamExact(teamName) ||
+              entityResolver.findNCAAFTeamExact(teamName) ||
+              entityResolver.findNFLTeamFuzzy(teamName) ||
+              entityResolver.findNCAAFTeamFuzzy(teamName)
 
-        const normalized = match?.matchedName || null
-        cache.set(teamName, normalized!)
-        return normalized
+        normalized = match?.matchedName ?? null
       } catch {
-        cache.set(teamName, null!)
-        return null
+        normalized = null
       }
+
+      cache.set(cacheKey, normalized)
+      return normalized
     }
 
     currentPipeline?.comparison?.comparisons?.forEach(comp => {
-      normalizeTeam(comp.homeTeam)
-      normalizeTeam(comp.awayTeam)
+      normalizeTeam(comp.homeTeam, comp.league)
+      normalizeTeam(comp.awayTeam, comp.league)
     })
 
     eloPredictions.forEach(pred => {
-      normalizeTeam(pred.homeTeam)
-      normalizeTeam(pred.awayTeam)
+      const league = predictionLeague(pred)
+      normalizeTeam(pred.homeTeam, league)
+      normalizeTeam(pred.awayTeam, league)
     })
 
     return cache
@@ -137,16 +168,18 @@ export default function CompactDashboard() {
 
     const predictionIndex = new Map<string, ELOPrediction>()
     for (const pred of eloPredictions) {
-      const normalizedHome = normalizedTeamCache.get(pred.homeTeam)
-      const normalizedAway = normalizedTeamCache.get(pred.awayTeam)
+      const league = predictionLeague(pred)
+      const normalizedHome = normalizedTeamCache.get(`${league}|${pred.homeTeam}`)
+      const normalizedAway = normalizedTeamCache.get(`${league}|${pred.awayTeam}`)
       if (normalizedHome && normalizedAway) {
         predictionIndex.set(`${normalizedHome}|${normalizedAway}`, pred)
       }
     }
 
     for (const comp of currentPipeline.comparison.comparisons) {
-      const normalizedHome = normalizedTeamCache.get(comp.homeTeam)
-      const normalizedAway = normalizedTeamCache.get(comp.awayTeam)
+      const league = comp.league ?? 'any'
+      const normalizedHome = normalizedTeamCache.get(`${league}|${comp.homeTeam}`)
+      const normalizedAway = normalizedTeamCache.get(`${league}|${comp.awayTeam}`)
 
       if (normalizedHome && normalizedAway) {
         const pred = predictionIndex.get(`${normalizedHome}|${normalizedAway}`)
@@ -879,12 +912,12 @@ export default function CompactDashboard() {
                 <label className="block text-xs font-mono text-gray-400 mb-1">LEAGUE</label>
                 <select
                   value={filters.league}
-                  onChange={(e) => setFilters({...filters, league: e.target.value as 'all' | 'NFL' | 'NCAA'})}
+                  onChange={(e) => setFilters({...filters, league: e.target.value as 'all' | 'NFL' | 'NCAAF'})}
                   className="w-full px-2 py-1 bg-zinc-950 border border-zinc-700 rounded text-xs font-mono text-gray-300 focus:border-orange-700 focus:outline-none"
                 >
                   <option value="all">ALL</option>
                   <option value="NFL">NFL</option>
-                  <option value="NCAA">NCAA</option>
+                  <option value="NCAAF">NCAAF</option>
                 </select>
               </div>
 
