@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { type ELOPrediction, predictionLeague } from '@/lib/predictions'
 import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
 import type { GameComparison } from '@/services/comparison-engine'
@@ -44,25 +45,6 @@ interface PipelineResult {
   }
 }
 
-interface ELOPrediction {
-  homeTeam: string
-  awayTeam: string
-  predictedWinner: 'home' | 'away'
-  winProbability: number
-  spread?: number
-  /** Which upstream produced this: 'nfelo' (NFL) or 'warren-nolan' (college). */
-  source?: string
-}
-
-/**
- * The league a prediction describes. Both upstreams are league-specific, so
- * the source names the league without guessing from the team name.
- */
-function predictionLeague(pred: ELOPrediction): 'NFL' | 'NCAAF' | undefined {
-  if (pred.source === 'warren-nolan') return 'NCAAF'
-  if (pred.source === 'nfelo') return 'NFL'
-  return undefined
-}
 
 export default function ModelPicksPage() {
   const router = useRouter()

@@ -40,7 +40,11 @@ export function interpretPrediction(
   awayWinProb: number,
   homeWinProb: number
 ): { predictedWinner: 'home' | 'away'; winProbability: number } {
-  const homeFavoured = homeSpread < 0
+  // A pick'em (spread 0) carries no sign to read, so fall back to the
+  // probabilities. Without this an even line always named the away team and
+  // could report its 49%, breaking the "the winner is never the less likely
+  // side" invariant everywhere downstream.
+  const homeFavoured = homeSpread === 0 ? homeWinProb >= awayWinProb : homeSpread < 0
   return {
     predictedWinner: homeFavoured ? 'home' : 'away',
     winProbability: homeFavoured ? homeWinProb : awayWinProb

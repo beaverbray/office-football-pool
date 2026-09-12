@@ -1,48 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { WeekDetector } from '@/services/week-detector'
 
-// This handler reads live state (database rows / the ESPN feed), so it must
-// run per request. Without this Next prerenders it as static content at
-// build time and freezes the response: the deployed endpoint kept serving a
-// snapshot of the predictions table taken during the build, so scrapes that
-// landed afterwards were invisible no matter how the caches were busted.
+// This handler reads live database rows, so it must run per request. Without
+// this Next prerenders it as static content at build time and freezes the
+// response: the deployed endpoint kept serving a snapshot of the predictions
+// table taken during the build, so scrapes that landed afterwards were
+// invisible no matter how the caches were busted.
 export const dynamic = 'force-dynamic'
 
 // Type inference from Supabase client - database types will be auto-generated
 type PredictionRow = any
 
-// Cache for predictions with timestamp and week
-let predictionsCache: { data: any[], timestamp: number, week: number } | null = null
+let predictionsCache: { data: any[], timestamp: number, week: number | null } | null = null
 const CACHE_TTL = 60 * 1000 // 1 minute cache
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const now = Date.now()
 
-    // Each league runs its own week number, and they differ: this slate is NFL
-    // week 1 and CFB week 2. Filtering every row against the NFL week discarded
-    // all college predictions, which is why MOD was blank for the 47 college
-    // games on a 61-game board.
-    const [weekInfo, ncaaWeekInfo] = await Promise.all([
-      WeekDetector.getCurrentNFLWeek(),
-      WeekDetector.getCurrentNCAAWeek()
-    ])
-    const currentWeek = weekInfo.week
-    const weekForSource: Record<string, number> = {
-      nfelo: weekInfo.week,
-      'warren-nolan': ncaaWeekInfo.week
-    }
-
-    // Return cached data if still fresh and same week
-    if (predictionsCache &&
-        (now - predictionsCache.timestamp) < CACHE_TTL &&
-        predictionsCache.week === currentWeek) {
+    if (predictionsCache && (now - predictionsCache.timestamp) < CACHE_TTL) {
       return NextResponse.json({
         success: true,
         predictions: predictionsCache.data,
         count: predictionsCache.data.length,
-        week: currentWeek,
+        week: predictionsCache.week,
         cached: true
       }, {
         headers: {
@@ -75,16 +56,30 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Keep this week's rows for each league. Finished games are dropped later,
-    // deliberately after deduplication.
-    const currentWeekPredictions = allPredictions.filter((pred: PredictionRow) => {
-      // Compare against the week for THIS row's league, not a single global one.
-      const expectedWeek = weekForSource[pred.source] ?? currentWeek
-      return pred.metadata?.week === expectedWeek
-    })
+    // Each league's current week comes from its own newest row. The query is
+    // sorted by scraped_at descending, so the first row seen for a source is
+    // from that source's latest scrape — and the latest scrape IS the current
+    // week by construction.
+    //
+    // This previously called WeekDetector on every request and compared against
+    // ESPN's answer. That made the response depend on a live third-party call
+    // in the read path: one invocation disagreed about the college week and
+    // served 16 rows (nfelo only, all 114 college rows filtered away), which
+    // the CDN then handed to the dashboard. Reading the week off the data
+    // removes the flake and two ESPN round-trips per request.
+    const weekForSource = new Map<string, number>()
+    for (const pred of allPredictions) {
+      const week = pred.metadata?.week
+      if (week != null && !weekForSource.has(pred.source)) {
+        weekForSource.set(pred.source, week)
+      }
+    }
 
-    // Deduplicate by game, keeping the most recent row (the query is sorted by
-    // scraped_at descending).
+    const currentWeekPredictions = allPredictions.filter(
+      (pred: PredictionRow) => pred.metadata?.week === weekForSource.get(pred.source)
+    )
+
+    // Deduplicate by game, keeping the most recent row.
     const gameMap = new Map<string, PredictionRow>()
 
     for (const pred of currentWeekPredictions) {
@@ -99,8 +94,10 @@ export async function GET(request: NextRequest) {
     // it Final — Missouri @ Kansas came back as a stale "4th Qtr" row carrying
     // pre-correction numbers, while the current row said Final. A finished game
     // should disappear, not revert.
+    //
+    // Prefix match, not equality: Warren Nolan also writes "Final/3OTs".
     const latestUnfinished = Array.from(gameMap.values()).filter(
-      (pred: PredictionRow) => pred.game_time?.toLowerCase() !== 'final'
+      (pred: PredictionRow) => !pred.game_time?.toLowerCase().startsWith('final')
     )
 
     // Transform to prediction format (include source to distinguish NFL vs NCAAF)
@@ -115,6 +112,8 @@ export async function GET(request: NextRequest) {
       confidence: pred.confidence, // Include confidence level
     }))
 
+    const currentWeek = weekForSource.get('nfelo') ?? null
+
     // Update cache
     predictionsCache = {
       data: transformedPredictions,
@@ -127,6 +126,9 @@ export async function GET(request: NextRequest) {
       predictions: transformedPredictions,
       count: transformedPredictions.length,
       week: currentWeek,
+      // Per-league weeks, so a bad filter is visible in the payload rather than
+      // showing up as silently missing games.
+      weeks: Object.fromEntries(weekForSource),
       cached: false
     }, {
       headers: {

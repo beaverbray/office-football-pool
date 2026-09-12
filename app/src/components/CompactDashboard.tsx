@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { type ELOPrediction, predictionLeague } from '@/lib/predictions'
 import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
 import type { GameComparison } from '@/services/comparison-engine'
@@ -52,26 +53,6 @@ interface PipelineResult {
   }
 }
 
-interface ELOPrediction {
-  homeTeam: string
-  awayTeam: string
-  predictedWinner: 'home' | 'away'
-  winProbability: number
-  spread?: number
-  /** Which upstream produced this: 'nfelo' (NFL) or 'warren-nolan' (college). */
-  source?: string
-}
-
-/**
- * The league a prediction describes. The two upstreams are league-specific —
- * nfelo covers the NFL, Warren Nolan covers college — so the source names the
- * league without having to guess from the team name.
- */
-function predictionLeague(pred: ELOPrediction): 'NFL' | 'NCAAF' | 'any' {
-  if (pred.source === 'warren-nolan') return 'NCAAF'
-  if (pred.source === 'nfelo') return 'NFL'
-  return 'any'
-}
 
 export default function CompactDashboard() {
   const router = useRouter()
@@ -168,7 +149,9 @@ export default function CompactDashboard() {
 
     const predictionIndex = new Map<string, ELOPrediction>()
     for (const pred of eloPredictions) {
-      const league = predictionLeague(pred)
+      // Must mirror the sentinel normalizeTeam writes for an unknown league,
+      // or an unrecognised source silently looks up "undefined|Team".
+      const league = predictionLeague(pred) ?? 'any'
       const normalizedHome = normalizedTeamCache.get(`${league}|${pred.homeTeam}`)
       const normalizedAway = normalizedTeamCache.get(`${league}|${pred.awayTeam}`)
       if (normalizedHome && normalizedAway) {

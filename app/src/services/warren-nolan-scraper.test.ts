@@ -45,3 +45,18 @@ describe('interpretPrediction', () => {
     }
   })
 })
+
+describe('interpretPrediction on an even line', () => {
+  // A pick'em has no sign to read. Before the tie-break it always named the
+  // away team, so an even line could report a sub-50% "winner".
+  it('names the more likely side when the spread is zero', () => {
+    expect(interpretPrediction(0, 49, 51)).toEqual({ predictedWinner: 'home', winProbability: 51 })
+    expect(interpretPrediction(0, 52, 48)).toEqual({ predictedWinner: 'away', winProbability: 52 })
+  })
+
+  it('still never names the less likely side', () => {
+    for (const [away, home] of [[49, 51], [52, 48], [50, 50]]) {
+      expect(interpretPrediction(0, away, home).winProbability).toBeGreaterThanOrEqual(50)
+    }
+  })
+})
