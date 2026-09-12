@@ -8,7 +8,8 @@ export interface NFELOPrediction {
   homeElo: number
   predictedWinner: 'home' | 'away'
   winProbability: number
-  spread: number
+  /** The model's own line. Absent when nfelo has not published one yet. */
+  spread?: number
   overUnder?: number
 }
 
@@ -92,8 +93,18 @@ export class NFELOScraper {
           const homeElo = parseFloat(game.starting_nfelo_home || 0)
           const awayElo = parseFloat(game.starting_nfelo_away || 0)
 
-          // Parse spread (home_line_close is negative when home is favored)
-          const homeLineClose = parseFloat(game.home_line_close || game.nfelo_home_line_close || 0)
+          // `nfelo_home_line_close` is the MODEL's line. `home_line_close` is
+          // the sportsbook's closing line — note its sibling columns
+          // `home_line_close_price`/`away_line_close_price`, which are prices
+          // only a book quotes. Preferring it made the NFL MOD column equal MKT
+          // on 13 of 14 games, so "the model agrees with the market" was a
+          // tautology, the +10 confirmation bonus was free, and every game with
+          // no market edge also showed no model disagreement.
+          //
+          // No fallback to the book's line: a missing model number must read as
+          // missing, not quietly become the market's.
+          const modelLine = parseFloat(game.nfelo_home_line_close)
+          const homeLineClose = Number.isFinite(modelLine) ? modelLine : null
 
           predictions.push({
             gameTime: '',
@@ -103,7 +114,7 @@ export class NFELOScraper {
             homeElo,
             predictedWinner: homeProb > awayProb ? 'home' : 'away',
             winProbability: Math.max(homeProb, awayProb),
-            spread: Math.abs(homeLineClose),
+            spread: homeLineClose !== null ? Math.abs(homeLineClose) : undefined,
             overUnder: parseFloat(game.total_line_close || 0) || undefined,
           })
         } catch (err) {
@@ -163,17 +174,22 @@ export class NFELOScraper {
     gameDate?: string
     metadata?: any
   }> {
-    return predictions.map(pred => ({
-      homeTeam: pred.homeTeam,
-      awayTeam: pred.awayTeam,
-      spread: pred.predictedWinner === 'home' ? -pred.spread : pred.spread,
-      metadata: {
-        source: 'nfelo',
-        winProbability: pred.winProbability,
-        awayElo: pred.awayElo,
-        homeElo: pred.homeElo,
-        gameTime: pred.gameTime,
-      }
-    }))
+    // A prediction with no model line carries no spread to publish. Drop it
+    // rather than coercing the absence into 0, which would read downstream as
+    // a pick'em the model never made.
+    return predictions
+      .filter((pred): pred is NFELOPrediction & { spread: number } => pred.spread != null)
+      .map(pred => ({
+        homeTeam: pred.homeTeam,
+        awayTeam: pred.awayTeam,
+        spread: pred.predictedWinner === 'home' ? -pred.spread : pred.spread,
+        metadata: {
+          source: 'nfelo',
+          winProbability: pred.winProbability,
+          awayElo: pred.awayElo,
+          homeElo: pred.homeElo,
+          gameTime: pred.gameTime,
+        }
+      }))
   }
 }
