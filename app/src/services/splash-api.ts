@@ -46,6 +46,16 @@ const TeamSchema = z.object({
   top25Ranking: z.number().nullable().optional()
 })
 
+/** Our own selection on a game, when the entry has picked it. */
+const PickSchema = z.object({
+  pickType: z.string(),
+  /** Team id we took. The API names this `value`, not `teamId`. */
+  value: z.string(),
+  grade: z.string().nullable().optional(),
+  points: z.number().nullable().optional(),
+  isAutoPick: z.boolean().optional()
+})
+
 const GameSchema = z.object({
   gameId: z.string(),
   startsAt: z.string(),
@@ -58,7 +68,10 @@ const GameSchema = z.object({
   total: z.number().nullable().optional(),
   isMustPickTeam: z.boolean().optional(),
   isTiebreakerGame: z.boolean().optional(),
-  possiblePoints: z.unknown().optional()
+  possiblePoints: z.unknown().optional(),
+  /** Present once the game starts. A locked pick can no longer be changed. */
+  lock: z.object({ value: z.boolean(), reason: z.string().nullable().optional() }).nullable().optional(),
+  picks: z.array(PickSchema).optional()
 })
 
 const PicksheetSchema = z.object({
@@ -68,6 +81,8 @@ const PicksheetSchema = z.object({
   picksheetAvailable: z.boolean().optional(),
   slateFullyLockedAt: z.string().nullable().optional(),
   leagueMinimums: z.array(z.object({ league: z.string(), minimum: z.number() })).optional(),
+  picksMade: z.number().optional(),
+  entryHasExistingPicks: z.boolean().optional(),
   games: z.array(GameSchema)
 })
 
@@ -322,4 +337,88 @@ export function toSourceGames(picksheet: SplashPicksheet): PipelineSourceGame[] 
     })
   }
   return out
+}
+
+// ============================================================================
+// ENTRY STATE — what we have already taken, and how many slots remain
+// ============================================================================
+
+/** One of our selections, resolved to the side we took. */
+export interface EntryPick {
+  gameId: string
+  league: 'NFL' | 'NCAAF'
+  /** Alias of the side we took, e.g. "NE". */
+  team: string
+  teamName: string
+  opponent: string
+  /** Spread we took, from the picked team's perspective. */
+  spread: number | null
+  /** Locked picks can no longer be changed; they consume a slot permanently. */
+  locked: boolean
+  status: string
+  grade: string | null
+}
+
+/**
+ * Our entry for the current slate: picks already made, and the quota still to
+ * fill per league.
+ *
+ * The pool requires a fixed number of picks in each league — Splash publishes
+ * that as `leagueMinimums` rather than it being a constant we guess. Locked
+ * picks are the ones whose game has started: they cannot be changed, so they
+ * permanently consume a slot and any recommendation that suggests otherwise is
+ * noise. Unlocked picks are still swappable, so they count towards the quota
+ * but remain candidates for replacement.
+ */
+export interface EntryState {
+  slateId: string
+  picks: EntryPick[]
+  quota: Record<'NFL' | 'NCAAF', number>
+  /** Slots whose pick has locked, per league. */
+  locked: Record<'NFL' | 'NCAAF', number>
+  /** Slots filled by a pick that can still be changed, per league. */
+  open: Record<'NFL' | 'NCAAF', number>
+}
+
+const toMetricLeague = (raw: string): 'NFL' | 'NCAAF' =>
+  raw.toLowerCase() === 'nfl' ? 'NFL' : 'NCAAF'
+
+export function toEntryState(sheet: SplashPicksheet): EntryState {
+  const quota: Record<'NFL' | 'NCAAF', number> = { NFL: 0, NCAAF: 0 }
+  for (const m of sheet.leagueMinimums ?? []) quota[toMetricLeague(m.league)] = m.minimum
+
+  const picks: EntryPick[] = []
+  for (const g of sheet.games) {
+    const pick = g.picks?.[0]
+    if (!pick) continue
+    // `value` holds the team id we took; match it to a side rather than
+    // assuming an order.
+    const side = pick.value === g.home.id ? g.home : pick.value === g.away.id ? g.away : null
+    if (!side) continue
+    const other = side === g.home ? g.away : g.home
+    picks.push({
+      gameId: g.gameId,
+      league: toMetricLeague(g.league),
+      team: side.alias,
+      teamName: side.name,
+      opponent: other.alias,
+      spread: side.spread,
+      // A game that has started locks its pick. `lock.value` is authoritative
+      // where present; status covers rows the API has already finalised.
+      locked: g.lock?.value === true || g.status === 'finalized' || g.status === 'in_progress',
+      status: g.status,
+      grade: pick.grade ?? null
+    })
+  }
+
+  const count = (league: 'NFL' | 'NCAAF', locked: boolean) =>
+    picks.filter(p => p.league === league && p.locked === locked).length
+
+  return {
+    slateId: sheet.slateId,
+    picks,
+    quota,
+    locked: { NFL: count('NFL', true), NCAAF: count('NCAAF', true) },
+    open: { NFL: count('NFL', false), NCAAF: count('NCAAF', false) }
+  }
 }

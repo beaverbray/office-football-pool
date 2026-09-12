@@ -511,7 +511,13 @@ export async function POST(request: NextRequest) {
           // monotonically lossy, observed collapsing 65 games to 1.
           pipeline_data: {
             ...refreshedPipeline,
-            parsing: refreshedPipeline.parsing ?? currentPipelineRow.pipeline_data?.parsing ?? null
+            parsing: refreshedPipeline.parsing ?? currentPipelineRow.pipeline_data?.parsing ?? null,
+            // Same reasoning as `parsing` (#31): the orchestrator result has no
+            // `entry`, so replacing pipeline_data wholesale would discard which
+            // picks we have already made and which have locked. Only the fetch
+            // can produce it — Splash blocks datacenter IPs, so Vercel cannot
+            // re-read it.
+            entry: currentPipelineRow.pipeline_data?.entry ?? null
           },
           picksheet_text: currentPipelineRow.picksheet_text,
           updated_at: new Date().toISOString()

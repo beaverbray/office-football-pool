@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
 import { EntityResolver } from '@/services/entity-resolution'
 import type { GameComparison } from '@/services/comparison-engine'
+import type { EntryState } from '@/services/splash-api'
 
 interface PipelineResult {
   id: string
@@ -59,6 +60,10 @@ export default function ModelPicksPage() {
   // false, the empty state rendered on every page load for the fetch's duration.
   const [dataLoaded, setDataLoaded] = useState<boolean | null>(null)
   const [eloPredictions, setEloPredictions] = useState<ELOPrediction[]>([])
+
+  // Our picks for this slate, recorded by the picksheet fetch. The dashboard
+  // cannot ask Splash for it directly: their API rejects datacenter IPs.
+  const entry = (currentPipeline as unknown as { entry?: EntryState | null })?.entry ?? null
 
   // Memoize EntityResolver instance
   const entityResolver = useMemo(() => new EntityResolver(), [])
@@ -327,9 +332,26 @@ export default function ModelPicksPage() {
     // Sort by score (highest first)
     scoredPicks.sort((a, b) => b.score - a.score)
 
-    // Split into NFL and NCAA
-    const nflPicks = scoredPicks.filter(p => p.league === 'NFL').slice(0, 10)
-    const ncaaPicks = scoredPicks.filter(p => p.league === 'NCAA').slice(0, 10)
+    // How many slots the pool still lets us decide, per league. The entry state
+    // comes from the picksheet fetch: Splash publishes the requirement as
+    // `leagueMinimums` rather than it being a constant worth guessing, and a
+    // pick whose game has started is locked, so it consumes a slot for good.
+    const quotaFor = (league: 'NFL' | 'NCAAF') => {
+      const q = entry?.quota?.[league] ?? 10
+      const locked = entry?.locked?.[league] ?? 0
+      return Math.max(0, q - locked)
+    }
+
+    // Games whose pick has locked are not decisions any more; recommending
+    // them is noise. Keyed by gameId, which the picksheet and comparisons share.
+    const lockedGameIds = new Set((entry?.picks ?? []).filter(p => p.locked).map(p => p.gameId))
+    const decidable = scoredPicks.filter(p => !lockedGameIds.has(p.gameId))
+
+    // 'NCAAF', not 'NCAA'. Comparisons have always carried 'NCAAF', so this
+    // filter matched nothing and the college half of this page was empty —
+    // which is the whole reason the screen looked broken.
+    const nflPicks = decidable.filter(p => p.league === 'NFL').slice(0, quotaFor('NFL'))
+    const ncaaPicks = decidable.filter(p => p.league === 'NCAAF').slice(0, quotaFor('NCAAF'))
 
     return { nflPicks, ncaaPicks }
   }
@@ -383,6 +405,18 @@ export default function ModelPicksPage() {
     )
   }
 
+  // Says what is actually on offer rather than a hardcoded "TOP 10": the pool
+  // requires `quota` per league and locked picks have already consumed some.
+  const slotLabel = (league: 'NFL' | 'NCAAF') => {
+    const quota = entry?.quota?.[league]
+    const locked = entry?.locked?.[league] ?? 0
+    if (!quota) return 'TOP PICKS'
+    const remaining = Math.max(0, quota - locked)
+    return locked > 0
+      ? `BEST ${remaining} OF ${quota} \u00b7 ${locked} LOCKED`
+      : `BEST ${remaining} OF ${quota}`
+  }
+
   const { nflPicks, ncaaPicks } = getModelPicks()
 
   return (
@@ -404,13 +438,44 @@ export default function ModelPicksPage() {
             </div>
           </div>
 
+          {/* Already committed: picks whose game has started and can no longer
+              be changed. They consume a slot, so the recommendations below are
+              sized to what is actually still decidable. */}
+          {entry && entry.picks.some(p => p.locked) && (
+            <div className="bg-zinc-900 rounded border border-zinc-800 p-3 sm:p-4">
+              <h2 className="text-sm sm:text-base font-mono font-bold text-gray-300 mb-2">
+                LOCKED THIS WEEK
+                <span className="text-gray-500 text-xs font-normal ml-2">
+                  already started &mdash; cannot be changed
+                </span>
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {entry.picks.filter(p => p.locked).map(p => (
+                  <span
+                    key={p.gameId}
+                    className={`px-2 py-1 rounded text-[10px] sm:text-xs font-mono border ${
+                      p.grade === 'won'
+                        ? 'border-green-700 bg-green-950/40 text-green-300'
+                        : p.grade === 'lost'
+                        ? 'border-red-800 bg-red-950/40 text-red-300'
+                        : 'border-zinc-700 bg-zinc-800/60 text-gray-300'
+                    }`}
+                  >
+                    {p.league} {p.team} {p.spread != null ? (p.spread > 0 ? `+${p.spread}` : p.spread) : ''} vs {p.opponent}
+                    {p.grade ? ` \u00b7 ${p.grade}` : ''}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* NFL Picks Table */}
             <div>
               <h2 className="text-sm sm:text-base font-mono font-bold text-blue-300 mb-2 flex items-center gap-2">
                 <span className="bg-blue-900/50 px-2 py-1 rounded text-xs">NFL</span>
-                <span className="text-gray-500 text-xs">TOP 10 PICKS</span>
+                <span className="text-gray-500 text-xs">{slotLabel('NFL')}</span>
               </h2>
               {nflPicks.length > 0 ? (
                 <div className="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">

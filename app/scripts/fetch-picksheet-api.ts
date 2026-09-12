@@ -32,6 +32,8 @@ import {
   getPicksheet,
   normalizeGames,
   toSourceGames,
+  toEntryState,
+  type EntryState,
   SplashAuthError,
   type SplashSlate,
   type PipelineSourceGame
@@ -68,7 +70,8 @@ function weekFromAbbreviation(abbr: string): number {
 async function persist(
   slate: SplashSlate,
   sourceGames: PipelineSourceGame[],
-  contestId: string
+  contestId: string,
+  entry: EntryState
 ): Promise<void> {
   const { error } = await supabase()
     .from('pipeline_current')
@@ -83,6 +86,11 @@ async function persist(
       // straight in and the regex/LLM parsers are bypassed entirely.
       pipeline_data: {
         parsing: { success: true, gamesFound: sourceGames.length, games: sourceGames },
+        // What we have already taken, and how many slots the pool still lets
+        // us decide. Recorded here because the dashboard cannot ask Splash
+        // directly: their API rejects datacenter IPs, so anything Vercel needs
+        // has to arrive through this fetch.
+        entry,
         source: 'splash-api'
       },
       updated_at: new Date().toISOString(),
@@ -250,7 +258,7 @@ async function main(): Promise<void> {
     if (dryRun) {
       console.log('[DRY RUN] would persist to afbp.pipeline_current and trigger refresh')
     } else {
-      await persist(slate, sourceGames, contestId)
+      await persist(slate, sourceGames, contestId, toEntryState(picksheet))
       console.log('Saved to afbp.pipeline_current')
       await triggerRefresh()
     }
