@@ -1,19 +1,29 @@
 /**
- * Deep links to OddsShark's matchup page for a given game.
+ * Deep links to the matchup page for a given game.
  *
- * OddsShark addresses matchups by opaque numeric id — /sport/football/nfl/
- * matchup/379928 — with no derivable slug. Guessed URLs like
- * /nfl/seattle-new-england-odds return HTTP 200 with the generic NFL landing
- * page, so a naive check would call them valid; they are soft 404s, confirmed
- * by a nonsense path returning the identical title.
+ * Matchups are addressed by opaque numeric id — /sport/football/nfl/matchup/
+ * 379928 — with no derivable slug. Guessed URLs like
+ * /nfl/seattle-new-england-odds return HTTP 200 with a generic landing page,
+ * so a naive check calls them valid; they are soft 404s.
  *
- * The ids are recoverable, though. Each matchup anchor on the league odds page
- * sits beside the two teams' logos, whose filenames carry the team alias —
- * exactly the alias Splash gives us. Measured on the live NFL page: 32 of 32
- * matchups resolved to precisely two aliases, none ambiguous.
+ * The ids ARE discoverable: each matchup anchor on the league odds page sits
+ * beside both teams' logos, whose filenames carry the same alias the pool
+ * uses. Measured live: 32 of 32 NFL matchups resolved to exactly two aliases,
+ * agreed independently by a byte-window parse and a DOM walk.
+ *
+ * Ids are read from oddsshark.com but LINKED to covers.com, which is where
+ * those ids actually render. OddsShark now redirects into Covers and serves an
+ * identical 520,636-byte shell for every matchup id — including a nonsense one
+ * — so every link would have opened the same landing page. Covers returns a
+ * distinct page per id (823KB / 755KB / 985KB for three different games, 1
+ * byte for a bogus id) with `<h1>Patriots vs Seahawks</h1>`, which is how the
+ * destination was actually confirmed rather than assumed.
  */
 
-const ODDSSHARK = 'https://www.oddsshark.com'
+/** Where the odds pages, and therefore the matchup ids, are listed. */
+const ID_SOURCE = 'https://www.oddsshark.com'
+/** Where those ids resolve to a real page. */
+const MATCHUP_HOST = 'https://www.covers.com'
 
 /** Splash's league value to OddsShark's path segment and logo directory. */
 const LEAGUE_PATHS: Record<'NFL' | 'NCAAF', { odds: string; sport: string; logos: string }> = {
@@ -40,7 +50,7 @@ export async function fetchMatchupLinks(
 
   let html: string
   try {
-    const res = await fetch(`${ODDSSHARK}${odds}`, {
+    const res = await fetch(`${ID_SOURCE}${odds}`, {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
@@ -71,7 +81,7 @@ export async function fetchMatchupLinks(
     // a link to the wrong matchup is worse than no link.
     if (aliases.size !== 2) continue
     const [a, b] = [...aliases]
-    links.set(matchupKey(a, b), `${ODDSSHARK}/sport/${sport}/matchup/${id}`)
+    links.set(matchupKey(a, b), `${MATCHUP_HOST}/sport/${sport}/matchup/${id}`)
   }
 
   return links
