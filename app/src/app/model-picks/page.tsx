@@ -554,8 +554,8 @@ export default function ModelPicksPage() {
             {/* NCAA Picks Table */}
             <div>
               <h2 className="text-sm sm:text-base font-mono font-bold text-green-300 mb-2 flex items-center gap-2">
-                <span className="bg-green-900/50 px-2 py-1 rounded text-xs">NCAA</span>
-                <span className="text-gray-500 text-xs">TOP 10 PICKS</span>
+                <span className="bg-green-900/50 px-2 py-1 rounded text-xs">NCAAF</span>
+                <span className="text-gray-500 text-xs">{slotLabel('NCAAF')}</span>
               </h2>
               {ncaaPicks.length > 0 ? (
                 <div className="bg-zinc-900 rounded border border-zinc-800 overflow-hidden">
