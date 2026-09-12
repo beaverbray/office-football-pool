@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeGames, toSourceGames, type SplashPicksheet } from './splash-api'
+import { normalizeGames, toSourceGames, toEntryState, type SplashPicksheet } from './splash-api'
 
 /** Shaped from a real /team-pickem/picksheets response. */
 function picksheet(games: SplashPicksheet['games']): SplashPicksheet {
@@ -118,5 +118,43 @@ describe('normalizeGames', () => {
     ])
     expect(toSourceGames(sheet)).toEqual([])
     expect(normalizeGames(sheet)).toHaveLength(1)
+  })
+})
+
+describe('toEntryState quota', () => {
+  it('takes the requirement from the sheet rather than assuming one', () => {
+    const sheet = {
+      ...picksheet([game()]),
+      leagueMinimums: [{ league: 'nfl', minimum: 10 }, { league: 'ncaaf', minimum: 10 }]
+    } as SplashPicksheet
+    expect(toEntryState(sheet).quota).toEqual({ NFL: 10, NCAAF: 10 })
+  })
+
+  it('reflects a requirement that is not ten', () => {
+    const sheet = {
+      ...picksheet([game()]),
+      leagueMinimums: [{ league: 'nfl', minimum: 12 }]
+    } as SplashPicksheet
+    expect(toEntryState(sheet).quota.NFL).toBe(12)
+  })
+
+  // leagueMinimums is optional in Splash's payload. A league it says nothing
+  // about must stay absent: seeding the map with zeros made a missing quota
+  // arrive as 0, which truncated every recommendation and rendered an empty
+  // table under "BEST 0 OF 0".
+  it('leaves a league Splash did not publish as unknown, not zero', () => {
+    const sheet = {
+      ...picksheet([game()]),
+      leagueMinimums: [{ league: 'nfl', minimum: 10 }]
+    } as SplashPicksheet
+    const { quota } = toEntryState(sheet)
+    expect(quota.NFL).toBe(10)
+    expect(quota.NCAAF).toBeUndefined()
+  })
+
+  it('leaves both leagues unknown when the field is absent entirely', () => {
+    const { quota } = toEntryState(picksheet([game()]))
+    expect(quota.NFL).toBeUndefined()
+    expect(quota.NCAAF).toBeUndefined()
   })
 })

@@ -392,12 +392,18 @@ export default function ModelPicksPage() {
       return a.basis === 'market' ? b.score - a.score : b.modelGap - a.modelGap
     })
 
-    // How many slots the pool still lets us decide, per league. The entry state
-    // comes from the picksheet fetch: Splash publishes the requirement as
-    // `leagueMinimums` rather than it being a constant worth guessing, and a
-    // pick whose game has started is locked, so it consumes a slot for good.
-    const quotaFor = (league: 'NFL' | 'NCAAF') => {
-      const q = entry?.quota?.[league] ?? 10
+    // How many slots the pool still lets us decide, per league, or null when
+    // Splash published no requirement for that league — `leagueMinimums` is
+    // optional in their payload.
+    //
+    // Null, not a default. `?? 10` here was unreachable: toEntryState used to
+    // seed the map with zeros, so a missing league arrived as 0 rather than
+    // undefined, the fallback never fired, and the table rendered empty under
+    // "BEST 0 OF 0". Inventing 10 instead would have been the other kind of
+    // wrong — a requirement nobody published, stated with confidence.
+    const quotaFor = (league: 'NFL' | 'NCAAF'): number | null => {
+      const q = entry?.quota?.[league]
+      if (q == null) return null
       const locked = entry?.locked?.[league] ?? 0
       return Math.max(0, q - locked)
     }
@@ -407,11 +413,18 @@ export default function ModelPicksPage() {
     const lockedGameIds = new Set((entry?.picks ?? []).filter(p => p.locked).map(p => p.gameId))
     const decidable = scoredPicks.filter(p => !lockedGameIds.has(p.gameId))
 
+    // An unknown quota truncates nothing: the ranking is still useful without
+    // knowing how many slots it has to fill.
+    const take = (league: 'NFL' | 'NCAAF') => {
+      const rows = decidable.filter(p => p.league === league)
+      const slots = quotaFor(league)
+      return slots === null ? rows : rows.slice(0, slots)
+    }
+
     // 'NCAAF', not 'NCAA'. Comparisons have always carried 'NCAAF', so this
-    // filter matched nothing and the college half of this page was empty —
-    // which is the whole reason the screen looked broken.
-    const nflPicks = decidable.filter(p => p.league === 'NFL').slice(0, quotaFor('NFL'))
-    const ncaaPicks = decidable.filter(p => p.league === 'NCAAF').slice(0, quotaFor('NCAAF'))
+    // filter matched nothing and the college half of this page was empty.
+    const nflPicks = take('NFL')
+    const ncaaPicks = take('NCAAF')
 
     return { nflPicks, ncaaPicks }
   }
@@ -470,7 +483,9 @@ export default function ModelPicksPage() {
   const slotLabel = (league: 'NFL' | 'NCAAF') => {
     const quota = entry?.quota?.[league]
     const locked = entry?.locked?.[league] ?? 0
-    if (!quota) return 'TOP PICKS'
+    // `== null`, not falsy: a published quota of 0 is a real statement ("no
+    // picks required in this league") and must not read as "unknown".
+    if (quota == null) return 'RANKED · QUOTA UNKNOWN'
     const remaining = Math.max(0, quota - locked)
     return locked > 0
       ? `BEST ${remaining} OF ${quota} \u00b7 ${locked} LOCKED`

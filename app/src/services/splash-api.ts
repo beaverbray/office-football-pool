@@ -382,7 +382,15 @@ export interface EntryPick {
 export interface EntryState {
   slateId: string
   picks: EntryPick[]
-  quota: Record<'NFL' | 'NCAAF', number>
+  /**
+   * Picks the pool requires per league, from the sheet's `leagueMinimums`.
+   * A league is absent when Splash did not publish a minimum for it — the
+   * field is optional in their payload. Absent means unknown, which callers
+   * must distinguish from zero: defaulting it to 0 silently truncated every
+   * recommendation, and defaulting it to 10 invents a requirement nobody
+   * published.
+   */
+  quota: Partial<Record<'NFL' | 'NCAAF', number>>
   /** Slots whose pick has locked, per league. */
   locked: Record<'NFL' | 'NCAAF', number>
   /** Slots filled by a pick that can still be changed, per league. */
@@ -393,7 +401,10 @@ const toMetricLeague = (raw: string): 'NFL' | 'NCAAF' =>
   raw.toLowerCase() === 'nfl' ? 'NFL' : 'NCAAF'
 
 export function toEntryState(sheet: SplashPicksheet): EntryState {
-  const quota: Record<'NFL' | 'NCAAF', number> = { NFL: 0, NCAAF: 0 }
+  // Deliberately not seeded with zeros: a league Splash said nothing about
+  // must stay absent so downstream can tell "no requirement published" from
+  // "a requirement of none".
+  const quota: Partial<Record<'NFL' | 'NCAAF', number>> = {}
   for (const m of sheet.leagueMinimums ?? []) quota[toMetricLeague(m.league)] = m.minimum
 
   const picks: EntryPick[] = []
