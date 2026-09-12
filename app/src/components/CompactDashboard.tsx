@@ -1076,7 +1076,7 @@ export default function CompactDashboard() {
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950" title="Line as of Tuesday morning, after the previous week's results and injury news.">OPEN</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MKT</th>
                     <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">POOL</th>
-                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950">MOD</th>
+                    <th scope="col" className="px-0.5 sm:px-1 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-mono text-gray-400 bg-zinc-950" title="Independent model line: nfelo's pre-market Elo rating for the NFL, Warren Nolan's projection for college. Deliberately not the market's number — that is the MKT column.">MOD</th>
                     {/* Two units share this column by design: the away row carries the
                         spread delta in points, the home row the calibrated probability
                         delta. Labelling it "Δp%" alone made the away row's -0.5 read as

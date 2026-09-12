@@ -351,7 +351,12 @@ export default function ModelPicksPage() {
       // strictly below every market-edge pick and are labelled in the row:
       // "the pool is mispriced" and "a model has a lean" are different claims
       // and must not blend into a single ranking.
-      if (homePoolSpread === null || homeEloSpread === null) return null
+      // The market spread is required even though it carries no edge here: the
+      // row renders it unconditionally, and a null would throw on .toFixed and
+      // blank the whole page. Both market branches above skip on a null market
+      // line, so without this check the fallback is the one path that can emit
+      // a pick with no market number.
+      if (homePoolSpread === null || homeMarketSpread === null || homeEloSpread === null) return null
       const modelGap = Math.abs(homePoolSpread - homeEloSpread)
       if (modelGap === 0) return null
 
@@ -545,7 +550,7 @@ export default function ModelPicksPage() {
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ%</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">REL%</th>
-                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">MOD</th>
+                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500" title="Independent model line: nfelo's pre-market Elo rating for the NFL, Warren Nolan's projection for college. Deliberately not the market's number — that is the MKT column.">MOD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800">
@@ -578,10 +583,10 @@ export default function ModelPicksPage() {
                               )}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold bg-orange-900/30 text-orange-400">
-                              {pick.poolSpread > 0 ? '+' : ''}{pick.poolSpread.toFixed(1)}
+                              {pick.poolSpread != null ? `${pick.poolSpread > 0 ? '+' : ''}${pick.poolSpread.toFixed(1)}` : '-'}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold text-gray-200">
-                              {pick.marketSpread > 0 ? '+' : ''}{pick.marketSpread.toFixed(1)}
+                              {pick.marketSpread != null ? `${pick.marketSpread > 0 ? '+' : ''}${pick.marketSpread.toFixed(1)}` : '-'}
                             </td>
                             <td className={`px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold ${pick.absDelta > 3 ? 'text-red-500' : pick.absDelta > 1 ? 'text-orange-700' : 'text-green-500'}`}>
                               {pick.delta > 0 ? '+' : ''}{pick.delta.toFixed(1)}
@@ -633,7 +638,7 @@ export default function ModelPicksPage() {
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">Δ%</th>
                           <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">REL%</th>
-                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500">MOD</th>
+                          <th className="px-1 sm:px-2 py-1.5 text-center text-[9px] sm:text-[10px] font-mono text-gray-500" title="Independent model line: nfelo's pre-market Elo rating for the NFL, Warren Nolan's projection for college. Deliberately not the market's number — that is the MKT column.">MOD</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-800">
@@ -666,10 +671,10 @@ export default function ModelPicksPage() {
                               )}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold bg-orange-900/30 text-orange-400">
-                              {pick.poolSpread > 0 ? '+' : ''}{pick.poolSpread.toFixed(1)}
+                              {pick.poolSpread != null ? `${pick.poolSpread > 0 ? '+' : ''}${pick.poolSpread.toFixed(1)}` : '-'}
                             </td>
                             <td className="px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold text-gray-200">
-                              {pick.marketSpread > 0 ? '+' : ''}{pick.marketSpread.toFixed(1)}
+                              {pick.marketSpread != null ? `${pick.marketSpread > 0 ? '+' : ''}${pick.marketSpread.toFixed(1)}` : '-'}
                             </td>
                             <td className={`px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-mono font-bold ${pick.absDelta > 3 ? 'text-red-500' : pick.absDelta > 1 ? 'text-orange-700' : 'text-green-500'}`}>
                               {pick.delta > 0 ? '+' : ''}{pick.delta.toFixed(1)}

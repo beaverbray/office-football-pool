@@ -78,6 +78,22 @@ export class NFELOScraper {
 
       const predictions: NFELOPrediction[] = []
 
+      // nfelo states its ratings in Elo points; a spread needs points of
+      // football. The conversion is a fixed multiplier, but rather than
+      // hardcode a reverse-engineered constant, recover it from the file:
+      // nfelo publishes both `nfelo_dif_close` and the line it rounds that to,
+      // so their ratio IS the multiplier. Median over the sample, so one odd
+      // row cannot move it, and it tracks nfelo if they ever retune.
+      const ratios = allGames
+        .map((g: any) => {
+          const dif = parseFloat(g.nfelo_dif_close)
+          const line = parseFloat(g.nfelo_home_line_close)
+          return Number.isFinite(dif) && Number.isFinite(line) && line !== 0 ? Math.abs(dif / line) : null
+        })
+        .filter((r: number | null): r is number => r !== null && r > 1)
+        .sort((a: number, b: number) => a - b)
+      const eloPerPoint = ratios.length > 0 ? ratios[Math.floor(ratios.length / 2)] : 25
+
       filteredGames.forEach((game: any) => {
         try {
           // Parse game_id to get teams
@@ -93,18 +109,30 @@ export class NFELOScraper {
           const homeElo = parseFloat(game.starting_nfelo_home || 0)
           const awayElo = parseFloat(game.starting_nfelo_away || 0)
 
-          // `nfelo_home_line_close` is the MODEL's line. `home_line_close` is
-          // the sportsbook's closing line — note its sibling columns
-          // `home_line_close_price`/`away_line_close_price`, which are prices
-          // only a book quotes. Preferring it made the NFL MOD column equal MKT
-          // on 13 of 14 games, so "the model agrees with the market" was a
-          // tautology, the +10 confirmation bonus was free, and every game with
-          // no market edge also showed no model disagreement.
+          // MOD must be an opinion the market has not already expressed —
+          // otherwise it duplicates the MKT column beside it.
           //
-          // No fallback to the book's line: a missing model number must read as
-          // missing, not quietly become the market's.
-          const modelLine = parseFloat(game.nfelo_home_line_close)
-          const homeLineClose = Number.isFinite(modelLine) ? modelLine : null
+          // Three candidates, all real columns:
+          //   home_line_close       the sportsbook's line. Not a model at all;
+          //                         reading it made MOD equal MKT in 13 of 14
+          //                         games and the "model confirms" bonus free.
+          //   nfelo_dif_close       the model regressed TOWARD the market. It
+          //                         rounds to the book's number 13 times in 16,
+          //                         so it is only nominally independent.
+          //   nfelo_dif_base        the pre-market rating differential, before
+          //                         any market adjustment. Differs from close
+          //                         by 0.93 pts on average, 1.85 at most.
+          //
+          // Using the base differential. A market-blended MOD cannot disagree
+          // with the market often enough to be worth a column.
+          //
+          // Positive differential favours the home team, and a home favourite
+          // carries a negative line, hence the sign flip. No fallback to any
+          // market column: a missing model number reads as missing.
+          const difBase = parseFloat(game.nfelo_dif_base)
+          const homeModelLine = Number.isFinite(difBase)
+            ? Math.round((-difBase / eloPerPoint) * 2) / 2
+            : null
 
           predictions.push({
             gameTime: '',
@@ -112,9 +140,15 @@ export class NFELOScraper {
             homeTeam,
             awayElo,
             homeElo,
-            predictedWinner: homeProb > awayProb ? 'home' : 'away',
+            // Winner follows the same pre-market differential the line does, so
+            // the two cannot contradict each other. winProbability stays
+            // nfelo's own close probability, which is a different, market-aware
+            // quantity — it is reported, not used to pick the side.
+            predictedWinner: homeModelLine !== null
+              ? (homeModelLine <= 0 ? 'home' : 'away')
+              : (homeProb > awayProb ? 'home' : 'away'),
             winProbability: Math.max(homeProb, awayProb),
-            spread: homeLineClose !== null ? Math.abs(homeLineClose) : undefined,
+            spread: homeModelLine !== null ? Math.abs(homeModelLine) : undefined,
             overUnder: parseFloat(game.total_line_close || 0) || undefined,
           })
         } catch (err) {
