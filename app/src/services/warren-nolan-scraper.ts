@@ -22,6 +22,31 @@ export interface WarrenNolanScraperResult {
   error?: string
 }
 
+/**
+ * Decide who Warren Nolan is predicting, and with what confidence.
+ *
+ * The home row's spread uses the standard convention: negative means the home
+ * team is favoured. Verified against the live page, where "Rhode Island -1"
+ * carries a 54% home win probability and "Long Island +3" carries 39%.
+ *
+ * This previously read the sign backwards ("negative = home is underdog") and
+ * took the loser's probability to match, so every single row named the
+ * underdog as the predicted winner and reported a sub-50% probability for it.
+ * Downstream that flipped the sign of the MOD column for college games, which
+ * is worse than showing nothing.
+ */
+export function interpretPrediction(
+  homeSpread: number,
+  awayWinProb: number,
+  homeWinProb: number
+): { predictedWinner: 'home' | 'away'; winProbability: number } {
+  const homeFavoured = homeSpread < 0
+  return {
+    predictedWinner: homeFavoured ? 'home' : 'away',
+    winProbability: homeFavoured ? homeWinProb : awayWinProb
+  }
+}
+
 export class WarrenNolanScraper {
   /**
    * Build the base predict-winners URL for a given season
@@ -91,8 +116,8 @@ export class WarrenNolanScraper {
           // Skip if essential data is missing
           if (!awayTeam || !homeTeam) return
 
-          // Parse home team spread
-          // Warren Nolan shows: negative = home is underdog (away favored), positive = home is favorite
+          // Parse home team spread. Warren Nolan uses the standard convention:
+          // a negative home number means the home team is favoured.
           const homeSpread = parseFloat(homeSpreadText.replace(/[^\d.-]/g, ''))
           if (isNaN(homeSpread)) return
 
@@ -100,11 +125,11 @@ export class WarrenNolanScraper {
           const awayWinProb = parseFloat(awayProbText.replace('%', '').trim())
           const homeWinProb = parseFloat(homeProbText.replace('%', '').trim())
 
-          // Determine predicted winner based on spread
-          // Negative spread = home is underdog (away team favored)
-          // Positive spread = home is favorite
-          const predictedWinner: 'home' | 'away' = homeSpread < 0 ? 'away' : 'home'
-          const winProbability = homeSpread < 0 ? awayWinProb : homeWinProb
+          const { predictedWinner, winProbability } = interpretPrediction(
+            homeSpread,
+            awayWinProb,
+            homeWinProb
+          )
 
           // Use the confidence from the predicted winner (based on spread)
           const confidenceText = predictedWinner === 'home' ? homeConfidence : awayConfidence
