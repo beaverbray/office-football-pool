@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { WeekDetector } from '@/services/week-detector'
 
+// This handler reads live state (database rows / the ESPN feed), so it must
+// run per request. Without this Next prerenders it as static content at
+// build time and freezes the response: the deployed endpoint kept serving a
+// snapshot of the predictions table taken during the build, so scrapes that
+// landed afterwards were invisible no matter how the caches were busted.
+export const dynamic = 'force-dynamic'
+
 // Type inference from Supabase client - database types will be auto-generated
 type PredictionRow = any
 
