@@ -293,7 +293,7 @@ export default function SharePage() {
                   return Math.min(Math.max(1, weeksSinceStart + 1), 18) // NFL regular season is 18 weeks
                 })()} | CREATED: {currentPipeline ? (() => {
                   const date = new Date(currentPipeline.timestamp)
-                  return `${date.toLocaleDateString()}, ${date.toLocaleTimeString('en-US', {timeZone: 'America/Los_Angeles', hour: '2-digit', minute:'2-digit'})}`
+                  return `${date.toLocaleDateString()}, ${date.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', timeZoneName: 'short'})}`
                 })() : 'N/A'}
               </p>
             </div>
@@ -702,13 +702,12 @@ export default function SharePage() {
                     const dateStr = gameDate ? 
                       `${(gameDate.getMonth() + 1).toString().padStart(2, '0')}/${gameDate.getDate().toString().padStart(2, '0')}` : 
                       'N/A'
-                    const timeStr = gameDate ? 
-                      gameDate.toLocaleTimeString('en-US', { 
-                        timeZone: 'America/Los_Angeles',
+                    const timeStr = gameDate ?
+                      gameDate.toLocaleTimeString('en-US', {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: false
-                      }) : 
+                      }) :
                       ''
                     
                     // Calculate relative delta (spread delta / pool spread)

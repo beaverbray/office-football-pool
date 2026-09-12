@@ -488,9 +488,12 @@ export default function CompactDashboard() {
 
     comparisons.forEach(comp => {
       const gameDate = comp.gameTime ? new Date(comp.gameTime) : null
+      // No hardcoded zone. This read 'America/Los_Angeles', so a viewer outside
+      // Pacific saw every kickoff shifted — a 6:00 PM ET game displayed as
+      // 3:00 pm to someone in Central, two hours before it actually starts.
+      // Picks lock at kickoff, so the wrong time is worse than no time.
       const dateStr = gameDate ?
         gameDate.toLocaleDateString('en-US', {
-          timeZone: 'America/Los_Angeles',
           month: '2-digit',
           day: '2-digit',
           year: 'numeric'
@@ -500,7 +503,6 @@ export default function CompactDashboard() {
       let hour = 'N/A'
       if (gameDate) {
         const timeString = gameDate.toLocaleTimeString('en-US', {
-          timeZone: 'America/Los_Angeles',
           hour: 'numeric',
           hour12: true
         })
@@ -1117,12 +1119,15 @@ export default function CompactDashboard() {
 
                           const gameDate = comp.gameTime ? new Date(comp.gameTime) : null
 
+                          // Viewer's own zone, with the abbreviation shown: a
+                          // bare "3:00 pm" is unfalsifiable, and this column is
+                          // the deadline to get a pick in.
                           const timeStr = gameDate ?
                             gameDate.toLocaleTimeString('en-US', {
-                              timeZone: 'America/Los_Angeles',
                               hour: 'numeric',
                               minute: '2-digit',
-                              hour12: true
+                              hour12: true,
+                              timeZoneName: 'short'
                             }).toLowerCase() : ''
 
                           const eloPred = findEloPrediction(comp.homeTeam, comp.awayTeam)
