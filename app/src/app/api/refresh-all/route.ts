@@ -8,6 +8,7 @@ import { ScheduleService } from '@/services/schedule-service'
 import { GameMatchingService } from '@/services/game-matching-service'
 import { recordOddsSnapshots, getOpeningSpreads } from '@/services/opening-lines'
 import { fetchAllMatchupLinks, matchupKey } from '@/services/oddsshark-links'
+import { assessSlate } from '@/services/picksheet-freshness'
 
 export const dynamic = 'force-dynamic'
 // The full pipeline measured 42s cold locally but exceeded 60s on Vercel
@@ -357,6 +358,30 @@ export async function POST(request: NextRequest) {
         predictions: { nfelo: null, warrenNolan: null },
         meta: { nflWeek: nflWeek.week, ncaaWeek: ncaaWeek.week, gamesMatched: 0, picksheetSource: 'none' as const }
       } as RefreshAllResponse, { status: 400 })
+    }
+
+    // Stage 2b: refuse to re-price a slate that has already been played.
+    // This route can only re-price the SAVED picksheet — Splash rejects
+    // datacenter IPs, so Vercel cannot pull a new slate. When every saved game
+    // has kicked off, the odds feed (upcoming events only) shares nothing with
+    // it, matching returns 0, and the pipeline throws "No games could be
+    // matched" ~60s and one Odds API call later, naming the symptom rather than
+    // the cause. Fail here instead, and say what actually has to happen.
+    const freshness = assessSlate(picksheetGames)
+    if (freshness.expired) {
+      const slateName = currentPipelineRow.metadata?.slateName
+      return NextResponse.json({
+        success: false,
+        persisted: false,
+        error: 'Saved picksheet is for a finished slate',
+        message:
+          `The saved picksheet${slateName ? ` (${slateName})` : ''} has ${freshness.timed} games and all of them ` +
+          `have already kicked off (last: ${freshness.lastKickoff}). Refresh only re-prices the saved slate, ` +
+          `so there is nothing left to match. Pull the new slate first: npm --prefix app run fetch-picksheet:api`,
+        timing: { ...timing, total: Date.now() - startTime },
+        predictions: { nfelo: null, warrenNolan: null },
+        meta: { nflWeek: nflWeek.week, ncaaWeek: ncaaWeek.week, gamesMatched: 0, picksheetSource: 'cached' as const }
+      } as RefreshAllResponse, { status: 409 })
     }
 
     console.log(`Loaded ${picksheetGames.length} picksheet games from database`)
