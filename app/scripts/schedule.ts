@@ -28,13 +28,19 @@ const APP_DIR = path.resolve(__dirname, '..')
 const LOG_DIR = path.join(os.homedir(), 'Library', 'Logs', 'office-football-pool')
 const plistPath = (label: string) => path.join(os.homedir(), 'Library', 'LaunchAgents', `${label}.plist`)
 
-export interface AgentSpec {
-  label: string
-  script: string
+/** One launchd StartCalendarInterval entry. */
+export interface RunTime {
   /** launchd weekday: 0/7 Sunday .. 4 Thursday */
   weekday: number
   hour: number
   minute: number
+}
+
+export interface AgentSpec {
+  label: string
+  script: string
+  /** Every time this agent runs. launchd takes an array of intervals. */
+  runs: RunTime[]
   /** Env keys this agent cannot run without. */
   requires: string[]
   why: string
@@ -49,20 +55,33 @@ export const AGENTS: AgentSpec[] = [
     // number is what the pool is playing against, and what the dashboard's OPEN
     // column means. Without this the earliest line on record is whenever the
     // Thursday fetch ran, measured at 8.5h before kickoff: a closing line.
-    weekday: 2,
-    hour: 9,
-    minute: 0,
+    runs: [{ weekday: 2, hour: 9, minute: 0 }],
     requires: ['SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'ODDS_API_KEY'],
     why: 'records the week opening lines'
   },
   {
     label: 'com.officefootballpool.fetch-picksheet',
     script: 'fetch-picksheet-api.ts',
-    // Thursday 18:00 local — matches the cron this replaced (Fri 02:00 UTC),
-    // before Thursday Night Football.
-    weekday: 4,
-    hour: 18,
-    minute: 0,
+    // Twice a week, one agent, because these are the same job at two useful
+    // moments rather than two jobs:
+    //
+    //  • Tuesday 09:30, right after the odds snapshot. The pool posts the new
+    //    slate early in the week, so fetching only on Thursday left the saved
+    //    slate finished and unmatchable for five days: /api/refresh-all can
+    //    only re-price what is saved (Splash rejects datacenter IPs, so Vercel
+    //    cannot pull a slate), and once every saved game has kicked off the
+    //    odds feed shares nothing with it. Observed 2026-09-16: saved "NFL
+    //    Week 1 | CFB Week 2" against an odds feed starting 2026-09-17.
+    //  • Thursday 18:00, matching the cron this replaced (Fri 02:00 UTC),
+    //    before Thursday Night Football — late line moves and which picks
+    //    have locked.
+    //
+    // Harmless when the pool is late: the fetch skips a slate with no games or
+    // no spreads rather than overwriting the saved one.
+    runs: [
+      { weekday: 2, hour: 9, minute: 30 },
+      { weekday: 4, hour: 18, minute: 0 }
+    ],
     requires: ['SPLASH_CONTEST_ID', 'SPLASH_ENTRY_ID', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_URL', 'APP_URL'],
     why: 'fetches the picksheet and refreshes the pipeline'
   }
@@ -100,6 +119,13 @@ export function buildPlist(
   logDir = LOG_DIR
 ): string {
   const logBase = agent.script.replace(/\.ts$/, '')
+  // launchd accepts an array of intervals for an agent that runs more than
+  // once a week; a bare dict would silently keep only one time.
+  const intervals = agent.runs
+    .map(r => `    <dict>\n      <key>Weekday</key><integer>${r.weekday}</integer>\n` +
+              `      <key>Hour</key><integer>${r.hour}</integer>\n` +
+              `      <key>Minute</key><integer>${r.minute}</integer>\n    </dict>`)
+    .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -120,11 +146,9 @@ export function buildPlist(
   <string>${APP_DIR}</string>
 
   <key>StartCalendarInterval</key>
-  <dict>
-    <key>Weekday</key><integer>${agent.weekday}</integer>
-    <key>Hour</key><integer>${agent.hour}</integer>
-    <key>Minute</key><integer>${agent.minute}</integer>
-  </dict>
+  <array>
+${intervals}
+  </array>
 
   <key>StandardOutPath</key>
   <string>${path.join(logDir, `${logBase}.log`)}</string>
@@ -163,7 +187,9 @@ export async function resolveNode(): Promise<string> {
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const hhmm = (a: AgentSpec) => `${String(a.hour).padStart(2, '0')}:${String(a.minute).padStart(2, '0')}`
+// Three call sites need the same rendering of an agent's schedule.
+const when = (a: AgentSpec) =>
+  a.runs.map(r => `${DAYS[r.weekday]}s ${String(r.hour).padStart(2, '0')}:${String(r.minute).padStart(2, '0')}`).join(', ')
 
 async function install(): Promise<void> {
   const nodePath = await resolveNode()
@@ -198,7 +224,7 @@ async function install(): Promise<void> {
     await run('launchctl', ['bootstrap', `gui/${uid}`, plist])
 
     console.log(`Installed ${agent.label}`)
-    console.log(`  runs : ${DAYS[agent.weekday]}s at ${hhmm(agent)} local — ${agent.why}`)
+    console.log(`  runs : ${when(agent)} local — ${agent.why}`)
     console.log(`  logs : ${path.join(LOG_DIR, agent.script.replace(/\.ts$/, '.log'))}`)
     console.log(`  now  : launchctl kickstart -p gui/${uid}/${agent.label}`)
     console.log('')
@@ -219,7 +245,7 @@ async function status(): Promise<void> {
   for (const agent of AGENTS) {
     const plist = plistPath(agent.label)
     const installed = await fs.access(plist).then(() => true, () => false)
-    console.log(`${agent.label}  (${DAYS[agent.weekday]}s ${hhmm(agent)})`)
+    console.log(`${agent.label}  (${when(agent)})`)
     console.log(`  plist   : ${installed ? plist : '(not installed)'}`)
 
     const { stdout } = await run('launchctl', ['print', `gui/${uid}/${agent.label}`]).catch(() => ({ stdout: '' }))

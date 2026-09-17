@@ -50,14 +50,21 @@ describe('missingConfig', () => {
 
 describe('buildPlist', () => {
   const agent: AgentSpec = {
-    label: 'com.example.job', script: 'job.ts', weekday: 4, hour: 18, minute: 0,
+    label: 'com.example.job', script: 'job.ts',
+    runs: [{ weekday: 4, hour: 18, minute: 0 }, { weekday: 2, hour: 9, minute: 30 }],
     requires: [], why: 'test'
   }
   const plist = buildPlist(agent, '/opt/node/bin/node', '/app/tsx.mjs', '/app/fetch.ts', '/logs')
 
-  it('schedules at the agent declared time', () => {
-    expect(plist).toContain('<key>Weekday</key><integer>4</integer>')
-    expect(plist).toContain('<key>Hour</key><integer>18</integer>')
+  it('schedules every declared run time, not just the first', () => {
+    // StartCalendarInterval must be an <array> of dicts here. As a bare dict
+    // launchd keeps one time and the second run never fires — silently, on a
+    // job that only proves itself once a week.
+    const block = plist.match(/<key>StartCalendarInterval<\/key>\s*<array>([\s\S]*?)<\/array>/)
+    expect(block).not.toBeNull()
+    const times = [...block![1].matchAll(/<key>Weekday<\/key><integer>(\d+)<\/integer>\s*<key>Hour<\/key><integer>(\d+)<\/integer>\s*<key>Minute<\/key><integer>(\d+)<\/integer>/g)]
+      .map(m => m.slice(1).join(':'))
+    expect(times).toEqual(['4:18:0', '2:9:30'])
   })
 
   it('gives each agent its own label and log files', () => {
@@ -87,13 +94,31 @@ describe('resolveNode', () => {
 })
 
 describe('agent table', () => {
-  it('schedules the odds snapshot before the picksheet fetch in the week', () => {
-    // OPEN means the Tuesday-morning line. If the snapshot ran after the fetch
-    // there would be no earlier observation than Thursday evening, and the
-    // column would be showing a near-closing line labelled as an opening one.
+  it('schedules the odds snapshot before every picksheet fetch in the week', () => {
+    // OPEN means the Tuesday-morning line. If the snapshot ran after a fetch
+    // there would be no earlier observation than that fetch, and the column
+    // would be showing a later line labelled as an opening one. Compared as
+    // minutes-into-the-week because the fetch now also runs on Tuesday, so
+    // weekday alone no longer separates them.
+    const minuteOfWeek = (r: { weekday: number; hour: number; minute: number }) =>
+      r.weekday * 1440 + r.hour * 60 + r.minute
     const snapshot = AGENTS.find(a => a.script === 'snapshot-odds.ts')!
     const fetch = AGENTS.find(a => a.script === 'fetch-picksheet-api.ts')!
-    expect(snapshot.weekday).toBeLessThan(fetch.weekday)
+    const earliestSnapshot = Math.min(...snapshot.runs.map(minuteOfWeek))
+    for (const r of fetch.runs) {
+      expect(earliestSnapshot).toBeLessThan(minuteOfWeek(r))
+    }
+  })
+
+  it('fetches the picksheet early in the week, not only before Thursday kickoff', () => {
+    // The pool posts the new slate early in the week. Fetching only on
+    // Thursday left the saved slate finished-and-unmatchable for days, which
+    // is what /api/refresh-all reports as an expired slate (observed
+    // 2026-09-16 against a saved "NFL Week 1 | CFB Week 2").
+    const fetch = AGENTS.find(a => a.script === 'fetch-picksheet-api.ts')!
+    expect(Math.min(...fetch.runs.map(r => r.weekday))).toBeLessThanOrEqual(2)
+    // And still covers Thursday, before the first kickoff of the slate.
+    expect(fetch.runs.some(r => r.weekday === 4)).toBe(true)
   })
 
   it('gives every agent a distinct label, so one cannot overwrite another plist', () => {
